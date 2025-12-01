@@ -14,9 +14,9 @@ const DailyLedgerPage = () => {
   return (
     <div className="p-10 space-y-8">
       <motion.div
-        initial={ opacity: 0, y: -20 }
-        animate={ opacity: 1, y: 0 }
-        transition={ duration: 0.5 }
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
       >
         <div className="flex items-center space-x-4 mb-2">
           <Receipt className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -30,9 +30,9 @@ const DailyLedgerPage = () => {
       </motion.div>
 
       <motion.div
-        initial={ opacity: 0, y: 20 }
-        animate={ opacity: 1, y: 0 }
-        transition={ delay: 0.2, duration: 0.5 }
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
       >
         <Card>
           <CardHeader>
@@ -59,9 +59,9 @@ const DailyLedgerPage = () => {
       </motion.div>
 
       <motion.div
-        initial={ opacity: 0, y: 20 }
-        animate={ opacity: 1, y: 0 }
-        transition={ delay: 0.4, duration: 0.5 }
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
       >
         <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
           <CardHeader>
@@ -78,8 +78,8 @@ const DailyLedgerPage = () => {
             </Button>
           </CardContent>
         </Card>
-      </motion.div>
-    </div>
+      </motion.div >
+    </div >
   );
 };
 
