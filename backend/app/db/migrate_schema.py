@@ -1,0 +1,141 @@
+"""
+Database Schema Migration Utility
+Ensures the database schema is up-to-date with the latest model definitions.
+"""
+
+import logging
+from sqlalchemy import text, inspect
+from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
+
+def check_column_exists(db: Session, table_name: str, column_name: str) -> bool:
+    """Check if a column exists in a table."""
+    try:
+        result = db.execute(text(f"""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = :table_name 
+            AND column_name = :column_name
+        """), {"table_name": table_name, "column_name": column_name})
+        return result.fetchone() is not None
+    except Exception as e:
+        logger.error(f"Error checking column {column_name}: {e}")
+        return False
+
+
+def migrate_master_accounts_schema(db: Session) -> bool:
+    """
+    Migrate master_accounts table to include enriched fields.
+    Returns True if migration was successful or not needed.
+    """
+    try:
+        logger.info("Checking master_accounts schema...")
+        
+        # Check if enriched fields exist
+        enriched_fields = [
+            "long_description",
+            "fs_mapping",
+            "tags",
+            "default_vendors",
+            "regulatory_mapping",
+            "normal_balance",
+            "cash_flow_classification",
+            "cost_center"
+        ]
+        
+        missing_fields = []
+        for field in enriched_fields:
+            if not check_column_exists(db, "master_accounts", field):
+                missing_fields.append(field)
+        
+        if not missing_fields:
+            logger.info("✓ Master accounts schema is up-to-date")
+            return True
+        
+        logger.info(f"⚠ Missing fields in master_accounts: {', '.join(missing_fields)}")
+        logger.info("Running schema migration...")
+        
+        # Add missing columns
+        migration_sql = """
+        -- Add enriched fields to master_accounts table
+        ALTER TABLE master_accounts 
+        ADD COLUMN IF NOT EXISTS long_description TEXT,
+        ADD COLUMN IF NOT EXISTS fs_mapping VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS tags TEXT[],
+        ADD COLUMN IF NOT EXISTS default_vendors TEXT[],
+        ADD COLUMN IF NOT EXISTS regulatory_mapping JSONB,
+        ADD COLUMN IF NOT EXISTS normal_balance VARCHAR(20),
+        ADD COLUMN IF NOT EXISTS cash_flow_classification VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS cost_center VARCHAR(50);
+
+        -- Add indexes for better query performance
+        CREATE INDEX IF NOT EXISTS idx_master_accounts_category ON master_accounts(category);
+        CREATE INDEX IF NOT EXISTS idx_master_accounts_fs_mapping ON master_accounts(fs_mapping);
+        CREATE INDEX IF NOT EXISTS idx_master_accounts_normal_balance ON master_accounts(normal_balance);
+        CREATE INDEX IF NOT EXISTS idx_master_accounts_tags ON master_accounts USING GIN(tags);
+        CREATE INDEX IF NOT EXISTS idx_master_accounts_default_vendors ON master_accounts USING GIN(default_vendors);
+
+        -- Add comments for documentation
+        COMMENT ON COLUMN master_accounts.long_description IS 'Professional IFRS/GAAP explanation of the account';
+        COMMENT ON COLUMN master_accounts.fs_mapping IS 'Financial statement mapping: Balance Sheet or Income Statement';
+        COMMENT ON COLUMN master_accounts.tags IS 'AI-friendly keywords for intelligent classification';
+        COMMENT ON COLUMN master_accounts.default_vendors IS 'Common vendor associations for automatic suggestion';
+        COMMENT ON COLUMN master_accounts.regulatory_mapping IS 'IFRS/IPSAS/ASC standard references';
+        COMMENT ON COLUMN master_accounts.normal_balance IS 'Normal balance type: Debit or Credit';
+        COMMENT ON COLUMN master_accounts.cash_flow_classification IS 'Cash flow statement classification';
+        COMMENT ON COLUMN master_accounts.cost_center IS 'Default cost center assignment';
+        """
+        
+        # Execute migration
+        db.execute(text(migration_sql))
+        db.commit()
+        
+        logger.info("✓ Schema migration completed successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"✗ Schema migration failed: {e}")
+        db.rollback()
+        return False
+
+
+def ensure_schema_updated(db: Session) -> bool:
+    """
+    Ensure all database schemas are up-to-date.
+    This should be called on application startup.
+    """
+    try:
+        logger.info("="*60)
+        logger.info("DATABASE SCHEMA CHECK")
+        logger.info("="*60)
+        
+        # Migrate master_accounts table
+        success = migrate_master_accounts_schema(db)
+        
+        if success:
+            logger.info("="*60)
+            logger.info("✓ ALL SCHEMAS UP-TO-DATE")
+            logger.info("="*60)
+        else:
+            logger.warning("="*60)
+            logger.warning("⚠ SCHEMA MIGRATION HAD ISSUES")
+            logger.warning("="*60)
+        
+        return success
+        
+    except Exception as e:
+        logger.error(f"Schema check failed: {e}")
+        return False
+
+
+if __name__ == "__main__":
+    # For manual execution
+    from app.db.session import SessionLocal
+    
+    db = SessionLocal()
+    try:
+        ensure_schema_updated(db)
+    finally:
+        db.close()
