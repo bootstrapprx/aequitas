@@ -1,0 +1,562 @@
+postgres | 2025-11-29 16:03:41.744 | 
+postgres | 2025-11-29 16:03:41.744 | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres | 2025-11-29 16:03:41.744 | 
+ollama   | 2025-11-29 16:03:41.844 | time=2025-11-29T20:03:41.843Z level=INFO source=routes.go:1544 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:4096 OLLAMA_DEBUG:INFO OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+ollama   | 2025-11-29 16:03:41.848 | time=2025-11-29T20:03:41.848Z level=INFO source=images.go:522 msg="total blobs: 5"
+ollama   | 2025-11-29 16:03:41.848 | time=2025-11-29T20:03:41.848Z level=INFO source=images.go:529 msg="total unused blobs removed: 0"
+ollama   | 2025-11-29 16:03:41.848 | time=2025-11-29T20:03:41.848Z level=INFO source=routes.go:1597 msg="Listening on [::]:11434 (version 0.13.0)"
+ollama   | 2025-11-29 16:03:41.850 | time=2025-11-29T20:03:41.850Z level=INFO source=runner.go:67 msg="discovering available GPUs..."
+ollama   | 2025-11-29 16:03:41.854 | time=2025-11-29T20:03:41.853Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 40463"
+postgres | 2025-11-29 16:03:41.881 | 2025-11-29 20:03:41.880 UTC [1] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+postgres | 2025-11-29 16:03:41.881 | 2025-11-29 20:03:41.881 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres | 2025-11-29 16:03:41.881 | 2025-11-29 20:03:41.881 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres | 2025-11-29 16:03:41.886 | 2025-11-29 20:03:41.886 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres | 2025-11-29 16:03:41.912 | 2025-11-29 20:03:41.912 UTC [29] LOG:  database system was interrupted; last known up at 2025-11-29 19:54:14 UTC
+ollama   | 2025-11-29 16:03:41.931 | time=2025-11-29T20:03:41.931Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 42867"
+ollama   | 2025-11-29 16:03:41.974 | time=2025-11-29T20:03:41.974Z level=INFO source=runner.go:102 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
+ollama   | 2025-11-29 16:03:41.974 | time=2025-11-29T20:03:41.974Z level=INFO source=types.go:60 msg="inference compute" id=cpu library=cpu compute="" name=cpu description=cpu libdirs=ollama driver="" pci_id="" type="" total="1.8 GiB" available="1.7 GiB"
+ollama   | 2025-11-29 16:03:41.974 | time=2025-11-29T20:03:41.974Z level=INFO source=routes.go:1638 msg="entering low vram mode" "total vram"="0 B" threshold="20.0 GiB"
+postgres | 2025-11-29 16:03:42.000 | 2025-11-29 20:03:41.999 UTC [29] LOG:  database system was not properly shut down; automatic recovery in progress
+postgres | 2025-11-29 16:03:42.002 | 2025-11-29 20:03:42.002 UTC [29] LOG:  redo starts at 0/1B60F78
+postgres | 2025-11-29 16:03:42.002 | 2025-11-29 20:03:42.002 UTC [29] LOG:  invalid record length at 0/1B61060: wanted 24, got 0
+postgres | 2025-11-29 16:03:42.002 | 2025-11-29 20:03:42.002 UTC [29] LOG:  redo done at 0/1B61028 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+postgres | 2025-11-29 16:03:42.008 | 2025-11-29 20:03:42.008 UTC [27] LOG:  checkpoint starting: end-of-recovery immediate wait
+postgres | 2025-11-29 16:03:42.018 | 2025-11-29 20:03:42.018 UTC [27] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.003 s, sync=0.002 s, total=0.014 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB
+postgres | 2025-11-29 16:03:42.024 | 2025-11-29 20:03:42.024 UTC [1] LOG:  database system is ready to accept connections
+backend  | 2025-11-29 16:03:42.539 | INFO:     Will watch for changes in these directories: ['/app']
+backend  | 2025-11-29 16:03:42.539 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+backend  | 2025-11-29 16:03:42.539 | INFO:     Started reloader process [1] using WatchFiles
+frontend | 2025-11-29 16:03:42.672 | 
+frontend | 2025-11-29 16:03:42.672 | > chart-forge@0.0.0 dev
+frontend | 2025-11-29 16:03:42.672 | > vite --host
+frontend | 2025-11-29 16:03:42.672 | 
+frontend | 2025-11-29 16:03:42.932 | 
+frontend | 2025-11-29 16:03:42.932 |   VITE v7.2.4  ready in 228 ms
+frontend | 2025-11-29 16:03:42.932 | 
+frontend | 2025-11-29 16:03:42.932 |   ➜  Local:   http://localhost:5173/
+frontend | 2025-11-29 16:03:42.932 |   ➜  Network: http://172.18.0.5:5173/
+backend  | 2025-11-29 16:03:44.818 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:03:44.818 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:03:44.818 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:03:44.818 | 2025-11-29 20:03:44.817 UTC [33] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:03:44.818 | 2025-11-29 20:03:44.817 UTC [33] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:03:44.818 | 2025-11-29 20:03:44.817 UTC [33] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:03:44.870 | INFO:     Started server process [8]
+backend  | 2025-11-29 16:03:44.870 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:03:44.870 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:04:09.163 | INFO:     172.18.0.1:63638 - "OPTIONS /api/v1/companies?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:04:09.168 | INFO:     172.18.0.1:63638 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 16:04:09.174 | INFO:     172.18.0.1:63638 - "OPTIONS /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:04:09.205 | INFO:     172.18.0.1:63638 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+postgres | 2025-11-29 16:04:42.126 | 2025-11-29 20:04:42.126 UTC [34] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:04:42.126 | 2025-11-29 20:04:42.126 UTC [34] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:04:42.126 | 2025-11-29 20:04:42.126 UTC [34] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:05:42.159 | 2025-11-29 20:05:42.158 UTC [35] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:05:42.159 | 2025-11-29 20:05:42.158 UTC [35] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:05:42.159 | 2025-11-29 20:05:42.158 UTC [35] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:06:42.177 | 2025-11-29 20:06:42.177 UTC [36] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:06:42.177 | 2025-11-29 20:06:42.177 UTC [36] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:06:42.177 | 2025-11-29 20:06:42.177 UTC [36] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:07:42.276 | 2025-11-29 20:07:42.276 UTC [37] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:07:42.276 | 2025-11-29 20:07:42.276 UTC [37] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:07:42.276 | 2025-11-29 20:07:42.276 UTC [37] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:08:42.308 | 2025-11-29 20:08:42.308 UTC [38] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:08:42.308 | 2025-11-29 20:08:42.308 UTC [38] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:08:42.308 | 2025-11-29 20:08:42.308 UTC [38] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:25.123 | WARNING:  WatchFiles detected changes in 'app/api/v1/admin.py'. Reloading...
+backend  | 2025-11-29 16:09:25.158 | INFO:     Shutting down
+backend  | 2025-11-29 16:09:25.259 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:09:25.259 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:09:25.259 | INFO:     Finished server process [8]
+backend  | 2025-11-29 16:09:25.620 | WARNING:  WatchFiles detected changes in 'app/api/v1/admin.py'. Reloading...
+backend  | 2025-11-29 16:09:27.199 | WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+backend  | 2025-11-29 16:09:27.716 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:09:27.716 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:09:27.716 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:09:27.716 | 2025-11-29 20:09:27.715 UTC [39] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:09:27.716 | 2025-11-29 20:09:27.715 UTC [39] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:09:27.716 | 2025-11-29 20:09:27.715 UTC [39] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:27.760 | INFO:     Started server process [19]
+backend  | 2025-11-29 16:09:27.760 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:09:27.761 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:09:29.419 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:09:29.419 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:09:29.419 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:09:29.419 | 2025-11-29 20:09:29.419 UTC [40] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:09:29.419 | 2025-11-29 20:09:29.419 UTC [40] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:09:29.419 | 2025-11-29 20:09:29.419 UTC [40] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:29.470 | INFO:     Started server process [27]
+backend  | 2025-11-29 16:09:29.470 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:09:29.470 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:09:35.774 | WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+backend  | 2025-11-29 16:09:35.833 | INFO:     Shutting down
+backend  | 2025-11-29 16:09:35.934 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:09:35.934 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:09:35.934 | INFO:     Finished server process [27]
+postgres | 2025-11-29 16:09:37.569 | 2025-11-29 20:09:37.569 UTC [41] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:09:37.569 | 2025-11-29 20:09:37.569 UTC [41] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:09:37.570 | 2025-11-29 20:09:37.569 UTC [41] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:37.571 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:09:37.571 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:09:37.571 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:37.654 | INFO:     Started server process [35]
+backend  | 2025-11-29 16:09:37.654 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:09:37.654 | INFO:     Application startup complete.
+postgres | 2025-11-29 16:09:42.321 | 2025-11-29 20:09:42.321 UTC [42] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:09:42.321 | 2025-11-29 20:09:42.321 UTC [42] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:09:42.321 | 2025-11-29 20:09:42.321 UTC [42] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:09:51.920 | INFO:     172.18.0.1:57066 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 16:09:52.097 | INFO:     172.18.0.1:57066 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+frontend | 2025-11-29 16:10:05.316 | 8:10:05 PM [vite] (client) hmr update /src/pages/SettingsPage.tsx, /src/index.css
+frontend | 2025-11-29 16:10:17.328 | 8:10:17 PM [vite] (client) hmr update /src/pages/SettingsPage.tsx, /src/index.css
+frontend | 2025-11-29 16:10:17.351 | 8:10:17 PM [vite] Internal server error:   x Expected '</', got 'jsx text (
+frontend | 2025-11-29 16:10:17.351 |   |
+frontend | 2025-11-29 16:10:17.351 |   |                     )'
+frontend | 2025-11-29 16:10:17.351 |      ,-[/app/src/pages/SettingsPage.tsx:275:1]
+frontend | 2025-11-29 16:10:17.351 |  272 |                                 </CardContent>
+frontend | 2025-11-29 16:10:17.351 |  273 |                             </Card>
+frontend | 2025-11-29 16:10:17.351 |  274 |     
+frontend | 2025-11-29 16:10:17.351 |  275 | ,->                     </Card>
+frontend | 2025-11-29 16:10:17.351 |  276 | |   
+frontend | 2025-11-29 16:10:17.351 |  277 | `->                     {user?.is_superuser && (
+frontend | 2025-11-29 16:10:17.351 |  278 |                             <Card className="border-destructive">
+frontend | 2025-11-29 16:10:17.351 |  279 |                                 <CardHeader>
+frontend | 2025-11-29 16:10:17.351 |  280 |                                     <CardTitle className="text-destructive">Danger Zone</CardTitle>
+frontend | 2025-11-29 16:10:17.351 |      `----
+frontend | 2025-11-29 16:10:17.351 | 
+frontend | 2025-11-29 16:10:17.351 | 
+frontend | 2025-11-29 16:10:17.351 | Caused by:
+frontend | 2025-11-29 16:10:17.351 |     Syntax Error
+frontend | 2025-11-29 16:10:17.351 |   Plugin: vite:react-swc
+frontend | 2025-11-29 16:10:17.351 |   File: /app/src/pages/SettingsPage.tsx
+frontend | 2025-11-29 16:10:17.351 |   
+postgres | 2025-11-29 16:10:42.332 | 2025-11-29 20:10:42.332 UTC [43] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:10:42.332 | 2025-11-29 20:10:42.332 UTC [43] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:10:42.332 | 2025-11-29 20:10:42.332 UTC [43] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+frontend | 2025-11-29 16:10:52.683 | 8:10:52 PM [vite] (client) hmr update /src/pages/SettingsPage.tsx, /src/index.css
+frontend | 2025-11-29 16:10:59.664 | 8:10:59 PM [vite] (client) hmr update /src/pages/SettingsPage.tsx, /src/index.css
+backend  | 2025-11-29 16:11:11.657 | INFO:     172.18.0.1:62426 - "POST /api/v1/admin/reset-db HTTP/1.1" 401 Unauthorized
+postgres | 2025-11-29 16:11:42.348 | 2025-11-29 20:11:42.348 UTC [44] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:11:42.348 | 2025-11-29 20:11:42.348 UTC [44] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:11:42.348 | 2025-11-29 20:11:42.348 UTC [44] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:12:06.945 | INFO:     172.18.0.1:58188 - "OPTIONS /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:12:06.956 | INFO:     172.18.0.1:58188 - "GET /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:12:24.559 | INFO:     172.18.0.1:65428 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:12:24.565 | INFO:     172.18.0.1:65432 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+postgres | 2025-11-29 16:12:42.350 | 2025-11-29 20:12:42.350 UTC [45] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:12:42.350 | 2025-11-29 20:12:42.350 UTC [45] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:12:42.350 | 2025-11-29 20:12:42.350 UTC [45] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:12:43.534 | INFO:     172.18.0.1:65092 - "GET /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:12:47.133 | INFO:     172.18.0.1:65092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 16:12:47.137 | INFO:     172.18.0.1:65092 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+postgres | 2025-11-29 16:13:42.410 | 2025-11-29 20:13:42.410 UTC [46] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:13:42.410 | 2025-11-29 20:13:42.410 UTC [46] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:13:42.410 | 2025-11-29 20:13:42.410 UTC [46] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:14:42.475 | 2025-11-29 20:14:42.475 UTC [47] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:14:42.475 | 2025-11-29 20:14:42.475 UTC [47] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:14:42.475 | 2025-11-29 20:14:42.475 UTC [47] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:15:42.547 | 2025-11-29 20:15:42.547 UTC [48] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:15:42.547 | 2025-11-29 20:15:42.547 UTC [48] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:15:42.547 | 2025-11-29 20:15:42.547 UTC [48] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:25.420 | WARNING:  WatchFiles detected changes in 'app/core/config.py'. Reloading...
+backend  | 2025-11-29 16:16:25.451 | INFO:     Shutting down
+backend  | 2025-11-29 16:16:25.552 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:16:25.552 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:16:25.553 | INFO:     Finished server process [35]
+backend  | 2025-11-29 16:16:27.292 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:16:27.292 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:16:27.292 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:16:27.292 | 2025-11-29 20:16:27.291 UTC [49] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:16:27.292 | 2025-11-29 20:16:27.291 UTC [49] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:16:27.292 | 2025-11-29 20:16:27.291 UTC [49] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:27.331 | INFO:     Started server process [44]
+backend  | 2025-11-29 16:16:27.331 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:16:27.331 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:16:34.892 | WARNING:  WatchFiles detected changes in 'app/db/init_db.py'. Reloading...
+backend  | 2025-11-29 16:16:34.907 | INFO:     Shutting down
+backend  | 2025-11-29 16:16:35.008 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:16:35.008 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:16:35.008 | INFO:     Finished server process [44]
+backend  | 2025-11-29 16:16:35.368 | WARNING:  WatchFiles detected changes in 'app/db/init_db.py'. Reloading...
+backend  | 2025-11-29 16:16:37.084 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:16:37.084 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:16:37.084 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:16:37.084 | 2025-11-29 20:16:37.084 UTC [50] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:16:37.084 | 2025-11-29 20:16:37.084 UTC [50] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:16:37.084 | 2025-11-29 20:16:37.084 UTC [50] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:37.124 | INFO:     Started server process [53]
+backend  | 2025-11-29 16:16:37.124 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:16:37.125 | INFO:     Application startup complete.
+postgres | 2025-11-29 16:16:42.564 | 2025-11-29 20:16:42.563 UTC [51] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:16:42.564 | 2025-11-29 20:16:42.563 UTC [51] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:16:42.564 | 2025-11-29 20:16:42.563 UTC [51] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:43.888 | WARNING:  WatchFiles detected changes in 'app/main.py'. Reloading...
+backend  | 2025-11-29 16:16:43.896 | INFO:     Shutting down
+backend  | 2025-11-29 16:16:43.998 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:16:43.999 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:16:43.999 | INFO:     Finished server process [53]
+backend  | 2025-11-29 16:16:45.694 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:16:45.694 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:16:45.694 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:16:45.694 | 2025-11-29 20:16:45.693 UTC [52] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:16:45.694 | 2025-11-29 20:16:45.693 UTC [52] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:16:45.694 | 2025-11-29 20:16:45.693 UTC [52] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:46.010 | Superuser admin@chartforge.com created
+backend  | 2025-11-29 16:16:46.044 | INFO:     Started server process [61]
+backend  | 2025-11-29 16:16:46.044 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:16:46.044 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:16:54.915 | WARNING:  WatchFiles detected changes in 'app/api/v1/admin.py'. Reloading...
+backend  | 2025-11-29 16:16:54.932 | INFO:     Shutting down
+backend  | 2025-11-29 16:16:55.033 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:16:55.033 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:16:55.033 | INFO:     Finished server process [61]
+backend  | 2025-11-29 16:16:56.601 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:16:56.601 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:16:56.601 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:16:56.601 | 2025-11-29 20:16:56.601 UTC [53] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:16:56.601 | 2025-11-29 20:16:56.601 UTC [53] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:16:56.601 | 2025-11-29 20:16:56.601 UTC [53] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:16:56.658 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 16:16:56.713 | INFO:     Started server process [69]
+backend  | 2025-11-29 16:16:56.713 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:16:56.713 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:17:04.540 | INFO:     172.18.0.1:64738 - "POST /api/v1/auth/login-json HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:17:12.244 | INFO:     172.18.0.1:56814 - "POST /api/v1/admin/reset-db HTTP/1.1" 403 Forbidden
+backend  | 2025-11-29 16:17:35.022 | WARNING:  WatchFiles detected changes in 'app/db/init_db.py'. Reloading...
+backend  | 2025-11-29 16:17:35.104 | INFO:     Shutting down
+backend  | 2025-11-29 16:17:35.205 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:17:35.205 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:17:35.205 | INFO:     Finished server process [69]
+backend  | 2025-11-29 16:17:36.901 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:17:36.901 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:17:36.901 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:17:36.901 | 2025-11-29 20:17:36.901 UTC [54] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:17:36.901 | 2025-11-29 20:17:36.901 UTC [54] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:17:36.901 | 2025-11-29 20:17:36.901 UTC [54] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:17:36.924 | Process SpawnProcess-11:
+backend  | 2025-11-29 16:17:36.930 | Traceback (most recent call last):
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
+backend  | 2025-11-29 16:17:36.931 |     self.run()
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
+backend  | 2025-11-29 16:17:36.931 |     self._target(*self._args, **self._kwargs)
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/_subprocess.py", line 78, in subprocess_started
+backend  | 2025-11-29 16:17:36.931 |     target(sockets=sockets)
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 65, in run
+backend  | 2025-11-29 16:17:36.931 |     return asyncio.run(self.serve(sockets=sockets))
+backend  | 2025-11-29 16:17:36.931 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
+backend  | 2025-11-29 16:17:36.931 |     return runner.run(main)
+backend  | 2025-11-29 16:17:36.931 |            ^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+backend  | 2025-11-29 16:17:36.931 |     return self._loop.run_until_complete(task)
+backend  | 2025-11-29 16:17:36.931 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
+backend  | 2025-11-29 16:17:36.931 |     await self._serve(sockets)
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 76, in _serve
+backend  | 2025-11-29 16:17:36.931 |     config.load()
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/config.py", line 433, in load
+backend  | 2025-11-29 16:17:36.931 |     self.loaded_app = import_from_string(self.app)
+backend  | 2025-11-29 16:17:36.931 |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+backend  | 2025-11-29 16:17:36.931 |     module = importlib.import_module(module_str)
+backend  | 2025-11-29 16:17:36.931 |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+backend  | 2025-11-29 16:17:36.931 |     return _bootstrap._gcd_import(name[level:], package, level)
+backend  | 2025-11-29 16:17:36.931 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+backend  | 2025-11-29 16:17:36.931 |   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+backend  | 2025-11-29 16:17:36.931 |   File "/app/app/main.py", line 47, in <module>
+backend  | 2025-11-29 16:17:36.931 |     from app.db.init_db import init_db
+backend  | 2025-11-29 16:17:36.931 |   File "/app/app/db/init_db.py", line 4, in <module>
+backend  | 2025-11-29 16:17:36.931 |     def init_db(db: Session) -> None:
+backend  | 2025-11-29 16:17:36.931 |                     ^^^^^^^
+backend  | 2025-11-29 16:17:36.931 | NameError: name 'Session' is not defined
+postgres | 2025-11-29 16:17:42.632 | 2025-11-29 20:17:42.632 UTC [55] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:17:42.632 | 2025-11-29 20:17:42.632 UTC [55] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:17:42.632 | 2025-11-29 20:17:42.632 UTC [55] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:17:44.112 | WARNING:  WatchFiles detected changes in 'app/db/init_db.py'. Reloading...
+backend  | 2025-11-29 16:17:46.065 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:17:46.065 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:17:46.065 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:17:46.065 | 2025-11-29 20:17:46.064 UTC [56] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:17:46.065 | 2025-11-29 20:17:46.064 UTC [56] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:17:46.065 | 2025-11-29 20:17:46.064 UTC [56] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:17:46.103 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 16:17:46.137 | INFO:     Started server process [86]
+backend  | 2025-11-29 16:17:46.137 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:17:46.138 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:17:56.601 | WARNING:  WatchFiles detected changes in 'fix_superuser.py'. Reloading...
+backend  | 2025-11-29 16:17:56.643 | INFO:     Shutting down
+backend  | 2025-11-29 16:17:56.744 | INFO:     Waiting for application shutdown.
+backend  | 2025-11-29 16:17:56.744 | INFO:     Application shutdown complete.
+backend  | 2025-11-29 16:17:56.744 | INFO:     Finished server process [86]
+backend  | 2025-11-29 16:17:58.598 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:17:58.598 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:17:58.598 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:17:58.598 | 2025-11-29 20:17:58.597 UTC [57] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:17:58.598 | 2025-11-29 20:17:58.597 UTC [57] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:17:58.598 | 2025-11-29 20:17:58.597 UTC [57] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:17:58.666 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 16:17:58.705 | INFO:     Started server process [94]
+backend  | 2025-11-29 16:17:58.705 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:17:58.705 | INFO:     Application startup complete.
+postgres | 2025-11-29 16:18:36.749 | 2025-11-29 20:18:36.748 UTC [58] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:18:36.749 | 2025-11-29 20:18:36.748 UTC [58] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:18:36.749 | 2025-11-29 20:18:36.748 UTC [58] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:18:42.318 | 2025-11-29 20:18:42.318 UTC [27] LOG:  checkpoint starting: time
+postgres | 2025-11-29 16:18:42.657 | 2025-11-29 20:18:42.657 UTC [59] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:18:42.657 | 2025-11-29 20:18:42.657 UTC [59] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:18:42.657 | 2025-11-29 20:18:42.657 UTC [59] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:18:42.839 | 2025-11-29 20:18:42.839 UTC [27] LOG:  checkpoint complete: wrote 6 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.507 s, sync=0.009 s, total=0.522 s; sync files=6, longest=0.008 s, average=0.002 s; distance=1 kB, estimate=1 kB
+backend  | 2025-11-29 16:18:45.443 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:18:45.443 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:18:45.443 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:18:45.443 | 2025-11-29 20:18:45.442 UTC [60] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:18:45.443 | 2025-11-29 20:18:45.442 UTC [60] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:18:45.443 | 2025-11-29 20:18:45.442 UTC [60] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:19:29.890 | 2025-11-29 20:19:29.890 UTC [61] WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:19:29.891 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:19:29.891 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:19:29.891 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:19:29.891 | 2025-11-29 20:19:29.890 UTC [61] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:19:29.891 | 2025-11-29 20:19:29.890 UTC [61] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:19:42.700 | 2025-11-29 20:19:42.700 UTC [62] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:19:42.700 | 2025-11-29 20:19:42.700 UTC [62] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:19:42.700 | 2025-11-29 20:19:42.700 UTC [62] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:19:48.344 | INFO:     172.18.0.1:59952 - "GET /health HTTP/1.1" 200 OK
+backend  | 2025-11-29 16:19:56.294 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:19:56.294 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:19:56.294 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:19:56.294 | 2025-11-29 20:19:56.294 UTC [63] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:19:56.294 | 2025-11-29 20:19:56.294 UTC [63] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:19:56.294 | 2025-11-29 20:19:56.294 UTC [63] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:20:16.560 | INFO:     Shutting down
+backend  | 2025-11-29 16:20:16.661 | INFO:     Waiting for connections to close. (CTRL+C to force quit)
+postgres | 2025-11-29 16:20:17.500 | 2025-11-29 20:20:17.500 UTC [57] LOG:  unexpected EOF on client connection with an open transaction
+postgres | 2025-11-29 16:20:17.502 | 2025-11-29 20:20:17.501 UTC [60] LOG:  unexpected EOF on client connection with an open transaction
+postgres | 2025-11-29 16:20:17.503 | 2025-11-29 20:20:17.503 UTC [61] LOG:  unexpected EOF on client connection with an open transaction
+postgres | 2025-11-29 16:20:17.504 | 2025-11-29 20:20:17.504 UTC [63] LOG:  unexpected EOF on client connection with an open transaction
+backend  | 2025-11-29 16:20:18.293 | INFO:     Will watch for changes in these directories: ['/app']
+backend  | 2025-11-29 16:20:18.293 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+backend  | 2025-11-29 16:20:18.293 | INFO:     Started reloader process [1] using WatchFiles
+backend  | 2025-11-29 16:20:19.809 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:20:19.809 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:20:19.809 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:20:19.809 | 2025-11-29 20:20:19.808 UTC [64] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:20:19.809 | 2025-11-29 20:20:19.808 UTC [64] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:20:19.809 | 2025-11-29 20:20:19.808 UTC [64] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:20:19.835 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 16:20:19.868 | INFO:     Started server process [8]
+backend  | 2025-11-29 16:20:19.868 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 16:20:19.868 | INFO:     Application startup complete.
+backend  | 2025-11-29 16:20:33.172 | INFO:     172.18.0.1:56974 - "POST /api/v1/auth/login-json HTTP/1.1" 200 OK
+postgres | 2025-11-29 16:20:42.781 | 2025-11-29 20:20:42.781 UTC [65] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:20:42.781 | 2025-11-29 20:20:42.781 UTC [65] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:20:42.781 | 2025-11-29 20:20:42.781 UTC [65] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:20:42.793 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:20:42.793 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:20:42.793 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:20:42.793 | 2025-11-29 20:20:42.792 UTC [66] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:20:42.793 | 2025-11-29 20:20:42.792 UTC [66] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:20:42.793 | 2025-11-29 20:20:42.792 UTC [66] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:21:28.288 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 16:21:28.288 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 16:21:28.288 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:21:28.288 | 2025-11-29 20:21:28.287 UTC [67] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:21:28.288 | 2025-11-29 20:21:28.287 UTC [67] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:21:28.288 | 2025-11-29 20:21:28.287 UTC [67] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:21:42.825 | 2025-11-29 20:21:42.825 UTC [68] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:21:42.825 | 2025-11-29 20:21:42.825 UTC [68] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:21:42.825 | 2025-11-29 20:21:42.825 UTC [68] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:21:50.778 | 2025-11-29 20:21:50.778 UTC [69] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:21:50.778 | 2025-11-29 20:21:50.778 UTC [69] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:21:50.778 | 2025-11-29 20:21:50.778 UTC [69] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:22:30.983 | WARNING:  WatchFiles detected changes in 'fix_superuser.py'. Reloading...
+backend  | 2025-11-29 16:22:31.048 | INFO:     Shutting down
+backend  | 2025-11-29 16:22:31.149 | INFO:     Waiting for connections to close. (CTRL+C to force quit)
+postgres | 2025-11-29 16:22:42.877 | 2025-11-29 20:22:42.877 UTC [70] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:22:42.877 | 2025-11-29 20:22:42.877 UTC [70] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:22:42.877 | 2025-11-29 20:22:42.877 UTC [70] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:23:42.813 | 2025-11-29 20:23:42.812 UTC [27] LOG:  checkpoint starting: time
+postgres | 2025-11-29 16:23:42.901 | 2025-11-29 20:23:42.901 UTC [71] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:23:42.901 | 2025-11-29 20:23:42.901 UTC [71] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:23:42.901 | 2025-11-29 20:23:42.901 UTC [71] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:23:44.044 | 2025-11-29 20:23:44.044 UTC [27] LOG:  checkpoint complete: wrote 13 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.213 s, sync=0.009 s, total=1.232 s; sync files=10, longest=0.009 s, average=0.001 s; distance=92 kB, estimate=92 kB
+postgres | 2025-11-29 16:24:42.931 | 2025-11-29 20:24:42.931 UTC [72] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:24:42.931 | 2025-11-29 20:24:42.931 UTC [72] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:24:42.931 | 2025-11-29 20:24:42.931 UTC [72] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:25:42.961 | 2025-11-29 20:25:42.961 UTC [73] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:25:42.961 | 2025-11-29 20:25:42.961 UTC [73] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:25:42.961 | 2025-11-29 20:25:42.961 UTC [73] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:26:42.990 | 2025-11-29 20:26:42.990 UTC [74] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:26:42.990 | 2025-11-29 20:26:42.990 UTC [74] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:26:42.990 | 2025-11-29 20:26:42.990 UTC [74] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 16:27:43.012 | 2025-11-29 20:27:43.012 UTC [75] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:27:43.012 | 2025-11-29 20:27:43.012 UTC [75] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:27:43.012 | 2025-11-29 20:27:43.012 UTC [75] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 16:28:38.617 | INFO:     Waiting for background tasks to complete. (CTRL+C to force quit)
+postgres | 2025-11-29 16:28:43.056 | 2025-11-29 20:28:43.056 UTC [76] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 16:28:43.056 | 2025-11-29 20:28:43.056 UTC [76] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 16:28:43.056 | 2025-11-29 20:28:43.056 UTC [76] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+ollama   | 2025-11-29 18:25:52.030 | time=2025-11-29T22:25:52.028Z level=INFO source=routes.go:1544 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:4096 OLLAMA_DEBUG:INFO OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
+ollama   | 2025-11-29 18:25:52.032 | time=2025-11-29T22:25:52.031Z level=INFO source=images.go:522 msg="total blobs: 5"
+ollama   | 2025-11-29 18:25:52.033 | time=2025-11-29T22:25:52.032Z level=INFO source=images.go:529 msg="total unused blobs removed: 0"
+ollama   | 2025-11-29 18:25:52.033 | time=2025-11-29T22:25:52.032Z level=INFO source=routes.go:1597 msg="Listening on [::]:11434 (version 0.13.0)"
+ollama   | 2025-11-29 18:25:52.037 | time=2025-11-29T22:25:52.037Z level=INFO source=runner.go:67 msg="discovering available GPUs..."
+ollama   | 2025-11-29 18:25:52.041 | time=2025-11-29T22:25:52.041Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 33039"
+postgres | 2025-11-29 18:25:52.069 | 
+postgres | 2025-11-29 18:25:52.069 | PostgreSQL Database directory appears to contain a database; Skipping initialization
+postgres | 2025-11-29 18:25:52.069 | 
+ollama   | 2025-11-29 18:25:52.146 | time=2025-11-29T22:25:52.122Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 33097"
+ollama   | 2025-11-29 18:25:52.179 | time=2025-11-29T22:25:52.178Z level=INFO source=runner.go:102 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
+ollama   | 2025-11-29 18:25:52.179 | time=2025-11-29T22:25:52.179Z level=INFO source=types.go:60 msg="inference compute" id=cpu library=cpu compute="" name=cpu description=cpu libdirs=ollama driver="" pci_id="" type="" total="1.8 GiB" available="1.7 GiB"
+ollama   | 2025-11-29 18:25:52.179 | time=2025-11-29T22:25:52.179Z level=INFO source=routes.go:1638 msg="entering low vram mode" "total vram"="0 B" threshold="20.0 GiB"
+postgres | 2025-11-29 18:25:52.285 | 2025-11-29 22:25:52.285 UTC [1] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
+postgres | 2025-11-29 18:25:52.285 | 2025-11-29 22:25:52.285 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+postgres | 2025-11-29 18:25:52.285 | 2025-11-29 22:25:52.285 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+postgres | 2025-11-29 18:25:52.289 | 2025-11-29 22:25:52.289 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+postgres | 2025-11-29 18:25:52.294 | 2025-11-29 22:25:52.294 UTC [30] LOG:  database system was interrupted; last known up at 2025-11-29 20:23:44 UTC
+postgres | 2025-11-29 18:25:52.361 | 2025-11-29 22:25:52.360 UTC [30] LOG:  database system was not properly shut down; automatic recovery in progress
+postgres | 2025-11-29 18:25:52.367 | 2025-11-29 22:25:52.367 UTC [30] LOG:  redo starts at 0/1B78620
+postgres | 2025-11-29 18:25:52.367 | 2025-11-29 22:25:52.367 UTC [30] LOG:  invalid record length at 0/1B788E8: wanted 24, got 0
+postgres | 2025-11-29 18:25:52.367 | 2025-11-29 22:25:52.367 UTC [30] LOG:  redo done at 0/1B788B0 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
+postgres | 2025-11-29 18:25:52.374 | 2025-11-29 22:25:52.374 UTC [28] LOG:  checkpoint starting: end-of-recovery immediate wait
+postgres | 2025-11-29 18:25:52.387 | 2025-11-29 22:25:52.387 UTC [28] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.002 s, total=0.014 s; sync files=2, longest=0.002 s, average=0.001 s; distance=0 kB, estimate=0 kB
+postgres | 2025-11-29 18:25:52.396 | 2025-11-29 22:25:52.396 UTC [1] LOG:  database system is ready to accept connections
+backend  | 2025-11-29 18:25:52.846 | INFO:     Will watch for changes in these directories: ['/app']
+backend  | 2025-11-29 18:25:52.846 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+backend  | 2025-11-29 18:25:52.846 | INFO:     Will watch for changes in these directories: ['/app']
+backend  | 2025-11-29 18:25:52.846 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+backend  | 2025-11-29 18:25:52.847 | INFO:     Started reloader process [1] using WatchFiles
+backend  | 2025-11-29 18:25:52.847 | INFO:     Started reloader process [1] using WatchFiles
+frontend | 2025-11-29 18:25:52.999 | 
+frontend | 2025-11-29 18:25:52.999 | > chart-forge@0.0.0 dev
+frontend | 2025-11-29 18:25:52.999 | > vite --host
+frontend | 2025-11-29 18:25:52.999 | 
+frontend | 2025-11-29 18:25:52.999 | 
+frontend | 2025-11-29 18:25:52.999 | > chart-forge@0.0.0 dev
+frontend | 2025-11-29 18:25:52.999 | > vite --host
+frontend | 2025-11-29 18:25:52.999 | 
+frontend | 2025-11-29 18:25:53.326 | 
+frontend | 2025-11-29 18:25:53.326 |   VITE v7.2.4  ready in 283 ms
+frontend | 2025-11-29 18:25:53.326 | 
+frontend | 2025-11-29 18:25:53.326 |   ➜  Local:   http://localhost:5173/
+frontend | 2025-11-29 18:25:53.326 | 
+frontend | 2025-11-29 18:25:53.326 |   VITE v7.2.4  ready in 283 ms
+frontend | 2025-11-29 18:25:53.326 | 
+frontend | 2025-11-29 18:25:53.326 |   ➜  Local:   http://localhost:5173/
+frontend | 2025-11-29 18:25:53.327 |   ➜  Network: http://172.18.0.5:5173/
+frontend | 2025-11-29 18:25:53.327 |   ➜  Network: http://172.18.0.5:5173/
+backend  | 2025-11-29 18:25:54.932 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 18:25:54.932 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 18:25:54.932 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:25:54.932 | 2025-11-29 22:25:54.932 UTC [34] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:25:54.932 | 2025-11-29 22:25:54.932 UTC [34] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:25:54.932 | 2025-11-29 22:25:54.932 UTC [34] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 18:25:54.932 | WARNING:  database "chartforge_dev" has a collation version mismatch
+backend  | 2025-11-29 18:25:54.932 | DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+backend  | 2025-11-29 18:25:54.932 | HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 18:25:54.984 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 18:25:54.984 | Superuser admin@chartforge.com already exists
+backend  | 2025-11-29 18:25:55.025 | INFO:     Started server process [8]
+backend  | 2025-11-29 18:25:55.025 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 18:25:55.025 | INFO:     Application startup complete.
+backend  | 2025-11-29 18:25:55.025 | INFO:     Started server process [8]
+backend  | 2025-11-29 18:25:55.025 | INFO:     Waiting for application startup.
+backend  | 2025-11-29 18:25:55.025 | INFO:     Application startup complete.
+postgres | 2025-11-29 18:26:52.402 | 2025-11-29 22:26:52.402 UTC [35] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:26:52.402 | 2025-11-29 22:26:52.402 UTC [35] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:26:52.402 | 2025-11-29 22:26:52.402 UTC [35] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:27:52.503 | 2025-11-29 22:27:52.502 UTC [36] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:27:52.503 | 2025-11-29 22:27:52.502 UTC [36] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:27:52.503 | 2025-11-29 22:27:52.502 UTC [36] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:28:52.513 | 2025-11-29 22:28:52.513 UTC [37] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:28:52.513 | 2025-11-29 22:28:52.513 UTC [37] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:28:52.513 | 2025-11-29 22:28:52.513 UTC [37] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:29:52.549 | 2025-11-29 22:29:52.549 UTC [38] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:29:52.549 | 2025-11-29 22:29:52.549 UTC [38] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:29:52.549 | 2025-11-29 22:29:52.549 UTC [38] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:30:52.650 | 2025-11-29 22:30:52.650 UTC [39] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:30:52.650 | 2025-11-29 22:30:52.650 UTC [39] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:30:52.650 | 2025-11-29 22:30:52.650 UTC [39] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:31:52.701 | 2025-11-29 22:31:52.701 UTC [40] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:31:52.701 | 2025-11-29 22:31:52.701 UTC [40] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:31:52.701 | 2025-11-29 22:31:52.701 UTC [40] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:32:21.071 | 2025-11-29 22:32:21.071 UTC [47] FATAL:  role "postgres" does not exist
+postgres | 2025-11-29 18:32:52.726 | 2025-11-29 22:32:52.726 UTC [48] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:32:52.726 | 2025-11-29 22:32:52.726 UTC [48] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:32:52.726 | 2025-11-29 22:32:52.726 UTC [48] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+postgres | 2025-11-29 18:32:56.484 | 2025-11-29 22:32:56.483 UTC [55] WARNING:  database "chartforge_dev" has a collation version mismatch
+postgres | 2025-11-29 18:32:56.484 | 2025-11-29 22:32:56.483 UTC [55] DETAIL:  The database was created using collation version 2.41, but the operating system provides version 2.36.
+postgres | 2025-11-29 18:32:56.484 | 2025-11-29 22:32:56.483 UTC [55] HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE chartforge_dev REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+backend  | 2025-11-29 18:33:04.668 | INFO:     172.18.0.1:55446 - "GET /health HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:33:04.668 | INFO:     172.18.0.1:55446 - "GET /health HTTP/1.1" 200 OK
+postgres | 2025-11-29 18:35:52.441 | 2025-11-29 22:35:52.441 UTC [28] LOG:  checkpoint starting: time
+postgres | 2025-11-29 18:35:52.765 | 2025-11-29 22:35:52.765 UTC [28] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.305 s, sync=0.008 s, total=0.325 s; sync files=4, longest=0.007 s, average=0.002 s; distance=1 kB, estimate=1 kB
+backend  | 2025-11-29 18:53:02.057 | INFO:     172.18.0.1:64668 - "OPTIONS /api/v1/companies?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:02.061 | INFO:     172.18.0.1:64668 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:53:02.057 | INFO:     172.18.0.1:64668 - "OPTIONS /api/v1/companies?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:02.061 | INFO:     172.18.0.1:64668 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:53:02.063 | INFO:     172.18.0.1:64668 - "OPTIONS /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:02.063 | INFO:     172.18.0.1:64668 - "OPTIONS /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:02.216 | INFO:     172.18.0.1:64668 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:02.216 | INFO:     172.18.0.1:64668 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:11.878 | INFO:     172.18.0.1:61462 - "OPTIONS /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:11.878 | INFO:     172.18.0.1:61462 - "OPTIONS /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:11.893 | INFO:     172.18.0.1:61462 - "GET /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:53:11.893 | INFO:     172.18.0.1:61462 - "GET /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.081 | INFO:     172.18.0.1:55470 - "OPTIONS /api/v1/auth/login-json HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.081 | INFO:     172.18.0.1:55470 - "OPTIONS /api/v1/auth/login-json HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.383 | INFO:     172.18.0.1:55470 - "POST /api/v1/auth/login-json HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.383 | INFO:     172.18.0.1:55470 - "POST /api/v1/auth/login-json HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.403 | INFO:     172.18.0.1:55470 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.403 | INFO:     172.18.0.1:55470 - "OPTIONS /api/v1/auth/me HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.427 | INFO:     172.18.0.1:55470 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:13.427 | INFO:     172.18.0.1:55470 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:21.146 | INFO:     172.18.0.1:55472 - "OPTIONS /api/v1/users/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:21.146 | INFO:     172.18.0.1:55472 - "OPTIONS /api/v1/users/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:21.159 | INFO:     172.18.0.1:55472 - "GET /api/v1/users/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:21.159 | INFO:     172.18.0.1:55472 - "GET /api/v1/users/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:36.390 | INFO:     172.18.0.1:59950 - "OPTIONS /api/v1/masterchart/stats HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:36.390 | INFO:     172.18.0.1:59950 - "OPTIONS /api/v1/masterchart/stats HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:36.416 | INFO:     172.18.0.1:59950 - "GET /api/v1/masterchart/stats HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:36.416 | INFO:     172.18.0.1:59950 - "GET /api/v1/masterchart/stats HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:40.857 | INFO:     172.18.0.1:59950 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:54:40.857 | INFO:     172.18.0.1:59950 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:54:40.862 | INFO:     172.18.0.1:59950 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:40.862 | INFO:     172.18.0.1:59950 - "GET /api/v1/companies/?status=all HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:49.547 | INFO:     172.18.0.1:64160 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:49.547 | INFO:     172.18.0.1:64160 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:49.553 | INFO:     172.18.0.1:64170 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:49.553 | INFO:     172.18.0.1:64170 - "GET /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:55.290 | INFO:     172.18.0.1:65382 - "OPTIONS /api/v1/admin/reset-db HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:55.290 | INFO:     172.18.0.1:65382 - "OPTIONS /api/v1/admin/reset-db HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:59.350 | INFO:     172.18.0.1:65384 - "OPTIONS /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:59.350 | INFO:     172.18.0.1:65384 - "OPTIONS /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:59.385 | INFO:     172.18.0.1:65384 - "POST /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:54:59.385 | INFO:     172.18.0.1:65384 - "POST /api/v1/settings/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:55:05.137 | INFO:     172.18.0.1:57086 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:05.137 | INFO:     172.18.0.1:57086 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:06.509 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:06.509 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:07.543 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:07.543 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:07.812 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:07.812 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.283 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.283 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.491 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.491 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.703 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.703 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.903 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:09.903 | INFO:     172.18.0.1:57092 - "GET /api/v1/companies?status=all HTTP/1.1" 307 Temporary Redirect
+backend  | 2025-11-29 18:55:18.560 | INFO:     172.18.0.1:64652 - "OPTIONS /api/v1/companies/ HTTP/1.1" 200 OK
+backend  | 2025-11-29 18:55:18.560 | INFO:     172.18.0.1:64652 - "OPTIONS /api/v1/companies/ HTTP/1.1" 200 OK
+postgres | 2025-11-29 18:55:52.838 | 2025-11-29 22:55:52.837 UTC [28] LOG:  checkpoint starting: time
+postgres | 2025-11-29 18:55:54.471 | 2025-11-29 22:55:54.471 UTC [28] LOG:  checkpoint complete: wrote 17 buffers (0.1%); 0 WAL file(s) added, 0 removed, 0 recycled; write=1.624 s, sync=0.003 s, total=1.635 s; sync files=13, longest=0.002 s, average=0.001 s; distance=73 kB, estimate=73 kB

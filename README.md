@@ -1,0 +1,299 @@
+# Aequitas - Integrated Accounting System
+
+**Aequitas** is a complete accounting system featuring intelligent chart of accounts management (powered by ChartForge), financial reporting, and integrated bookkeeping. Built with a modern React frontend and powerful FastAPI backend, Aequitas provides a seamless experience for managing your company's financial operations.
+
+## ✨ Features
+
+### Core Accounting
+- **Dashboard:** Overview of companies, users, and recent activity
+- **Registration Module:** Centralized management of companies, users, and charts of accounts
+- **Accountancy Module:** Daily ledger, journal entries, and trial balance (coming soon)
+- **Reports Module:** Financial statements, custom reports, and export center (coming soon)
+- **Administration:** System settings, integrations, and audit logs
+
+### ChartForge - Intelligent Chart of Accounts
+- **Master Chart Management:** Create and maintain standardized chart of accounts
+- **AI-Powered Mapping:** Automatic account classification and mapping using AI
+- **QuickBooks Integration:** OAuth2-based sync with QuickBooks Online
+- **Template System:** Reusable chart of accounts templates
+- **Import/Export:** Excel-based data exchange
+
+### Technical Features
+- **Intuitive Frontend:** Responsive UI built with React, Vite, Tailwind CSS, and shadcn/ui
+- **Powerful Backend:** Robust REST API built with FastAPI and Python
+- **Database Integration:** PostgreSQL with SQLAlchemy for reliable data storage
+- **AI-Powered Organization:**
+    - **Local AI:** Uses Ollama for local, private accounting classification
+    - **Cloud AI:** Supports Cloudflare Workers AI for edge-based inference
+- **Dynamic Settings:** Manage API keys and integrations directly from the UI
+- **Containerized Environment:** Full Docker and Docker Compose setup for easy development and deployment
+- **UCID Generation:** Automatic generation of Unique Company IDs using standardized normalization and hashing
+
+## 📂 Project Structure
+
+The project is organized into two main directories: `frontend` and `backend`.
+
+```
+/
+├── backend/         # FastAPI application
+│   ├── app/
+│   │   ├── api/v1/          # API routes
+│   │   ├── db/              # Database models and session
+│   │   ├── services/        # Business logic
+│   │   └── main.py          # FastAPI app entry point
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── frontend/        # React application
+│   ├── src/
+│   │   ├── pages/           # Page components
+│   │   │   ├── dashboard/   # Main dashboard
+│   │   │   ├── registration/ # Companies, users, CoA
+│   │   │   ├── chartforge/  # ChartForge module
+│   │   │   ├── accountancy/ # Accounting operations
+│   │   │   ├── reports/     # Financial reports
+│   │   │   └── admin/       # Administration
+│   │   ├── components/      # Reusable components
+│   │   └── App.tsx          # Main app component
+│   ├── package.json
+│   └── vite.config.ts
+├── docs/            # Documentation and guides
+├── assets/          # Excel workbooks and resources
+└── README.md        # This file
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Docker** and **Docker Compose** installed on your machine
+- **Node.js** (v18+) and **pnpm** for local frontend development
+- **Python** (3.11+) for local backend development
+
+### Quick Start with Docker
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/bootstrapprx/ChartForge.git
+   cd ChartForge
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   # Backend
+   cp backend/.env.example backend/.env
+   # Edit backend/.env with your configuration
+   
+   # Frontend
+   cp frontend/.env.example frontend/.env
+   # Edit frontend/.env with your configuration
+   ```
+
+3. **Start the application:**
+   ```bash
+   docker-compose up --build
+   ```
+
+4. **Access the application:**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+### Local Development
+
+#### Backend
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Frontend
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+## 📚 Documentation
+
+- **[Master Chart Guide](MASTER_CHART.md)** - Complete guide to the US-GAAP master chart of accounts
+- **[Technical Report](docs/technical_report.md)** - Detailed methodology and implementation
+- **[Chart of Accounts Guide](docs/ChartOfAccounts_Guide.pdf)** - Comprehensive accounting guide
+- **[Enriched Chart README](backend/app/data/ENRICHED_CHART_README.md)** - Enhanced chart features
+- **[Transformation Plan](AEQUITAS_TRANSFORMATION_PLAN.md)** - Aequitas architecture and roadmap
+
+## 🎯 Modules
+
+### Dashboard
+Main landing page with company overview, user stats, and recent activity feed.
+
+### Registration
+- **Companies:** Manage multiple companies with separate charts of accounts
+- **Users:** User management and access control
+- **Chart of Accounts:** Simple CoA registration and management
+
+### ChartForge (Intelligent CoA Module)
+- **Master Chart:** Standardized US-GAAP chart of accounts (345 accounts)
+- **Mapping:** Automatic and manual account mapping
+- **Import/Export:** Excel-based data exchange
+- **AI Organizer (Dexter):** AI-powered account classification
+
+### Accountancy (Coming Soon)
+- **Daily Ledger:** Journal entry management
+- **Ledger Accounts:** Account-level transaction history
+- **Trial Balance:** Debit/credit verification
+
+### Reports (Coming Soon)
+- **Financial Statements:** Balance Sheet, Income Statement, Cash Flow
+- **Custom Reports:** Build and save custom reports
+- **Export Center:** Export to Excel, PDF, CSV
+
+### Administration
+- **System Settings:** Application configuration
+- **Integrations:** QuickBooks and other integrations
+- **Audit Log:** System activity tracking
+
+## 🔐 Authentication
+
+Aequitas uses JWT-based authentication with role-based access control:
+
+- **Superuser:** Full system access
+- **Admin:** Company-level administration
+- **User:** Standard user access
+
+Default superuser credentials (change immediately):
+- Email: admin@aequitas.local
+- Password: admin123
+
+## 🤖 AI Features
+
+### Dexter - AI Accounting Assistant
+Dexter is an AI-powered assistant that helps with:
+- Account classification and mapping
+- Natural language queries about your chart of accounts
+- Intelligent suggestions for account organization
+
+### AI Organizer
+Automatic classification of uploaded accounts using:
+- **Ollama** (local, private)
+- **Cloudflare Workers AI** (edge-based)
+
+## 🔗 Integrations
+
+### QuickBooks Online
+- OAuth2-based authentication
+- Automatic account synchronization
+- Bidirectional data sync
+- Token refresh handling
+
+### Future Integrations
+- Xero
+- Sage
+- NetSuite
+- Custom API integrations
+
+## 📊 Master Chart of Accounts
+
+Aequitas includes a comprehensive US-GAAP master chart with:
+- **345 accounts** (7 headers + 338 details)
+- **Complete IFRS/US-GAAP compliance**
+- **AI-ready tags** for automatic categorization
+- **Vendor mappings** for 59 expense accounts
+- **Regulatory references** (IAS, IFRS, ASC)
+- **Professional descriptions** for all accounts
+
+See [MASTER_CHART.md](MASTER_CHART.md) for complete details.
+
+## 🛠️ Technology Stack
+
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development
+- **Tailwind CSS** for styling
+- **shadcn/ui** component library
+- **Tanstack Query** for data fetching
+- **React Router** for navigation
+- **Framer Motion** for animations
+
+### Backend
+- **FastAPI** (Python 3.11+)
+- **PostgreSQL** database
+- **SQLAlchemy** ORM
+- **Alembic** for migrations
+- **Pydantic** for validation
+- **JWT** authentication
+- **Ollama** for local AI
+- **Cloudflare Workers AI** for cloud AI
+
+### DevOps
+- **Docker** & **Docker Compose**
+- **GitHub Actions** for CI/CD
+- **PostgreSQL** containerized database
+
+## 📈 Roadmap
+
+### Phase 1: Core Accounting (Current)
+- [x] Dashboard and navigation
+- [x] Company management
+- [x] ChartForge module (complete)
+- [x] User authentication
+- [ ] User management UI
+- [ ] Simple CoA registration
+
+### Phase 2: Accountancy Module
+- [ ] Daily ledger / journal entries
+- [ ] Ledger accounts view
+- [ ] Trial balance
+- [ ] General ledger
+- [ ] Transaction management
+
+### Phase 3: Financial Reporting
+- [ ] Balance Sheet
+- [ ] Income Statement (P&L)
+- [ ] Cash Flow Statement
+- [ ] Custom report builder
+- [ ] Export center
+
+### Phase 4: Advanced Features
+- [ ] Multi-currency support
+- [ ] Budget management
+- [ ] Forecasting
+- [ ] Analytics dashboard
+- [ ] Mobile app
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
+
+## 📧 Support
+
+For questions, issues, or feature requests:
+- Open an issue on GitHub
+- Contact: support@aequitas.local
+
+## 🙏 Acknowledgments
+
+- **ChartForge:** The intelligent chart of accounts engine powering Aequitas
+- **shadcn/ui:** Beautiful and accessible component library
+- **FastAPI:** Modern, fast web framework for building APIs
+- **Ollama:** Local AI inference engine
+
+---
+
+**Aequitas** - *Fairness and Justice in Accounting* ⚖️
+
+Built with ❤️ for accountants, by developers who care about financial accuracy.

@@ -1,0 +1,220 @@
+You are updating the ChartForge project.  
+You must fix and enhance the Companies module and fully implement the AI agent “Dexter”.
+
+Your tasks are divided into 3 major parts:
+
+═════════════════════════════════════════════════
+1) COMPLETE REWORK OF THE COMPANY MODULE (CRUD)
+═════════════════════════════════════════════════
+
+Current situation:
+- Companies can be created but cannot be edited properly.
+- Deletion does not work and is not desirable. We need INACTIVATION.
+- The UCID system works, but the lifecycle must be improved.
+- The current UI uses a side-panel for editing, which is insufficient.
+- There is no protection against accidental inactivation.
+
+► Replace DELETE with a complete SOFT-INACTIVATION workflow.
+
+Required backend changes:
+
+### BACKEND — FASTAPI + SQLAlchemy
+Implement:
+- POST /companies → create company
+- GET /companies → list (filter active/inactive)
+- GET /companies/{ucid}
+- PUT /companies/{ucid} → update
+- PATCH /companies/{ucid}/inactivate
+- PATCH /companies/{ucid}/activate
+- Add a required confirmation step:
+  Endpoint must require:
+      { "confirmation": "<company_name>" }
+  If names do not match → fail (400).
+- Soft delete fields:
+    is_active: bool = True
+    inactivated_at: datetime | null
+    inactivated_by: user_id | null
+- UCID rules:
+  - UCID remains reserved for the same normalized name.
+  - Reactivation reuses the same UCID.
+  - If the legal name changes, generate a new UCID only if it is a *different company*, not a reactivation.
+
+### FRONTEND — SvelteKit
+Implement a complete UX overhaul:
+
+1. Replace inline edit panel with:
+   - A modal popup (“Edit Company”)
+   - Tabs inside modal: Basic / Contact / Additional
+   - Save/Cancel buttons
+   - Validation using zod
+
+2. Add “Inactivate Company” workflow:
+   - Clicking the icon opens a modal:
+        “To inactivate this company, type the company name:”
+        - Input field
+        - If match → enable Confirm
+   - Show warnings:
+        - If Master Chart exists
+        - If mappings exist
+        - If QuickBooks sync configured
+        - If snapshots or imports depend on it
+
+3. Add “Activate Company” workflow:
+   - Same modal confirmation
+
+4. Improve company list UI:
+   - Active and Inactive tabs
+   - Each company card shows:
+       • UCID  
+       • Industry  
+       • Email  
+       • Description  
+       • Status badges (“Active”, “Inactive”)  
+       • Actions: View | Edit | Inactivate/Activate
+
+5. Add toast notifications for every action.
+
+6. Add audit indicators:
+   “Last updated by ___ on ___”
+   “Inactivated on ___ by ___”
+
+═════════════════════════════════════════════════
+2) COMPLETE IMPLEMENTATION OF THE “DEXTER” AI AGENT
+═════════════════════════════════════════════════
+
+Dexter currently exists only visually.  
+You must implement the ENTIRE logic behind the agent:
+
+-------------------------------------------------
+A) PASSIVE MODE (LEARNING ENGINE)
+-------------------------------------------------
+
+Dexter must:
+- Learn the company’s Master Chart
+- Learn mappings, ledger imports, QuickBooks data
+- Learn recurring patterns:
+    vendor → account  
+    contract → account  
+    description patterns  
+    amount patterns  
+- Build embeddings using the configured Ollama model:
+    qwen2.5-coder:1.5b-base  
+  (loaded from .env variables)
+- Maintain a per-company vector index
+- Be triggered automatically on data import or user classification
+
+Implement:
+
+### Backend requirements:
+
+Create service:
+`app/ai/learning_engine.py`
+with methods:
+- ingest_master_chart(ucid)
+- ingest_mappings(ucid)
+- ingest_ledger(ucid)
+- rebuild_embeddings(ucid)
+- get_company_knowledge(ucid)
+
+Store embeddings:
+- Prefer pgvector, fallback to a local vector DB (Chroma or DuckDB).
+- Maintain metadata: source, account, confidence, last_seen, company_ucid.
+
+Add background tasks using:
+- FastAPI BackgroundTasks OR Celery (if available)
+- Rebuild embeddings on-demand or scheduled.
+
+-------------------------------------------------
+B) ACTIVE MODE (ASSISTANT)
+-------------------------------------------------
+
+Dexter must:
+- Respond to chat
+- Suggest accounts for new transactions
+- Generate charts (JSON encoded + frontend rendering)
+- Generate PDF or Excel reports
+- Provide explanations for account selection
+- Answer natural-language queries:
+      “Show me expenses by category”
+      “Which vendors map to account 6100?”
+      “Summarize last month’s imports”
+
+Endpoints required:
+- POST /ai/chat
+- POST /ai/suggest
+- POST /ai/generate/chart
+- POST /ai/generate/report
+- GET  /ai/context/{ucid}
+
+Dexter must use:
+- Company embeddings
+- Master Chart relationships
+- Historical behavior patterns
+- System heuristics
+
+-------------------------------------------------
+C) FRONTEND CHAT WIDGET
+-------------------------------------------------
+
+Complete the floating widget with:
+- Open/close animation
+- Message history (localStorage + server-side save optional)
+- Quick action buttons:
+    • “Explain this account”
+    • “Suggest account”
+    • “Generate chart”
+    • “Generate report”
+- Auto-scroll
+- Feedback loading indicators
+- Dark/light mode support
+
+═════════════════════════════════════════════════
+3) QUALITY IMPROVEMENTS, STABILITY, CONSISTENCY
+═════════════════════════════════════════════════
+
+Add the following:
+
+### A) Event Logging (Audit Trail)
+Create table:
+audit_log:
+    id
+    timestamp
+    user_id
+    action
+    entity_type (“company”, “mapping”, etc.)
+    entity_id/ucid
+    payload_json
+
+Log events for:
+- Company create
+- Company update
+- Company inactivate
+- Company activate
+- AI actions (suggestions, reports, chat requests)
+- Sync operations
+
+### B) Error visibility
+- Show descriptive errors in toasts
+- Backend must return structured errors:
+    { "error": "Invalid confirmation", "expected": "MARAVILLA CLEANERS" }
+
+### C) Caching
+- Cache company list and AI context in frontend
+- Revalidate on update
+
+═════════════════════════════════════════════════
+OUTPUT REQUIREMENTS
+═════════════════════════════════════════════════
+
+Your output MUST contain:
+1. Updated backend code (FastAPI + models + migrations + services)
+2. Updated frontend components and pages (SvelteKit)
+3. New modal components for edit/inactivate/reactivate
+4. Full Dexter AI logic (backend + frontend chat)
+5. Learning Engine architecture
+6. API documentation (OpenAPI + README)
+7. Tests for all new features
+8. Refactoring suggestions if needed
+
+Everything must be production-grade, consistent with existing project architecture, and ready to run via docker-compose.
+
