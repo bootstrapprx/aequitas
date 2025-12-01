@@ -21,11 +21,29 @@ export interface MasterAccountNode extends MasterAccount {
 }
 
 export interface MasterChartStats {
-    total_accounts: number;
-    header_count: number;
-    detail_count: number;
-    max_depth: number;
-    orphans: number;
-    missing_parents: string[];
-    needs_rebuild: boolean;
+  total_accounts: number;
+  header_count: number;
+  detail_count: number;
+  max_depth: number;
+  orphans: number;
+  missing_parents: string[];
+  needs_rebuild: boolean;
+}
+
+// Extended types for analytics and filtering
+export interface MasterAccountExtended extends MasterAccount {
+  tags?: string[];
+  normal_balance?: 'Debit' | 'Credit';
+  fs_mapping?: string;
+  subcategory?: string;
+}
+
+export type ViewMode = 'tree' | 'list' | 'cards';
+
+export interface FilterState {
+  search: string;
+  category: string;
+  type: 'H' | 'D' | 'all';
+  normalBalance: 'Debit' | 'Credit' | 'all';
+  tags: string[];
 }

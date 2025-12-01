@@ -24,7 +24,7 @@ import UsersListPage from "./pages/registration/users/UsersListPage";
 import SimpleCoAPage from "./pages/registration/coa/SimpleCoAPage";
 
 // ChartForge Module (formerly masterchart)
-import MasterChartPage from "./pages/masterchart/MasterChartPage";
+import MasterChartDashboard from "./pages/masterchart/MasterChartDashboard";
 import MasterChartTreePage from "./pages/masterchart/MasterChartTreePage";
 import MasterChartInteractivePage from "./pages/masterchart/MasterChartInteractivePage";
 import MasterChartImportPage from "./components/integrations/masterchart/MasterChartImportPage";
@@ -74,7 +74,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
-              
+
               {/* Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
@@ -98,7 +98,7 @@ const App = () => (
                 <Route path="registration/coa" element={<SimpleCoAPage />} />
 
                 {/* ChartForge Module */}
-                <Route path="chartforge/masterchart" element={<MasterChartPage />} />
+                <Route path="chartforge/masterchart" element={<MasterChartDashboard />} />
                 <Route path="chartforge/masterchart/tree" element={<MasterChartTreePage />} />
                 <Route path="chartforge/masterchart/interactive" element={<MasterChartInteractivePage />} />
                 <Route path="chartforge/masterchart/import" element={<MasterChartImportPage />} />
@@ -124,7 +124,7 @@ const App = () => (
                 <Route path="admin/audit" element={<AuditLogPage />} />
 
                 {/* Legacy Routes (backward compatibility) */}
-                <Route path="masterchart" element={<MasterChartPage />} />
+                <Route path="masterchart" element={<MasterChartDashboard />} />
                 <Route path="masterchart/tree" element={<MasterChartTreePage />} />
                 <Route path="masterchart/interactive" element={<MasterChartInteractivePage />} />
                 <Route path="masterchart/import" element={<MasterChartImportPage />} />
