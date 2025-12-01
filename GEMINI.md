@@ -1,116 +1,116 @@
-# ChartForge Project Overview
+# Aequitas Code Project
 
-This document provides a comprehensive overview of the ChartForge project, intended as a technical context for AI-driven development tasks.
+## Project Overview
 
-## 1. Project Summary
+**Aequitas** is a complete accounting system featuring intelligent chart of accounts management (powered by ChartForge), financial reporting, and integrated bookkeeping. Built with a modern React frontend and powerful FastAPI backend, Aequitas provides a seamless experience for managing your company's financial operations.
 
-ChartForge is a full-stack web application designed for managing and mapping Charts of Accounts (COA). It allows users to upload their COA, map it to a master chart, and integrate with financial software like QuickBooks. The system features a sophisticated backend with a newly added AI-powered "Organizer" module for intelligent classification of accounting descriptions.
+**Frontend:**
+- **Framework:** React 18 with TypeScript
+- **Build Tool:** Vite
+- **Styling:** Tailwind CSS with shadcn/ui component library
+- **Data Fetching:** Tanstack Query
+- **Routing:** React Router
 
-- **Frontend:** A modern, responsive UI built with **React**, **Vite**, **TypeScript**, and styled with **Tailwind CSS** and **shadcn/ui**.
-- **Backend:** A robust API built with **Python**, **FastAPI**, and **SQLAlchemy** for the ORM.
-- **Database:** **PostgreSQL**, managed via SQLAlchemy models.
-- **AI Features:** An "Organizer AI" module uses a local **Ollama** model for classifying accounting data, featuring a learning engine that improves through user feedback.
-- **Containerization:** The entire backend and database stack is containerized with **Docker** and **Docker Compose** for easy setup and consistent development environments.
+**Backend:**
+- **Framework:** FastAPI (Python 3.11+)
+- **Database:** PostgreSQL with SQLAlchemy ORM
+- **Authentication:** JWT-based authentication
+- **AI Features:**
+    - Local AI with Ollama
+    - Cloud AI with Cloudflare Workers AI
+
+**DevOps:**
+- **Containerization:** Docker & Docker Compose, Nginx, Cloudflare Tunnel
+- **CI/CD:** GitHub Actions
 - **Repository:** [https://github.com/bootstrapprx/Aequitas](https://github.com/bootstrapprx/Aequitas)
 
-## 2. Key Technologies
+## Building and Running
 
-| Area      | Technology                                                              |
-| :-------- | :---------------------------------------------------------------------- |
-| **Frontend**  | React, Vite, TypeScript, Tailwind CSS, shadcn/ui, TanStack Query, React Router |
-| **Backend**   | FastAPI, Python, Uvicorn, SQLAlchemy, Pydantic, Pandas, Alembic         |
-| **Database**  | PostgreSQL                                                              |
-| **AI**        | Ollama, httpx, python-thefuzz                                           |
-| **DevOps**    | Docker, Docker Compose, Nginx, Cloudflare Tunnel                        |
-| **Auth**      | python-jose, passlib, requests-oauthlib (for QBO)                       |
+### Docker (Recommended)
 
-## 3. How to Build and Run (Unified Dev Mode)
-
-The project now supports a "Unified Dev Mode" for streamlined development. This mode runs the frontend on the host machine with hot-reloading, while the backend, PostgreSQL, and Ollama run in Docker containers.
-
-### Prerequisites
-
-*   **Docker**: Ensure Docker Desktop or Docker Engine is installed and running.
-*   **`make`**: A build automation tool, commonly available on Unix-like systems.
-*   **`npm`**: Node Package Manager, typically installed with Node.js.
-*   **Frontend Dependencies**: Install Node.js dependencies in the `frontend` directory.
+1.  **Start all services:**
     ```bash
-    cd frontend
-    npm install
+    make dev
     ```
 
-### Starting the Development Environment
+2.  **Access the application:**
+    - Frontend: http://localhost:5173
+    - Backend API: http://localhost:8000
+    - API Documentation: http://localhost:8000/docs
 
-From the project root directory, run the unified development command:
+3.  **Stop all services:**
+    ```bash
+    make stop
+    ```
+
+4.  **Reset the database:**
+    ```bash
+    make reset-db
+    ```
+
+5.  **View logs:**
+    ```bash
+    make logs
+    ```
+
+### Local Development
+
+#### Backend
 
 ```bash
-make dev
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Alternatively, you can use the `npm` script:
+#### Frontend
 
 ```bash
-npm run dev
+cd frontend
+pnpm install
+pnpm dev
 ```
 
-This command will:
-*   Start the Backend, Frontend, PostgreSQL, and Ollama Docker containers in the background.
-*   The Backend container mounts the local code for hot-reloading.
-*   The Frontend container mounts the local code for hot-reloading and is accessible at `http://localhost:5173`.
+## Development Conventions
 
-### Accessing Services
+- **Linting:**
+    - **Frontend:** `pnpm lint` in the `frontend` directory.
+- **Testing:**
+    - **Backend:**
+        ```bash
+        cd backend
+        python3 -m venv venv
+        source venv/bin/activate
+        python3 -m pip install -r requirements.txt
+        python3 -m pip install -r requirements-dev.txt
+        pytest
+        ```
+    - **Frontend:**
+        - TODO: No testing commands were found.
 
-*   **Frontend**: `http://localhost:5173`
-*   **Backend API**: `http://localhost:8000`
-*   **Ollama API**: `http://localhost:11434`
-*   **PostgreSQL**: Connect using a database client on `localhost:5432`.
+## Database Schema
 
-### Managing Development Services
+The database schema is defined using SQLAlchemy in the `backend/app/db/models` directory. Here are some of the key models:
 
-The `Makefile` provides additional commands for managing the development environment:
-
-*   `make stop`: Stops all running development services (Docker containers, backend, and frontend processes).
-*   `make reset-db`: Stops and removes the PostgreSQL container, then restarts it, effectively resetting the development database.
-*   `make logs`: Follows the logs of the Docker services (PostgreSQL and Ollama).
-
-## 4. Development Conventions
-
--   **Modular Structure:** The backend is organized by features, with API endpoints, services, schemas, and database models separated into distinct modules (e.g., `companies`, `masterchart`, `organizer_ai`).
--   **Automatic DB Migration:** The backend uses `Base.metadata.create_all(bind=engine)` on startup. This means any new SQLAlchemy models imported into `app/main.py` will have their corresponding tables automatically created or updated in the database. This is convenient for development but may require `alembic` for production migrations.
--   **Type Hinting:** The Python backend and TypeScript frontend make extensive use of type hints for better code quality and maintainability.
--   **Dependency Management:** Backend dependencies are managed with `pip` and `requirements.txt`. Frontend dependencies are managed with `npm` and `package.json`.
--   **Configuration:** Both frontend and backend use `.env` files for environment-specific configuration.
--   **API Versioning:** The API is versioned under the `/api/v1` prefix.
--   **UI Components:** The frontend heavily utilizes `shadcn/ui`, which is a collection of reusable UI components built on Radix UI and Tailwind CSS. When adding new UI, prefer composing existing `shadcn/ui` components.
-
-## 5. Backend Modules Overview
-
-### 5.1. Organizer AI Module
-
-This module provides intelligent classification of accounting descriptions using a local Ollama model and a learning engine.
-
--   **Location:** `backend/app/services/organizer_ai/`
--   **Key Components:**
-    -   `model.py`: Handles interaction with the Ollama LLM.
-    -   `prompts.py`: Defines the system and few-shot prompts for the LLM.
-    -   `classifier.py`: Orchestrates the classification process using static rules, memory, and LLM inference.
-    -   `memory.py`: Manages a database-backed memory of confirmed classifications for continuous learning.
-    -   `learning_rules.py`: Generates and applies dynamic rules based on user feedback.
-    -   `feedback.py`: Processes user confirmations and rejections of classifications.
-    -   `router.py`: Exposes API endpoints for classification, ingestion, and feedback.
--   **Database Models:** `OrganizerMemory`, `OrganizerRule` (in `app/db/models/`).
--   **Environment Variables:** `ORGANIZER_MODEL_NAME`, `OLLAMA_BASE_URL`, `ORGANIZER_MAX_FEWSHOT`.
-
-### 5.2. Automatic Code Generator Module
-
-This module provides an enterprise-grade system for automatically generating hierarchical Master Chart of Accounts codes.
-
--   **Location:** `backend/app/services/code_generator/`
--   **Key Components:**
-    -   `patterns.py`: Defines the `CodePattern` class for parsing and validating code structures (e.g., "X.XX.XX").
-    -   `validator.py`: Validates code structure and detects conflicts with existing accounts.
-    -   `generator.py`: The core logic for generating the next available root or child codes based on the active pattern and existing hierarchy.
-    -   `exceptions.py`: Custom exceptions for robust error handling within the module.
-    -   `router.py`: Exposes API endpoints for generating and validating codes.
--   **Integration:** Integrated with `masterchart_service.py` to auto-generate codes when creating new accounts.
--   **Environment Variables:** `CODE_PATTERN`, `CODE_SEPARATOR`, `CODE_SEGMENT_PAD`, `CODE_MAX_LEVEL`.
+-   **User:** Represents a user of the system.
+    -   Has a many-to-many relationship with the `Company` model through the `UserCompany` association table.
+-   **Company:** Represents a company that is being managed by the system.
+    -   Has a one-to-many relationship with the `CompanyAccount` model.
+    -   Has a many-to-many relationship with the `User` model through the `UserCompany` association table.
+-   **CompanyAccount:** Represents a single account in a company's chart of accounts.
+    -   Belongs to a single `Company`.
+-   **MasterAccount:** Represents a single account in the master chart of accounts.
+-   **AccountMapping:** Represents the mapping between a company account and a master account.
+-   **UserCompany:** A many-to-many table that links users and companies.
+-   **QBOToken:** Stores OAuth2 tokens for QuickBooks Online integration.
+-   **Snapshot:** Stores a snapshot of a company's chart of accounts at a particular point in time.
+-   **Template:** Stores a reusable chart of accounts template.
+-   **AuditLog:** Stores a log of all actions that are performed in the system.
+-   **SystemSettings:** Stores system-wide settings.
+-   **OrganizerMemory:** Stores the memory of the AI organizer.
+-   **OrganizerRules:** Stores the rules that are used by the AI organizer.
+-   **Embedding:** Stores embeddings for the AI organizer.
+-   **UserDatabaseConfig:** Stores database configurations for users.
