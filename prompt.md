@@ -1,407 +1,262 @@
-postgres | 2025-12-01 14:13:30.428 | 
-postgres | 2025-12-01 14:13:30.428 | PostgreSQL Database directory appears to contain a database; Skipping initialization
-postgres | 2025-12-01 14:13:30.428 | 
-ollama   | 2025-12-01 14:13:30.518 | time=2025-12-01T18:13:30.516Z level=INFO source=routes.go:1544 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:4096 OLLAMA_DEBUG:INFO OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
-ollama   | 2025-12-01 14:13:30.519 | time=2025-12-01T18:13:30.519Z level=INFO source=images.go:522 msg="total blobs: 0"
-ollama   | 2025-12-01 14:13:30.519 | time=2025-12-01T18:13:30.519Z level=INFO source=images.go:529 msg="total unused blobs removed: 0"
-ollama   | 2025-12-01 14:13:30.520 | time=2025-12-01T18:13:30.520Z level=INFO source=routes.go:1597 msg="Listening on [::]:11434 (version 0.13.0)"
-ollama   | 2025-12-01 14:13:30.523 | time=2025-12-01T18:13:30.522Z level=INFO source=runner.go:67 msg="discovering available GPUs..."
-ollama   | 2025-12-01 14:13:30.526 | time=2025-12-01T18:13:30.526Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 33907"
-postgres | 2025-12-01 14:13:30.627 | 2025-12-01 18:13:30.626 UTC [1] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
-postgres | 2025-12-01 14:13:30.630 | 2025-12-01 18:13:30.630 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-postgres | 2025-12-01 14:13:30.630 | 2025-12-01 18:13:30.630 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-postgres | 2025-12-01 14:13:30.635 | 2025-12-01 18:13:30.635 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-ollama   | 2025-12-01 14:13:30.640 | time=2025-12-01T18:13:30.640Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 36405"
-postgres | 2025-12-01 14:13:30.649 | 2025-12-01 18:13:30.646 UTC [28] LOG:  database system was interrupted; last known up at 2025-12-01 18:01:56 UTC
-ollama   | 2025-12-01 14:13:30.707 | time=2025-12-01T18:13:30.706Z level=INFO source=runner.go:102 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
-ollama   | 2025-12-01 14:13:30.707 | time=2025-12-01T18:13:30.707Z level=INFO source=types.go:60 msg="inference compute" id=cpu library=cpu compute="" name=cpu description=cpu libdirs=ollama driver="" pci_id="" type="" total="1.8 GiB" available="1.7 GiB"
-ollama   | 2025-12-01 14:13:30.707 | time=2025-12-01T18:13:30.707Z level=INFO source=routes.go:1638 msg="entering low vram mode" "total vram"="0 B" threshold="20.0 GiB"
-postgres | 2025-12-01 14:13:30.840 | 2025-12-01 18:13:30.840 UTC [28] LOG:  database system was not properly shut down; automatic recovery in progress
-postgres | 2025-12-01 14:13:30.846 | 2025-12-01 18:13:30.845 UTC [28] LOG:  redo starts at 0/19D90C8
-postgres | 2025-12-01 14:13:30.846 | 2025-12-01 18:13:30.846 UTC [28] LOG:  invalid record length at 0/19D9100: wanted 24, got 0
-postgres | 2025-12-01 14:13:30.846 | 2025-12-01 18:13:30.846 UTC [28] LOG:  redo done at 0/19D90C8 system usage: CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s
-postgres | 2025-12-01 14:13:30.855 | 2025-12-01 18:13:30.855 UTC [26] LOG:  checkpoint starting: end-of-recovery immediate wait
-postgres | 2025-12-01 14:13:30.870 | 2025-12-01 18:13:30.869 UTC [26] LOG:  checkpoint complete: wrote 3 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.002 s, total=0.019 s; sync files=2, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB
-postgres | 2025-12-01 14:13:30.884 | 2025-12-01 18:13:30.883 UTC [1] LOG:  database system is ready to accept connections
-frontend | 2025-12-01 14:13:31.746 | 
-frontend | 2025-12-01 14:13:31.746 | > aequitas@0.0.0 dev
-frontend | 2025-12-01 14:13:31.746 | > vite --host
-frontend | 2025-12-01 14:13:31.746 | 
-backend  | 2025-12-01 14:13:31.956 | INFO:     Will watch for changes in these directories: ['/app']
-backend  | 2025-12-01 14:13:31.956 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-backend  | 2025-12-01 14:13:31.957 | INFO:     Started reloader process [1] using WatchFiles
-frontend | 2025-12-01 14:13:32.365 | 
-frontend | 2025-12-01 14:13:32.365 |   VITE v7.2.4  ready in 544 ms
-frontend | 2025-12-01 14:13:32.365 | 
-frontend | 2025-12-01 14:13:32.366 |   ➜  Local:   http://localhost:5173/
-frontend | 2025-12-01 14:13:32.366 |   ➜  Network: http://172.18.0.5:5173/
-backend  | 2025-12-01 14:13:37.189 | ✓ Superuser admin@chartforge.com already exists
-backend  | 2025-12-01 14:13:37.200 | 
-backend  | 2025-12-01 14:13:37.200 | ============================================================
-backend  | 2025-12-01 14:13:37.200 | INITIALIZING MASTER CHART OF ACCOUNTS
-backend  | 2025-12-01 14:13:37.200 | ============================================================
-backend  | 2025-12-01 14:13:37.204 | Loading enriched master chart from /app/app/data/enriched_master_chart.csv...
-backend  | 2025-12-01 14:13:37.220 | Found 345 accounts in CSV...
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 20000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 30000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 40000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 50000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 60000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 80000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10069: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10138: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10207: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10276: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10345: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10414: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10483: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10552: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10621: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10690: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10759: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10828: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10897: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 10966: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11035: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11104: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11173: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11242: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11311: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11380: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11449: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11518: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11587: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11656: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11725: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11794: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11863: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 11932: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12001: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12070: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12139: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12208: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12277: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12346: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12415: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12484: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12553: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12622: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12691: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12760: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12829: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12898: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 12967: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13036: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13105: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13174: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13243: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13312: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13381: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13450: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13519: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13588: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13657: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13726: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13795: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13864: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 13933: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14002: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14071: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14140: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14209: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14278: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14347: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14416: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14485: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14554: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14623: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14692: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14761: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.221 |   Error loading account 14830: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 14899: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 14968: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15037: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15106: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15175: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15244: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15313: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15382: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15451: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15520: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15589: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15658: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15727: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15796: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15865: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 15934: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16003: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16072: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16141: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16210: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16279: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16348: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16417: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16486: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16555: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16624: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16693: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16762: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16831: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16900: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 16969: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17038: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17107: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17176: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17245: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17314: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17383: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17452: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17521: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17590: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17659: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17728: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17797: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17866: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 17935: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18004: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18073: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18142: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18211: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18280: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18349: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18418: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18487: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18556: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18625: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18694: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18763: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18832: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18901: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 18970: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19039: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19108: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19177: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19246: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19315: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19384: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19453: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19522: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19591: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19660: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19729: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19798: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 19867: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 50000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 50227: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 50454: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 50681: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 50908: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 51135: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 51362: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 51589: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 51816: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 52043: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 52270: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 52497: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 52724: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 52951: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 53178: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 53405: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 53632: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 53859: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 54086: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 54313: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 54540: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 54767: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 54994: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 55221: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 55448: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 55675: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 55902: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 56129: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 56356: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 56583: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 56810: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 57037: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 57264: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 57491: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 57718: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.222 |   Error loading account 57945: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 58172: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 58399: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 58626: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 58853: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 59080: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 59307: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 59534: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 59761: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 30000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 30624: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 31248: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 31872: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 32496: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 33120: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 33744: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 34368: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 34992: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 35616: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 36240: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 36864: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 37488: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 38112: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 38736: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 39360: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60166: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60332: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60498: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60664: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60830: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 60996: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61162: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61328: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61494: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61660: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61826: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 61992: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62158: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62324: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62490: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62656: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62822: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 62988: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63154: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63320: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63486: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63652: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63818: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 63984: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64150: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64316: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64482: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64648: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64814: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 64980: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65146: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65312: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65478: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65644: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65810: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 65976: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66142: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66308: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66474: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66640: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66806: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 66972: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67138: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67304: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67470: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67636: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67802: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 67968: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68134: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68300: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68466: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68632: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68798: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 68964: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 69130: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 69296: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 69462: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 69628: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 69794: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20178: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20356: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20534: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20712: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 20890: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21068: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21246: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21424: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21602: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21780: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 21958: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 22136: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 22314: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 22492: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 22670: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 22848: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 23026: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 23204: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.223 |   Error loading account 23382: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 23560: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 23738: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 23916: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24094: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24272: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24450: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24628: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24806: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 24984: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 25162: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 25340: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 25518: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 25696: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 25874: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26052: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26230: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26408: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26586: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26764: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 26942: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 27120: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 27298: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 27476: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 27654: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 27832: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28010: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28188: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28366: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28544: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28722: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 28900: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 29078: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 29256: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 29434: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 29612: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 29790: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 80000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 81999: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 83998: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 85997: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 87996: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 40000: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 40769: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 41538: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 42307: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 43076: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 43845: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 44614: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 45383: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 46152: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 46921: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 47690: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 48459: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   Error loading account 49228: time data '' does not match format '%Y-%m-%d'
-backend  | 2025-12-01 14:13:37.224 |   First pass complete: 0 accounts loaded, 345 skipped
-backend  | 2025-12-01 14:13:37.224 |   Setting parent relationships...
-backend  | 2025-12-01 14:13:37.481 |   Set 0 parent relationships
-backend  | 2025-12-01 14:13:37.481 | 
-backend  | 2025-12-01 14:13:37.481 | ✓ Successfully loaded 0 accounts
-backend  | 2025-12-01 14:13:37.488 | ✗ Error initializing Master Chart: 'Session' object has no attribute 'func'
-backend  | 2025-12-01 14:13:37.488 |   You can manually load it by running:
-backend  | 2025-12-01 14:13:37.488 |   python -m app.data.seed_enriched_master_chart
-backend  | 2025-12-01 14:13:37.488 | ============================================================
-backend  | 2025-12-01 14:13:37.488 | 
-backend  | 2025-12-01 14:13:37.559 | INFO:     Started server process [8]
-backend  | 2025-12-01 14:13:37.559 | INFO:     Waiting for application startup.
-backend  | 2025-12-01 14:13:37.559 | INFO:     Application startup complete.
-backend  | 2025-12-01 14:14:01.649 | INFO:     172.18.0.1:60754 - "OPTIONS /api/v1/masterchart/stats HTTP/1.1" 200 OK
-backend  | 2025-12-01 14:14:01.674 | INFO:     172.18.0.1:60754 - "GET /api/v1/masterchart/stats HTTP/1.1" 200 OK
-backend  | 2025-12-01 14:14:06.395 | INFO:     172.18.0.1:60754 - "GET /api/v1/masterchart/stats HTTP/1.1" 200 OK
-postgres | 2025-12-01 14:18:30.941 | 2025-12-01 18:18:30.941 UTC [26] LOG:  checkpoint starting: time
-postgres | 2025-12-01 14:18:34.101 | 2025-12-01 18:18:34.100 UTC [26] LOG:  checkpoint complete: wrote 32 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=3.133 s, sync=0.016 s, total=3.160 s; sync files=27, longest=0.014 s, average=0.001 s; distance=112 kB, estimate=112 kB
+REBUILD THE MASTER CHART (PREMIUM VERSION)
+🎯 Goal
+
+Restore and significantly enhance the Master Chart Dashboard inside the ChartForge module of Aequitas.
+The new page must be modern, visually rich, analytics-driven, and far superior to the previous layout — including tree, list, and card views, with premium UI components.
+
+1. Create a premium layout for the Master Chart Dashboard
+
+Design a new Master Chart Dashboard page with:
+
+Header
+
+Large title: Master Chart Dashboard
+
+Subtitle showing the active template or database view
+
+Right-aligned actions:
+
+“Interactive Editor”
+
+“View Tree”
+
+“Add Account”
+
+Optional breadcrumbs
+
+Smooth motion transitions (Framer Motion)
+
+2. Rebuild KPI cards (analytics summary)
+
+Create a metrics panel showing:
+
+Total Accounts
+
+Header Accounts
+
+Detail Accounts
+
+Orphan Accounts
+
+Categories
+
+Unique Tags
+
+Visual requirements:
+
+rounded-2xl
+
+shadow-lg shadow-black/20
+
+Icons using lucide-react inside soft gradient circles
+
+Bold numbers (text-3xl font-bold)
+
+Secondary label text (text-sm text-muted-foreground)
+
+Subtle hover/entry animations (motion.div)
+
+This KPI bar should be significantly more modern and premium than the previous version.
+
+3. Add an “Analytics & Insights” section with charts
+
+Insert a full analytics block below the KPIs.
+
+Use Recharts to create:
+
+Chart 1 — Account Types Distribution
+
+Pie chart
+
+Counts of: Assets, Liabilities, Equity, Revenue, Expense
+
+Chart 2 — Categories Breakdown
+
+Horizontal bar chart
+
+Shows how accounts are distributed across categories
+
+Chart 3 — Hierarchy Depth
+
+Bar chart showing number of header levels vs detail items
+
+Helps visualize structural density
+
+Charts should:
+
+Use the default theme colors
+
+Animate on load
+
+Have tooltips and labels
+
+Fit inside responsive cards (rounded-xl border shadow)
+
+4. Add a Notion-style view selector
+
+Implement a modern segmented control with:
+
+[ Tree View ] [ List View ] [ Cards View ]
+
+
+Each tab switches the central content area.
+
+5. Implement each view
+A. Tree View (hierarchical)
+
+Collapsible tree structure
+
+Clean indentation
+
+Icons for header/detail
+
+Actions per node:
+
+Add Child
+
+Edit
+
+Delete
+
+View Details
+
+Smooth collapse/expand animations
+
+B. List View (spreadsheet-like)
+
+DataTable using shadcn/ui
+
+Columns:
+
+Code
+
+Name
+
+Type
+
+Category
+
+Normal Balance
+
+Tags
+
+Status
+
+Actions
+
+Features:
+
+Fuzzy search
+
+Column sorting
+
+Resizable columns
+
+Sticky header
+
+Pagination
+
+C. Cards View (portfolio-style)
+
+Grid of cards
+
+Each card displays:
+
+Code (large)
+
+Name
+
+Type + category badges
+
+Tag chips
+
+Parent header info
+
+Action buttons
+
+Card design:
+
+rounded-2xl
+
+shadow-lg
+
+Hover lift (-translate-y-1)
+
+Motion fade-in
+
+6. Add a right-side “Account Details Panel”
+
+When selecting an account in any view, open a side panel:
+
+Tabs: Overview / Structure / Rollups / Categories / Tags / History
+
+Show metadata, children, and related accounts
+
+Keep the panel collapsible or slide-over (Dialog or Sheet)
+
+7. Filtering Bar (top of page)
+
+Recreate an advanced filter bar:
+
+Fuzzy search
+
+Category filter
+
+Type filter
+
+Normal Balance filter
+
+Tags filter
+
+“Reset Filters” button
+
+Use shadcn/ui components with:
+
+flex gap-4 items-center
+
+rounded-xl border px-4 py-3
+
+8. Visual Style Requirements (Premium)
+
+Follow these principles:
+
+Spacing similar to QuickBooks / Linear:
+
+Page: p-8 md:p-10
+
+Sections: mt-8
+
+Large rounded surfaces (rounded-2xl)
+
+Soft shadows (shadow-xl)
+
+Dark theme optimization
+
+Smooth transitions for all interactions
+
+Consistent typography scale:
+
+Title: text-3xl font-semibold
+
+Subtitles: text-lg text-muted-foreground
+
+Body: text-sm or text-base
+
+9. Keep backend integration exactly as is
+
+Do not modify endpoints or backend logic.
+Only improve the UI, design, layout, and React structure.
+
+10. Acceptance Criteria
+
+The Master Chart page looks significantly more modern than the previous version.
+
+Multiple visualization modes (tree, list, cards) are implemented and functional.
+
+Analytics charts are rendered and responsive.
+
+KPI cards are premium-grade.
+
+All existing functionality (search, filters, detail view, actions) continues working.
+
+No loss of data, no breaking changes.
