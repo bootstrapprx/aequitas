@@ -23,6 +23,7 @@ import json
 import csv
 from datetime import datetime
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.db.models.master_account import MasterAccount
 from app.db.session import SessionLocal
 import os
@@ -72,8 +73,19 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
     
     for account_data in accounts_data:
         try:
+            # Skip duplicates
+            if account_data['code'] in code_to_id_map:
+                print(f"  Skipping duplicate account code: {account_data['code']}")
+                continue
+
             # Parse dates
-            start_date = datetime.strptime(account_data['start_date'], '%Y-%m-%d').date()
+            start_date_str = account_data.get('start_date', '').strip()
+            if start_date_str:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            else:
+                # Default to 2024-01-01 if start_date is missing
+                start_date = datetime(2024, 1, 1).date()
+
             end_date = None
             if account_data.get('end_date') and account_data['end_date'].strip():
                 end_date = datetime.strptime(account_data['end_date'], '%Y-%m-%d').date()
@@ -103,8 +115,8 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
                 description=account_data['description'],
                 start_date=start_date,
                 end_date=end_date,
-                type=account_data['type'],
-                level=int(account_data['level']),
+                type='H' if account_data['type'] == 'Header' else 'D',
+                level=int(account_data.get('level', 0)),  # Default to 0 if missing
                 category=account_data['category'],
                 notes=account_data.get('notes'),
                 parent_code=account_data.get('parent_code') if account_data.get('parent_code') else None,
@@ -161,7 +173,7 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
     details = db.query(MasterAccount).filter(MasterAccount.type == 'D').count()
     
     # Count by category
-    categories = db.query(MasterAccount.category, db.func.count(MasterAccount.id)).group_by(MasterAccount.category).all()
+    categories = db.query(MasterAccount.category, func.count(MasterAccount.id)).group_by(MasterAccount.category).all()
     
     # Count accounts with vendors
     with_vendors = db.query(MasterAccount).filter(MasterAccount.default_vendors.isnot(None)).count()
