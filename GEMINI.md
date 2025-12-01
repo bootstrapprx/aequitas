@@ -11,6 +11,7 @@ ChartForge is a full-stack web application designed for managing and mapping Cha
 - **Database:** **PostgreSQL**, managed via SQLAlchemy models.
 - **AI Features:** An "Organizer AI" module uses a local **Ollama** model for classifying accounting data, featuring a learning engine that improves through user feedback.
 - **Containerization:** The entire backend and database stack is containerized with **Docker** and **Docker Compose** for easy setup and consistent development environments.
+- **Repository:** [https://github.com/bootstrapprx/Aequitas](https://github.com/bootstrapprx/Aequitas)
 
 ## 2. Key Technologies
 
@@ -20,7 +21,7 @@ ChartForge is a full-stack web application designed for managing and mapping Cha
 | **Backend**   | FastAPI, Python, Uvicorn, SQLAlchemy, Pydantic, Pandas, Alembic         |
 | **Database**  | PostgreSQL                                                              |
 | **AI**        | Ollama, httpx, python-thefuzz                                           |
-| **DevOps**    | Docker, Docker Compose                                                  |
+| **DevOps**    | Docker, Docker Compose, Nginx, Cloudflare Tunnel                        |
 | **Auth**      | python-jose, passlib, requests-oauthlib (for QBO)                       |
 
 ## 3. How to Build and Run (Unified Dev Mode)
