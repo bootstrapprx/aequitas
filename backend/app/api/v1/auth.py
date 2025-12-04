@@ -70,65 +70,21 @@ def get_current_user(
     return user
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, deprecated=True)
 def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
     """
-    Register a new user.
+    DEPRECATED: Public registration is disabled.
 
-    For initial sign-up: provide is_initial_signup=True and company_name
-    For joining existing company: provide company_ids list
-
-    Args:
-        user_data: User registration data (email, password, and company info)
-        db: Database session
-
-    Returns:
-        Created user information
+    Users must be created by administrators via POST /api/v1/users endpoint.
+    Only SuperUsers, Accountants, and Company Admins can create new users.
     """
-    from app.services.company_service import CompanyService
-    from app.schemas.company import CompanyCreate
-    from app.services.permission_service import PermissionService
-
-    user_service = UserService(db)
-
-    try:
-        # Handle initial sign-up (create company + user)
-        if user_data.is_initial_signup:
-            if not user_data.company_name:
-                raise ValueError("Company name is required for initial sign-up")
-
-            # Create company
-            company_service = CompanyService()
-            company_data = CompanyCreate(name=user_data.company_name)
-            company = company_service.create_company(db, company_data)
-
-            # Create user with company association
-            user = user_service.create_user(user_data, company_ids=[company.id])
-
-            # Make user admin of their company
-            permission_service = PermissionService(db)
-            user_company = permission_service.get_user_company(user.id, company.id)
-            if user_company:
-                permission_service.update_user_company_permissions(
-                    user.id,
-                    company.id,
-                    UserCompanyUpdate(is_admin=True)
-                )
-
-            db.refresh(user)
-            return user
-        else:
-            # Join existing company
-            user = user_service.create_user(user_data)
-            return user
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Public registration is disabled. Please contact your administrator to create an account."
+    )
 
 @router.post("/login", response_model=Token)
 def login(

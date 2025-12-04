@@ -12,7 +12,11 @@ from app.api.deps import check_company_admin
 from app.db.models.user import User
 from app.db.models.company import Company
 from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.schemas.user_company import UserCompanyUpdate
 from app.services.user_service import UserService
+from app.services.permission_service import PermissionService
+from app.services.company_service import CompanyService
+from app.schemas.company import CompanyCreate
 
 router = APIRouter()
 
@@ -40,17 +44,91 @@ def create_user(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new user. Only superusers can create users.
+    Create a new user.
+
+    Permissions:
+    - SuperUsers: Can create users for any company
+    - Company Admins: Can create users only for companies they admin
+
+    For initial company setup: provide is_initial_signup=True and company_name
+    For adding to existing company: provide company_ids list
     """
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only superusers can create users"
-        )
-    
+    permission_service = PermissionService(db)
     user_service = UserService(db)
+
+    # Handle initial sign-up (create company + user) - SuperUser only
+    if user_data.is_initial_signup:
+        if not current_user.is_superuser:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only superusers can create new companies with users"
+            )
+
+        if not user_data.company_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Company name is required for initial sign-up"
+            )
+
+        try:
+            # Create company
+            company_service = CompanyService()
+            company_data = CompanyCreate(name=user_data.company_name)
+            company = company_service.create_company(db, company_data)
+
+            # Create user with company association
+            user = user_service.create_user(user_data, company_ids=[company.id])
+
+            # Make user admin of their company
+            user_company = permission_service.get_user_company(user.id, company.id)
+            if user_company:
+                permission_service.update_user_company_permissions(
+                    user.id,
+                    company.id,
+                    UserCompanyUpdate(is_admin=True)
+                )
+
+            db.refresh(user)
+            return user
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+
+    # Regular user creation - SuperUser or Company Admin
+    company_ids = user_data.company_ids or []
+
+    if not company_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one company_id must be provided"
+        )
+
+    # Check permissions
+    if not current_user.is_superuser:
+        # Get companies where current user is admin
+        user_companies = permission_service.get_user_companies(current_user.id)
+        admin_company_ids = [
+            uc.company_id for uc in user_companies if uc.is_admin
+        ]
+
+        if not admin_company_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You must be a company admin to create users"
+            )
+
+        # Verify current user is admin of all requested companies
+        for company_id in company_ids:
+            if company_id not in admin_company_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"You are not an admin of company {company_id}"
+                )
+
     try:
-        user = user_service.create_user(user_data)
+        user = user_service.create_user(user_data, company_ids=company_ids)
         return user
     except ValueError as e:
         raise HTTPException(

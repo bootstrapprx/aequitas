@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
 from app.db.session import get_db
+from app.db.models.user import User
+from app.api.v1.auth import get_current_user
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyInactivate
 from app.schemas.user import UserResponse
 from app.services.company_service import CompanyService
@@ -13,24 +15,37 @@ router = APIRouter()
 @router.get("/", response_model=list[CompanyResponse])
 def list_companies(
     status: str = "active",
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get all companies.
+    Get companies accessible to the current user.
+
+    SuperUsers see all companies.
+    Regular users see only companies they're assigned to.
+
     Query param `status` can be "active", "inactive", or "all".
     """
+    from app.services.permission_service import PermissionService
+
+    # Get all companies based on status filter
     if status == "active":
-        return CompanyService.get_all_companies(db, active_only=True)
+        all_companies = CompanyService.get_all_companies(db, active_only=True)
     elif status == "inactive":
-        # Get all and filter in python (or update service to handle this better)
-        # For now, let's update service to handle 'active_only' as a filter?
-        # Service currently has `active_only: bool`.
-        # Let's fetch all and filter here if needed, or better, update service.
-        # But for now, let's just use what we have.
         all_companies = CompanyService.get_all_companies(db, active_only=False)
-        return [c for c in all_companies if not c.is_active]
+        all_companies = [c for c in all_companies if not c.is_active]
     else:
-        return CompanyService.get_all_companies(db, active_only=False)
+        all_companies = CompanyService.get_all_companies(db, active_only=False)
+
+    # Filter by user access (unless superuser)
+    if not current_user.is_superuser:
+        permission_service = PermissionService(db)
+        user_company_ids = [
+            uc.company_id for uc in permission_service.get_user_companies(current_user.id)
+        ]
+        all_companies = [c for c in all_companies if c.id in user_company_ids]
+
+    return all_companies
 
 @router.post("/", response_model=CompanyResponse)
 def create_company(

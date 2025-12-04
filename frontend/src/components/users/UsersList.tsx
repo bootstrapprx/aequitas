@@ -3,7 +3,7 @@ import { User } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Mail, Shield, User as UserIcon } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 
 interface UsersListProps {
   users: User[];
@@ -20,13 +20,30 @@ const UsersList: React.FC<UsersListProps> = ({
   isLoading,
   isError,
 }) => {
-  if (isLoading) return <p>Loading users...</p>;
-  if (isError) return <p className="text-destructive">Error loading users.</p>;
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-muted-foreground">Loading users...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-destructive">Error loading users.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Users</CardTitle>
+        <CardTitle>Users ({users.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-3">
@@ -36,23 +53,27 @@ const UsersList: React.FC<UsersListProps> = ({
               className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
             >
               <div className="flex justify-between items-start">
-                <div className="flex-1 cursor-pointer" onClick={() => onEdit(user)}>
+                <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <UserIcon className="h-4 w-4 text-muted-foreground" />
-                    <h3 className="font-semibold hover:underline">{user.email}</h3>
+                    <h3 className="font-semibold">{user.email}</h3>
                     {user.is_superuser && (
-                      <Badge variant="default" className="bg-purple-600">
-                        <Shield className="h-3 w-3 mr-1" />
-                        Superuser
+                      <Badge variant="destructive" className="text-xs">
+                        SuperUser
                       </Badge>
                     )}
                     {!user.is_active && (
-                      <Badge variant="secondary">Inactive</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Inactive
+                      </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Mail className="h-3 w-3" />
-                    <span>{user.email}</span>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <div>
+                      <span className="font-mono text-xs">{user.user_uid}</span>
+                    </div>
+                    <div className="text-xs">
+                      Created: {new Date(user.created_at).toLocaleDateString()}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -88,4 +109,3 @@ const UsersList: React.FC<UsersListProps> = ({
 };
 
 export default UsersList;
-
