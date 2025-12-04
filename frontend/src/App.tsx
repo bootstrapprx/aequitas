@@ -44,6 +44,7 @@ import CustomReportsPage from "./pages/reports/custom/CustomReportsPage";
 import ExportCenterPage from "./pages/reports/export/ExportCenterPage";
 
 // Administration Module
+import SuperuserPanel from "./pages/admin/SuperuserPanel";
 import SystemSettingsPage from "./pages/admin/system/SystemSettingsPage";
 import IntegrationsPage from "./pages/admin/integrations/IntegrationsPage";
 import AuditLogPage from "./pages/admin/audit/AuditLogPage";
@@ -119,6 +120,7 @@ const App = () => (
                 <Route path="reports/export" element={<ExportCenterPage />} />
 
                 {/* Administration Module */}
+                <Route path="admin/superuser" element={<SuperuserPanel />} />
                 <Route path="admin/system" element={<SystemSettingsPage />} />
                 <Route path="admin/integrations" element={<IntegrationsPage />} />
                 <Route path="admin/audit" element={<AuditLogPage />} />

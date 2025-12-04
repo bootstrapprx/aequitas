@@ -24,6 +24,7 @@ import {
   LogOut,
   User,
   ChevronDown,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -133,6 +134,8 @@ const AequitasSidebar = () => {
       title: "ADMINISTRATION",
       icon: Settings,
       links: [
+        // Conditionally add Superuser Panel if user is superuser
+        ...(user?.is_superuser ? [{ label: "Superuser Panel", path: "/admin/superuser", icon: Shield }] : []),
         { label: "System Settings", path: "/admin/system", icon: Settings },
         { label: "Integrations", path: "/admin/integrations", icon: Plug },
         { label: "Audit Log", path: "/admin/audit", icon: ScrollText },

@@ -10,6 +10,7 @@ export enum QueryKey {
   MASTER_CHART = 'masterChart',
   COMPANY_CHART = 'companyChart',
   TEMPLATES = 'templates',
+  ADMIN = 'admin',
 }
 
 export const masterChartKeys = {
@@ -42,4 +43,10 @@ export const templateKeys = {
     list: (filters: string) => [...templateKeys.lists(), { filters }] as const,
     details: () => [...templateKeys.all, 'detail'] as const,
     detail: (id: string) => [...templateKeys.details(), id] as const,
+};
+
+export const adminKeys = {
+  all: [QueryKey.ADMIN] as const,
+  users: () => [...adminKeys.all, 'users'] as const,
+  settings: () => [...adminKeys.all, 'settings'] as const,
 };
