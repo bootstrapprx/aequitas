@@ -1,82 +1,221 @@
-You are Claude Code working inside the Aequitas repository. The system currently has two critical regressions:
+You are Claude Code working inside the Aequitas repository.
+Your task is to fully implement the "Users Management" module, which is currently only a placeholder.
 
-1) The default superuser account "actpm@aequitas.com" cannot log in (login returns 401).
-2) The registration UI is broken because the frontend expects an auth config object (allow_public_signup) which is undefined; also the Pay & Register flow is failing or falling back inconsistently.
+This module must respect the new identity hierarchy:
+- Users always belong to one or more Companies.
+- Normal users cannot create other users.
+- Superusers can create, edit, assign companies, remove company assignments, and deactivate users globally.
+- Company admins can ONLY create/edit users inside their own company.
+- Users cannot exist without a company association, except the global superuser (actpm@aequitas.com).
 
-Your task: implement a robust, idempotent patch that fixes authentication, the auth/config endpoint, the sign-up & payment flows, and adds defensive logging and fallbacks so the frontend never crashes reading undefined.
+-----------------------------------------------
+## HIGH-LEVEL OBJECTIVES
+Implement a complete Users Management page that supports:
 
-Requirements (high level)
-- Fix backend login/auth so that existing seeded superuser can authenticate using the password from DEFAULT_SUPERUSER_PASSWORD in .env (idempotent seed).
-- Ensure an endpoint `/api/v1/auth/config` (or whatever frontend expects) reliably returns JSON with `allow_public_signup` and other flags; backend must always return valid JSON (with defaults) even on error.
-- Make frontend registration code defensive: check for undefined before accessing `allow_public_signup`, and use a sensible default (false).
-- Fix paid registration flow: if Stripe keys are missing, return a clear JSON response indicating `stripe_configured: false` and enable a mock mode only when `ALLOW_MOCK_PAYMENTS=true` env var exists.
-- Add temporary server-side debug logs for auth, config fetch, and stripe-related actions; keep logs minimal and non-sensitive (do not print passwords).
-- Add tests for: seed creation, config endpoint, free registration allowed vs forbidden, and paid registration fallback.
+1. Listing users:
+   - If logged-in user is superuser:
+     → list ALL users in the system.
+   - If logged-in user is company admin:
+     → list ONLY users inside their company(ies).
 
-Concrete Backend tasks (FastAPI + SQLAlchemy)
-1. Startup seed:
-   - In `app/core/config.py`: add DEFAULT_SUPERUSER_EMAIL, DEFAULT_SUPERUSER_PASSWORD, ALLOW_PUBLIC_SIGNUP, ALLOW_MOCK_PAYMENTS env vars (with defaults).
-   - In startup script (e.g., `app/db/init_db.py` or `app/main.py` on startup event) ensure:
-     * If DEFAULT_SUPERUSER_EMAIL and DEFAULT_SUPERUSER_PASSWORD are set and user not exists, create superuser (is_superuser=True) using existing password hashing util.
-     * Log: "Default superuser created: actpm@aequitas.com" (no password).
-   - Ensure this is idempotent (do not update existing user).
+2. Viewing user details:
+   - Basic info: email, UID, status, roles, last login
+   - List of companies the user belongs to
 
-2. Login verification:
-   - Ensure login endpoint (`/api/v1/auth/login-json`) verifies password using current hasher. If the codebase changed the hasher, add a legacy-check fallback: if verify_password(old_algo) passes, re-hash using new hasher and persist.
-   - Add clear error messages in logs on failed authentication (e.g., "Failed login for email X: user not found" or "password mismatch").
+3. Creating users:
+   - Superuser: can create any user and assign to ANY company.
+   - Company admin: can ONLY create users inside their own company.
+   - Enforce no user creation without company assignment.
+   - User must receive a generated UID (backend already implemented or must be added if missing).
+   - Generate temporary password or allow admin to set initial password.
 
-3. Auth config endpoint:
-   - Add or fix `GET /api/v1/auth/config` returning:
-     {
-       "allow_public_signup": <bool from config.ALLOW_PUBLIC_SIGNUP>,
-       "stripe_configured": <true|false>,
-       "mock_payments_allowed": <true|false>
-     }
-   - Always return 200 with JSON. If an internal exception occurs, return defaults with a `warning` field.
+4. Editing users:
+   - Change email, roles (admin inside a company), active/inactive status.
+   - Add/remove companies the user belongs to (respecting permission scope).
 
-4. Registration endpoints:
-   - Validate `register_type` and enforce server-side guard:
-     * If register_type == "free": require ALLOW_PUBLIC_SIGNUP true else return 403 with helpful message.
-     * If register_type == "paid": if STRIPE_API_KEY present create Stripe session, else if ALLOW_MOCK_PAYMENTS true create a mock paid pending registration. If neither, return 503 with message "payments unavailable".
-   - Ensure pending registration record created for paid flows with token & expiry.
-   - Implement webhook endpoint that finalizes pending registration upon confirmed payment.
-   - Ensure `create_user()` is only called in flows where company association is present or special-case superuser seed.
+5. Deleting / Deactivating users:
+   - Hard delete only allowed for superuser.
+   - Company admins may only deactivate users inside their company.
 
-5. Add/adjust unit tests:
-   - test_superuser_seeding()
-   - test_config_endpoint_returns_defaults()
-   - test_free_registration_guard()
-   - test_paid_registration_fallback_to_mock()
+6. Security:
+   - Enforce strict backend permission checks.
+   - Validate that updates do not orphan a user (remove all companies → forbidden unless superuser and target is superuser).
 
-Concrete Frontend tasks (React + TS)
-1. Defensive config fetch:
-   - Update `frontend/src/pages/auth/Register.tsx` (or wherever fetchConfig is called) to:
-     * Try/catch the fetch of `/api/v1/auth/config`.
-     * If response missing or malformed, fallback to `{ allow_public_signup: false, stripe_configured: false, mock_payments_allowed: false }`.
-     * Do not access `allow_public_signup` without checking presence.
-   - Add a small spinner and a user-friendly message if payments are unavailable.
+7. Frontend UI:
+   - Table with search, filters, pagination.
+   - Drawer / modal for Create User.
+   - Drawer / modal for Edit User.
+   - Select component to choose which companies the new user belongs to.
+   - Status indicators (active, suspended, admin).
+   - Company badges in table rows.
 
-2. Login diagnostics:
-   - On login failure show server message if present (e.g., "Invalid credentials" vs "account locked").
-   - Ensure login request uses `email` and `password` fields (not uid).
+-----------------------------------------------
+## BACKEND REQUIREMENTS (FastAPI)
 
-3. Payment UI:
-   - If `stripe_configured` false and `mock_payments_allowed` false, hide "Pay & Register" button and show explanation: "Payments not configured. Contact admin."
-   - If `stripe_configured` false and `mock_payments_allowed` true, make the Pay & Register button trigger a mock checkout flow calling the backend confirm endpoint.
+### 1. Routes
+Create new router at:
+`backend/app/api/v1/users_management.py`
 
-4. Minimal tests:
-   - verify that Register page does not crash when `/auth/config` returns 500 or empty.
-   - verify login displays server error on 401.
+Endpoints:
 
-Deliverables
-- File-by-file diffs in ```diff``` blocks for all changed files.
-- Short explanation for each change (1-2 sentences).
-- Tests added and high-level results (pass/fail).
-- Add a short README note describing env variables and the mock payments fallback.
+GET /admin/users  
+- Only for superusers  
+- Returns all users with:
+  - id, email, user_uid, is_superuser, created_at, last_login, companies[], is_active, roles
 
-Safety & non-breaking constraints
-- Do not log secrets.
-- Do not overwrite an existing superuser.
-- Keep behavior backwards-compatible for other modules.
+GET /companies/{company_id}/users  
+- For company admins & superusers  
+- Returns users belonging to that company
 
-Begin now. Provide diffs and test changes when finished.
+POST /users  
+- Create user  
+- Payload:
+  {
+    "email": "...",
+    "password": "...",             # optional, if empty generate random temp password
+    "company_ids": [...],          # required unless creating superuser
+    "roles": {"is_admin": true|false},
+    "is_active": true
+  }
+- Enforce:
+  * superuser can assign ANY company
+  * company admin can assign ONLY their companies
+  * user must have at least one company unless superuser
+
+PUT /users/{user_id}  
+- Update email, companies, roles, is_active  
+- Enforce same rules as create
+
+DELETE /users/{user_id}  
+- Soft delete (set is_active=False) for company admin  
+- Hard delete allowed only for superuser
+
+GET /users/{user_id}  
+- Fetch details + companies + roles
+
+### 2. Validation Rules
+- A normal user cannot create or modify another user.
+- Company admins cannot remove a company assignment that they do not control.
+- Prevent removal of all company assignments unless:
+  * superuser AND target user is superuser.
+- Prevent demoting the last superuser.
+- Prevent self deletion.
+
+### 3. Service Layer
+Create:
+`backend/app/services/users_management_service.py`
+
+Functions:
+- list_all_users()
+- list_users_by_company(company_id)
+- create_user_with_companies()
+- update_user_with_companies()
+- deactivate_user()
+- delete_user()
+- get_user_details()
+
+### 4. Schemas
+Create in:
+`backend/app/schemas/user_management.py`
+
+Schemas:
+- UserListItem
+- UserDetail
+- UserCreate
+- UserUpdate
+- UserCompanyAssignment
+
+### 5. DB model adjustments
+Ensure:
+- user has user_uid unique
+- UserCompany has:
+  - user_id
+  - company_id
+  - is_admin
+  - is_active
+- No circular imports or missing relationships.
+
+-----------------------------------------------
+## FRONTEND REQUIREMENTS (React + TS)
+
+Folder:
+`frontend/src/pages/users/UsersManagement.tsx`
+
+Replace placeholder with:
+
+### 1. Users Table
+Columns:
+- Email
+- UID
+- Companies (badges)
+- Roles (Admin | User | Superuser)
+- Status (Active | Suspended)
+- Actions (Edit | Deactivate/Delete)
+
+Features:
+- Search bar (search by email)
+- Pagination
+- Filter by company (if superuser)
+
+### 2. Hooks (TanStack Query)
+Add file:
+`frontend/src/hooks/usersManagement.ts`
+
+Hooks:
+- useAllUsersQuery() (superuser)
+- useCompanyUsersQuery(company_id)
+- useCreateUserMutation()
+- useUpdateUserMutation()
+- useDeactivateUserMutation()
+- useDeleteUserMutation()
+- useUserDetailsQuery()
+
+### 3. API Client
+File:
+`frontend/src/lib/api/usersManagement.ts`
+
+Endpoints:
+- getAllUsers()
+- getUsersByCompany()
+- createUser()
+- updateUser()
+- deactivateUser()
+- deleteUser()
+- getUser()
+
+### 4. Create User Modal
+Inputs:
+- Email
+- Password (optional)
+- Company selector (multi-select)
+- Role toggles
+- Active toggle
+
+Validation:
+- Must select at least one company unless superuser creating superuser.
+
+### 5. Edit User Modal
+Show:
+- Email
+- Is Active
+- Companies with multi-select
+- Roles
+- Reset Password button (optional)
+
+### 6. Permission Guard
+- If user is not superuser or company admin → redirect to dashboard.
+- Use AuthContext → check company roles.
+
+-----------------------------------------------
+## EXPECTATIONS
+
+You must:
+- Produce file-by-file diffs inside ```diff``` blocks.
+- Create all new backend and frontend files.
+- Ensure backend passes type checking & lints.
+- Ensure frontend compiles successfully.
+- Maintain consistency with new Company/User hierarchy.
+- Do not break Superuser Panel and System Settings.
+- Keep code modular and clean.
+
+Begin now.
