@@ -1,78 +1,19 @@
-chunk-7CVORMRW.js?v=73b0b86a:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-react-router-dom.js?v=73b0b86a:4413 ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
-warnOnce @ react-router-dom.js?v=73b0b86a:4413
-react-router-dom.js?v=73b0b86a:4413 ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
-warnOnce @ react-router-dom.js?v=73b0b86a:4413
-:8000/api/v1/settings/:1  Failed to load resource: net::ERR_CONNECTION_RESET
-SettingsPage.tsx:74 Failed to fetch settings TypeError: Failed to fetch
-    at fetchSettings (SettingsPage.tsx:68:40)
-    at SettingsPage.tsx:85:9
-    at commitHookEffectListMount (chunk-7CVORMRW.js?v=73b0b86a:16963:34)
-    at commitPassiveMountOnFiber (chunk-7CVORMRW.js?v=73b0b86a:18206:19)
-    at commitPassiveMountEffects_complete (chunk-7CVORMRW.js?v=73b0b86a:18179:17)
-    at commitPassiveMountEffects_begin (chunk-7CVORMRW.js?v=73b0b86a:18169:15)
-    at commitPassiveMountEffects (chunk-7CVORMRW.js?v=73b0b86a:18159:11)
-    at flushPassiveEffectsImpl (chunk-7CVORMRW.js?v=73b0b86a:19543:11)
-    at flushPassiveEffects (chunk-7CVORMRW.js?v=73b0b86a:19500:22)
-    at commitRootImpl (chunk-7CVORMRW.js?v=73b0b86a:19469:13)
-fetchSettings @ SettingsPage.tsx:74
-:8000/api/v1/settings/:1  Failed to load resource: net::ERR_CONNECTION_RESET
-SettingsPage.tsx:74 Failed to fetch settings TypeError: Failed to fetch
-    at fetchSettings (SettingsPage.tsx:68:40)
-    at SettingsPage.tsx:85:9
-    at commitHookEffectListMount (chunk-7CVORMRW.js?v=73b0b86a:16963:34)
-    at invokePassiveEffectMountInDEV (chunk-7CVORMRW.js?v=73b0b86a:18374:19)
-    at invokeEffectsInDev (chunk-7CVORMRW.js?v=73b0b86a:19754:19)
-    at commitDoubleInvokeEffectsInDEV (chunk-7CVORMRW.js?v=73b0b86a:19739:15)
-    at flushPassiveEffectsImpl (chunk-7CVORMRW.js?v=73b0b86a:19556:13)
-    at flushPassiveEffects (chunk-7CVORMRW.js?v=73b0b86a:19500:22)
-    at commitRootImpl (chunk-7CVORMRW.js?v=73b0b86a:19469:13)
-    at commitRoot (chunk-7CVORMRW.js?v=73b0b86a:19330:13)
-fetchSettings @ SettingsPage.tsx:74
-chunk-7CVORMRW.js?v=73b0b86a:521 Warning: A component is changing an uncontrolled input to be controlled. This is likely caused by the value changing from undefined to a defined value, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components
-    at input
-    at _c (http://localhost:5173/src/components/ui/input.tsx:23:54)
-    at http://localhost:5173/node_modules/.vite/deps/chunk-KIPDZLP6.js?v=73b0b86a:54:11
-    at http://localhost:5173/node_modules/.vite/deps/chunk-KIPDZLP6.js?v=73b0b86a:28:11
-    at http://localhost:5173/src/components/ui/form.tsx:121:72
-    at div
-    at http://localhost:5173/src/components/ui/form.tsx:73:66
-    at Controller (http://localhost:5173/node_modules/.vite/deps/chunk-SEUDXLBY.js?v=73b0b86a:379:35)
-    at FormField (http://localhost:5173/src/components/ui/form.tsx:29:25)
-    at div
-    at _c8 (http://localhost:5173/src/components/ui/card.tsx:67:61)
-    at div
-    at _c (http://localhost:5173/src/components/ui/card.tsx:23:53)
-    at form
-    at FormProvider (http://localhost:5173/node_modules/.vite/deps/chunk-SEUDXLBY.js?v=73b0b86a:101:11)
-    at div
-    at div
-    at SettingsPage (http://localhost:5173/src/pages/SettingsPage.tsx:49:23)
-    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:4108:5)
-    at Outlet (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:4514:26)
-    at main
-    at div
-    at ManualModeProvider (http://localhost:5173/src/contexts/ManualModeContext.tsx:25:38)
-    at DashboardLayout
-    at ProtectedRoute (http://localhost:5173/src/components/auth/ProtectedRoute.tsx:25:27)
-    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:4108:5)
-    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:4578:5)
-    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:4521:15)
-    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=73b0b86a:5267:5)
-    at AuthProvider (http://localhost:5173/src/contexts/AuthContext.tsx:29:32)
-    at Provider (http://localhost:5173/node_modules/.vite/deps/chunk-UQZLVG2T.js?v=73b0b86a:43:15)
-    at TooltipProvider (http://localhost:5173/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=73b0b86a:156:5)
-    at O (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=73b0b86a:23:25)
-    at z (http://localhost:5173/node_modules/.vite/deps/next-themes.js?v=73b0b86a:21:18)
-    at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.tsx:147:9)
-    at App
-    at ManualModeProvider (http://localhost:5173/src/contexts/ManualModeContext.tsx:25:38)
-    at QueryClientProvider (http://localhost:5173/node_modules/.vite/deps/chunk-UI7R5BQN.js?v=73b0b86a:3030:3)
-    at QueryClientProvider (http://localhost:5173/src/context/queryClient.tsx:36:43)
-printWarning @ chunk-7CVORMRW.js?v=73b0b86a:521
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/auth/login-json:1  Failed to load resource: net::ERR_CONNECTION_RESET
+[plugin:vite:import-analysis] Failed to resolve import "./pages/SettingsPage" from "src/App.tsx". Does the file exist?
+/app/src/App.tsx:55:25
+64 |  // Legacy pages (to be reorganized or removed)
+65 |  import UploadPage from "./pages/Upload";
+66 |  import SettingsPage from "./pages/SettingsPage";
+   |                            ^
+67 |  import TemplatesPage from "./pages/Templates";
+68 |  import SnapshotsPage from "./pages/snapshots/SnapshotsPage";
+    at TransformPluginContext._formatLog (file:///app/node_modules/vite/dist/node/chunks/config.js:29647:43)
+    at TransformPluginContext.error (file:///app/node_modules/vite/dist/node/chunks/config.js:29644:14)
+    at normalizeUrl (file:///app/node_modules/vite/dist/node/chunks/config.js:27767:18)
+    at async file:///app/node_modules/vite/dist/node/chunks/config.js:27825:32
+    at async Promise.all (index 39)
+    at async TransformPluginContext.transform (file:///app/node_modules/vite/dist/node/chunks/config.js:27793:4)
+    at async EnvironmentPluginContainer.transform (file:///app/node_modules/vite/dist/node/chunks/config.js:29445:14)
+    at async loadAndTransform (file:///app/node_modules/vite/dist/node/chunks/config.js:23316:26)
+    at async viteTransformMiddleware (file:///app/node_modules/vite/dist/node/chunks/config.js:25188:20)
+Click outside, press Esc key, or fix the code to dismiss.
+You can also disable this overlay by setting server.hmr.overlay to false in vite.config.ts.
