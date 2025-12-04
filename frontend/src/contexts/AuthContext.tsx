@@ -30,28 +30,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token, user, and company context from localStorage on mount
+  // Load and validate token from localStorage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedUser = localStorage.getItem(USER_KEY);
-    const storedCompanyIds = localStorage.getItem(COMPANY_IDS_KEY);
-    const storedCurrentCompany = localStorage.getItem(CURRENT_COMPANY_KEY);
+    const validateToken = async () => {
+      const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(USER_KEY);
+      const storedCompanyIds = localStorage.getItem(COMPANY_IDS_KEY);
+      const storedCurrentCompany = localStorage.getItem(CURRENT_COMPANY_KEY);
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      // Set default authorization header
-      api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      if (storedToken && storedUser) {
+        try {
+          // Validate token by fetching user info
+          api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          const userResponse = await api.get('/auth/me');
 
-      if (storedCompanyIds) {
-        setCompanyIds(JSON.parse(storedCompanyIds));
+          // Token is valid, set user data
+          setToken(storedToken);
+          setUser(userResponse.data);
+
+          if (storedCompanyIds) {
+            setCompanyIds(JSON.parse(storedCompanyIds));
+          }
+
+          if (storedCurrentCompany) {
+            setCurrentCompanyId(storedCurrentCompany);
+          }
+        } catch (error) {
+          // Token is invalid or expired, clear everything
+          console.error('Token validation failed:', error);
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem(COMPANY_IDS_KEY);
+          localStorage.removeItem(CURRENT_COMPANY_KEY);
+          delete api.defaults.headers.common['Authorization'];
+        }
       }
+      setIsLoading(false);
+    };
 
-      if (storedCurrentCompany) {
-        setCurrentCompanyId(storedCurrentCompany);
-      }
-    }
-    setIsLoading(false);
+    validateToken();
   }, []);
 
   // Update API headers when token changes

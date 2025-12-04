@@ -69,12 +69,12 @@ The project is organized into two main directories: `frontend` and `backend`.
 - **Node.js** (v18+) and **pnpm** for local frontend development
 - **Python** (3.11+) for local backend development
 
-### Quick Start with Docker
+### Quick Start with Docker (Recommended)
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/bootstrapprx/ChartForge.git
-   cd ChartForge
+   git clone https://github.com/bootstrapprx/Aequitas.git
+   cd Aequitas
    ```
 
 2. **Set up environment variables:**
@@ -90,15 +90,59 @@ The project is organized into two main directories: `frontend` and `backend`.
 
 3. **Start the application:**
    ```bash
-   docker-compose up --build
+   make dev
    ```
 
 4. **Access the application:**
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+   - Ollama: http://localhost:11435
+   - Postgres: localhost:5432
 
-### Local Development
+### Makefile Commands
+
+#### Development Commands
+```bash
+make dev          # Start development environment
+make stop         # Stop all services
+make logs         # View container logs
+```
+
+#### Reset & Rebuild Commands
+```bash
+make reset        # Complete reset (stops, removes volumes, rebuilds)
+make rebuild      # Force rebuild containers without cache
+make reset-db     # Reset only the database
+```
+
+#### Dependency Management
+
+**For Docker-based development (recommended):**
+```bash
+make rebuild      # Rebuilds containers with fresh dependencies
+```
+
+**For local IDE support or local development:**
+```bash
+make install-deps         # Install all dependencies locally (frontend + backend)
+make install-frontend     # Install only frontend dependencies locally
+make install-backend      # Install only backend dependencies locally
+
+make clean-deps           # Clean all local dependency caches
+make reinstall-frontend   # Clean and reinstall frontend dependencies locally
+make reinstall-backend    # Clean and reinstall backend dependencies locally
+make reinstall-deps       # Clean and reinstall all dependencies locally
+```
+
+**Important:** When using Docker (recommended), dependency changes are automatically handled by `make rebuild`. The local install commands are only needed to:
+- Fix IDE TypeScript/ESLint errors
+- Run the app outside Docker for development
+
+**Typical Docker workflow when dependencies change:**
+1. Run `make rebuild` - That's it! Dependencies are installed inside containers.
+
+### Local Development (Without Docker)
 
 #### Backend
 

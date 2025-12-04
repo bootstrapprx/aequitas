@@ -1,4 +1,4 @@
-.PHONY: dev stop reset-db logs reset rebuild
+.PHONY: dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend
 
 # Default shell
 SHELL := /bin/bash
@@ -61,6 +61,55 @@ rebuild:
 logs:
 	@echo "Following Docker logs..."
 	docker compose -f $(DOCKER_COMPOSE_DEV) logs -f
+
+# ============================================================
+# Dependency Management
+# ============================================================
+
+install-deps:
+	@echo "Installing all dependencies..."
+	@echo "Installing frontend dependencies..."
+	cd $(FRONTEND_DIR) && npm install
+	@echo "Installing backend dependencies..."
+	cd $(BACKEND_DIR) && python3 -m pip install -r requirements.txt
+	@echo "All dependencies installed!"
+
+install-frontend:
+	@echo "Installing frontend dependencies..."
+	cd $(FRONTEND_DIR) && npm install
+	@echo "Frontend dependencies installed!"
+
+install-backend:
+	@echo "Installing backend dependencies..."
+	cd $(BACKEND_DIR) && python3 -m pip install -r requirements.txt
+	@echo "Backend dependencies installed!"
+
+clean-deps:
+	@echo "Cleaning dependency caches..."
+	@echo "Cleaning npm cache..."
+	cd $(FRONTEND_DIR) && rm -rf node_modules package-lock.json
+	@echo "Cleaning Python cache..."
+	cd $(BACKEND_DIR) && find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	cd $(BACKEND_DIR) && find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@echo "Dependency caches cleaned!"
+
+reinstall-frontend:
+	@echo "Reinstalling frontend dependencies..."
+	cd $(FRONTEND_DIR) && rm -rf node_modules package-lock.json
+	cd $(FRONTEND_DIR) && npm install
+	@echo "Frontend dependencies reinstalled!"
+	@echo "Tip: Run 'make rebuild' to rebuild containers with fresh dependencies"
+
+reinstall-backend:
+	@echo "Reinstalling backend dependencies..."
+	cd $(BACKEND_DIR) && find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	cd $(BACKEND_DIR) && python3 -m pip install --force-reinstall -r requirements.txt
+	@echo "Backend dependencies reinstalled!"
+	@echo "Tip: Run 'make rebuild' to rebuild containers with fresh dependencies"
+
+reinstall-deps: clean-deps install-deps
+	@echo "All dependencies reinstalled!"
+	@echo "Tip: Run 'make rebuild' to rebuild containers with fresh dependencies"
 
 shared:
 	@echo "Starting Shared Dev Mode..."
