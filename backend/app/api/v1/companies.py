@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from app.db.session import get_db
 from app.db.models.user import User
 from app.api.v1.auth import get_current_user
@@ -12,21 +12,42 @@ from app.services.permission_service import PermissionService
 
 router = APIRouter()
 
+def get_current_user_optional(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Get current user if authenticated, otherwise return None."""
+    # Check for Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    token = auth_header.replace("Bearer ", "")
+    try:
+        return get_current_user(token, db)
+    except:
+        return None
+
 @router.get("/", response_model=list[CompanyResponse])
 def list_companies(
     status: str = "active",
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     """
     Get companies accessible to the current user.
 
-    SuperUsers see all companies.
-    Regular users see only companies they're assigned to.
+    If not authenticated: Returns empty list (this should be a protected page)
+    If authenticated as SuperUser: Returns all companies
+    If authenticated as regular user: Returns only companies they're assigned to
 
     Query param `status` can be "active", "inactive", or "all".
     """
     from app.services.permission_service import PermissionService
+
+    # If not authenticated, return empty list
+    if not current_user:
+        return []
 
     # Get all companies based on status filter
     if status == "active":
@@ -37,7 +58,7 @@ def list_companies(
     else:
         all_companies = CompanyService.get_all_companies(db, active_only=False)
 
-    # Filter by user access (unless superuser)
+    # Filter by user access if not superuser
     if not current_user.is_superuser:
         permission_service = PermissionService(db)
         user_company_ids = [

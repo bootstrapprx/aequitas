@@ -1,65 +1,168 @@
-chunk-7CVORMRW.js?v=3562f290:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-react-router-dom.js?v=7cc75fb6:4413 ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
-warnOnce @ react-router-dom.js?v=7cc75fb6:4413
-react-router-dom.js?v=7cc75fb6:4413 ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
-warnOnce @ react-router-dom.js?v=7cc75fb6:4413
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/?status=all:1  Failed to load resource: the server responded with a status of 401 (Unauthorized)
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. ApiError: API request failed with status 401
-    at baseRequest (api.ts:73:13)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
+You are Claude Code working inside the Aequitas repository.
+
+Your task is to fully implement the **Superuser Promotion & System Settings Page**, 
+which is currently only a placeholder in the frontend.
+
+This new module must allow ONLY superusers to:
+1. View all users in the system
+2. Promote/demote users to/from superuser
+3. Edit global system settings (basic config for now)
+4. Manage global flags and metadata (future ready)
+5. Have a secure UI + backend that enforces all rules
+
+------------------------------------------
+## BACKEND REQUIREMENTS (FastAPI + SQLAlchemy)
+
+### 1. Permission Enforcement
+- Create a dependency: `check_superuser()` in `app/core/security.py`
+- Any route under `/api/v1/admin/*` must require superuser privileges
+- Return 403 if a non-superuser tries to access
+
+### 2. New Admin Routes
+Create a new router in:
+`backend/app/api/v1/admin.py`
+
+Include endpoints:
+
+#### GET /admin/users
+Returns list of all users with:
+- id
+- email
+- is_superuser
+- user_uid
+- companies linked
+
+#### PUT /admin/users/{user_id}/promote
+Sets:
+`is_superuser = True`
+
+#### PUT /admin/users/{user_id}/demote
+Sets:
+`is_superuser = False`  
+Safety rule:
+- A superuser cannot demote themselves.
+
+#### GET /admin/settings
+Returns system settings (see item 3)
+
+#### PUT /admin/settings
+Updates system settings.
+
+### 3. New SystemSettings model/table
+Create model in:
+`app/db/models/system_settings.py`
+
+Fields:
+- id (int, PK)
+- maintenance_mode (bool, default False)
+- allow_public_signup (bool, default False)
+- created_at
+- updated_at
+
+Create:
+- Pydantic schemas
+- Alembic migration
+- A single row seeded on startup if not exists (default settings)
+
+### 4. Admin Service Layer
+Create `admin_service.py` with:
+- get_all_users()
+- promote_user()
+- demote_user()
+- get_settings()
+- update_settings()
+
+Make sure all operations enforce security.
+
+------------------------------------------
+## FRONTEND REQUIREMENTS (React + TS + shadcn/ui)
+
+Structure for new page:
+`frontend/src/pages/admin/SuperuserPanel.tsx`
+
+### 1. Access Control
+- Use AuthContext
+- If `!currentUser.is_superuser`, redirect to dashboard
+
+### 2. UI Structure
+Tabs or sections:
+
+A) **User Management**
+- Table listing all users
+- Columns: email, UID, company count, superuser flag
+- Action buttons:
+  - Promote (if not superuser)
+  - Demote (if superuser and NOT self)
+
+B) **System Settings**
+- Switch: Maintenance Mode
+- Switch: Allow Public Sign-Up
+- Save button with optimistic UI
+
+All UI must use:
+- shadcn/ui Table
+- Switch
+- Button
+- Card
+- Alert
+
+### 3. Data Fetching Hooks
+Create hooks in:
+`frontend/src/hooks/admin.ts`
+
+- `useAdminUsersQuery()`
+- `usePromoteUserMutation()`
+- `useDemoteUserMutation()`
+- `useSystemSettingsQuery()`
+- `useUpdateSettingsMutation()`
+
+Use TanStack Query.
+Ensure proper query invalidation.
+
+### 4. API Client
+Create file:
+`frontend/src/lib/api/admin.ts`
+
+Implement calls:
+- GET /admin/users
+- PUT /admin/users/{id}/promote
+- PUT /admin/users/{id}/demote
+- GET /admin/settings
+- PUT /admin/settings
+
+### 5. Navigation
+Add route in:
+`frontend/src/router.tsx`
+
+Path:
+`/admin/superuser`
+Component:
+`<SuperuserPanel />`
+
+### 6. Sidebar
+In `frontend/src/components/Sidebar.tsx`
+Under ADMINISTRATION:
+- Add link:
+  “Superuser Panel”
+  Show only if `currentUser.is_superuser === true`
+
+------------------------------------------
+## NON-BREAKING REQUIREMENTS
+
+- Do NOT affect normal user signup or login.
+- Do NOT introduce new required fields for Company or User.
+- Do NOT break AuthContext.
+- Maintain full compatibility with upcoming company/user hierarchy improvements.
+- Must pass type checking and compile without warnings.
+
+------------------------------------------
+## EXPECTATIONS
+
+Your output must include:
+- Complete diff blocks for each file modified
+- New files fully implemented
+- Backend + frontend both fully functional
+- Explanations where needed
+- Ensure migrations run and repository remains stable
+
+Begin now.
