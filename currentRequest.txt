@@ -1,12 +1,98 @@
-chunk-7CVORMRW.js?v=da1ffe3f:21609 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
-react-router-dom.js?v=06ca0209:4413 ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
-warnOnce @ react-router-dom.js?v=06ca0209:4413
-react-router-dom.js?v=06ca0209:4413 ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
-warnOnce @ react-router-dom.js?v=06ca0209:4413
-:8000/api/v1/companies?status=all:1  Failed to load resource: net::ERR_CONNECTION_RESET
-useManualCRUD.ts:30 Could not fetch data from /companies?status=all. Falling back to initial data. Error: Failed to fetch
-    at baseRequest (api.ts:89:11)
-    at async queryFn (useManualCRUD.ts:27:16)
-queryFn @ useManualCRUD.ts:30
-:8000/api/v1/companies/:1  Failed to load resource: net::ERR_CONNECTION_RESET
-:8000/api/v1/companies/:1  Failed to load resource: net::ERR_CONNECTION_RESET
+You are Claude Code working inside the Aequitas repository.
+Your task is to diagnose and fix the broken Master Chart Dashboard.
+
+-----------------------------------------
+## PROBLEM DESCRIPTION
+
+The Master Chart Dashboard renders, but all analytic sections are empty:
+- Account Types Distribution → empty
+- Categories Breakdown → empty
+- Hierarchy Depth → empty
+- "Categories" and "Unique Tags" widgets show 0
+- Tree/List/Cards view shows no accounts
+
+However:
+- Total Accounts is correct (338)
+- Headers vs Details count is correct (7 and 331)
+- Backend master chart is populated and working
+
+This indicates a frontend issue, likely caused by:
+- Incorrect or outdated API client call to `/api/v1/masterchart/stats` or `/tree`
+- A mismatch between backend JSON shape and frontend TypeScript types
+- Broken TanStack Query hook (e.g., useMasterChartStatsQuery, useMasterChartTreeQuery)
+- Component props not receiving data due to transformation errors
+- Axios instance potentially failing silently (no error captured)
+- Race condition / stale state overwriting API response
+- Incorrect filtering (e.g., requiring company_id when master chart is global)
+
+-----------------------------------------
+## REQUIREMENTS
+
+### 1. Inspect and fix data fetching
+- Verify the API client in `frontend/src/lib/api/masterchart.ts`
+- Inspect TanStack Query hooks:
+  - `useMasterChartStatsQuery`
+  - `useMasterChartTreeQuery`
+  - `useMasterChartListQuery`
+- Ensure correct endpoints:
+  - GET /api/v1/masterchart/stats
+  - GET /api/v1/masterchart/tree
+- Make sure no company_id filtering is applied (master chart is global)
+
+### 2. Validate response shape
+Backend returns something like:
+
+{
+  "total_accounts": ...,
+  "header_accounts": ...,
+  "detail_accounts": ...,
+  "categories": [...],
+  "tags": [...],
+  "orphan_accounts": [...],
+  "account_types_distribution": {...},
+  "category_breakdown": {...},
+  "hierarchy_depth": {...}
+}
+
+Ensure the frontend types match these keys and structures.
+Fix any mismatched field names in TypeScript types.
+
+### 3. Fix chart components
+Check components in:
+- `frontend/src/pages/masterchart/Dashboard.tsx`
+- `frontend/src/components/charts/*`
+
+Ensure:
+- props are passed correctly
+- null/undefined guards are correct
+- empty arrays are not overriding API response
+- default state does not replace loaded data
+
+### 4. Display the data on screen
+Fix the rendering so that all three charts show correct analytics.
+Fix category counters in the analytic widgets.
+
+### 5. Add defensive logging (temporary)
+Add console.debug() logs in queries to log:
+- API URL
+- request params
+- returned data
+- errors
+
+Remove them after verifying functionality.
+
+### 6. Ensure no regression to Master Chart Editor or Mapping Tool
+All changes must preserve the Interactive Editor and Mapping pages.
+
+-----------------------------------------
+## EXPECTATIONS
+
+Your output must include:
+- File-by-file diffs using ```diff fenced blocks
+- Explanations when necessary
+- Creation or updates of TypeScript types
+- Fixing query hooks
+- Fixing dashboard component
+- RESTORING full functionality of the analytics section
+
+Begin now.

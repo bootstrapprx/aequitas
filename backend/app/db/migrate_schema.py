@@ -101,6 +101,63 @@ def migrate_master_accounts_schema(db: Session) -> bool:
         return False
 
 
+def migrate_users_schema(db: Session) -> bool:
+    """
+    Migrate users table to include user_uid and preferred_company_id fields.
+    Returns True if migration was successful or not needed.
+    """
+    try:
+        logger.info("Checking users schema...")
+        
+        has_user_uid = check_column_exists(db, "users", "user_uid")
+        has_preferred_company_id = check_column_exists(db, "users", "preferred_company_id")
+        
+        if has_user_uid and has_preferred_company_id:
+            logger.info("✓ Users schema is up-to-date")
+            return True
+            
+        logger.info("⚠ Missing columns in users table")
+        logger.info("Running users schema migration...")
+        
+        migration_sql = ""
+        
+        if not has_user_uid:
+            logger.info("Adding user_uid column...")
+            migration_sql += """
+            -- Add user_uid column
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS user_uid VARCHAR;
+            
+            -- Populate existing rows with UUIDs
+            UPDATE users SET user_uid = gen_random_uuid()::text WHERE user_uid IS NULL;
+            
+            -- Make it not null
+            ALTER TABLE users ALTER COLUMN user_uid SET NOT NULL;
+            
+            -- Add unique index
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_users_user_uid ON users(user_uid);
+            """
+            
+        if not has_preferred_company_id:
+            logger.info("Adding preferred_company_id column...")
+            migration_sql += """
+            -- Add preferred_company_id column
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_company_id UUID;
+            """
+        
+        # Execute migration
+        if migration_sql:
+            db.execute(text(migration_sql))
+            db.commit()
+        
+        logger.info("✓ Users schema migration completed successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"✗ Users schema migration failed: {e}")
+        db.rollback()
+        return False
+
+
 def ensure_schema_updated(db: Session) -> bool:
     """
     Ensure all database schemas are up-to-date.
@@ -112,18 +169,21 @@ def ensure_schema_updated(db: Session) -> bool:
         logger.info("="*60)
         
         # Migrate master_accounts table
-        success = migrate_master_accounts_schema(db)
+        success_master = migrate_master_accounts_schema(db)
         
-        if success:
+        # Migrate users table
+        success_users = migrate_users_schema(db)
+        
+        if success_master and success_users:
             logger.info("="*60)
             logger.info("✓ ALL SCHEMAS UP-TO-DATE")
             logger.info("="*60)
+            return True
         else:
             logger.warning("="*60)
             logger.warning("⚠ SCHEMA MIGRATION HAD ISSUES")
             logger.warning("="*60)
-        
-        return success
+            return False
         
     except Exception as e:
         logger.error(f"Schema check failed: {e}")
