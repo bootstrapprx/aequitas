@@ -48,6 +48,7 @@ import SuperuserPanel from "./pages/admin/SuperuserPanel";
 import SystemSettingsPage from "./pages/admin/system/SystemSettingsPage";
 import IntegrationsPage from "./pages/admin/integrations/IntegrationsPage";
 import AuditLogPage from "./pages/admin/audit/AuditLogPage";
+import AdminRequests from "./pages/admin/AdminRequests";
 
 // Legacy pages (to be reorganized or removed)
 import UploadPage from "./pages/Upload";
@@ -124,6 +125,7 @@ const App = () => (
                 <Route path="admin/system" element={<SystemSettingsPage />} />
                 <Route path="admin/integrations" element={<IntegrationsPage />} />
                 <Route path="admin/audit" element={<AuditLogPage />} />
+                <Route path="admin/requests" element={<AdminRequests />} />
 
                 {/* Legacy Routes (backward compatibility) */}
                 <Route path="masterchart" element={<MasterChartDashboard />} />

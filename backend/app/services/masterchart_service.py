@@ -153,7 +153,14 @@ class MasterChartService:
         detail_count = total_accounts - header_count
         max_depth = max((acc.level for acc in accounts), default=0)
         
-        orphans = [acc.code for acc in accounts if acc.parent_code and not self.get_account_by_code(acc.parent_code)]
+        # Create a set of all account codes for O(1) lookup
+        all_codes = {acc.code for acc in accounts}
+        
+        # Identify orphans (accounts with a parent_code that doesn't exist in the set)
+        orphans = [
+            acc.code for acc in accounts 
+            if acc.parent_code and acc.parent_code not in all_codes
+        ]
 
         return {
             "total_accounts": total_accounts,

@@ -1,0 +1,5 @@
+CONTAINER ID   IMAGE                    COMMAND                  CREATED          STATUS          PORTS                                             NAMES
+24a3d6c0c0d0   aequitas-frontend        "docker-entrypoint.s…"   47 seconds ago   Up 46 seconds   0.0.0.0:5173->5173/tcp, [::]:5173->5173/tcp       chartforge-frontend-dev
+68f863c2ce11   aequitas-backend         "uvicorn app.main:ap…"   16 hours ago     Up 4 minutes    0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp       chartforge-backend-dev
+ce5d70c618e0   ollama/ollama            "/bin/ollama serve"      16 hours ago     Up 4 minutes    0.0.0.0:11435->11434/tcp, [::]:11435->11434/tcp   chartforge-ollama-dev
+a8f8973539d6   pgvector/pgvector:pg15   "docker-entrypoint.s…"   16 hours ago     Up 4 minutes    0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp       chartforge-postgres-dev

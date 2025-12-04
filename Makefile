@@ -15,7 +15,7 @@ dev:
 	@echo "Unified Dev Mode is running."
 	@echo "Frontend: http://localhost:5173"
 	@echo "Backend: http://localhost:8000"
-	@echo "Ollama: http://localhost:11434"
+	@echo "Ollama: http://localhost:11435"
 	@echo "Postgres: localhost:5432"
 
 stop:

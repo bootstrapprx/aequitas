@@ -1,0 +1,104 @@
+Starting Unified Dev Mode...
+Starting Docker services (Postgres, Ollama, Backend, Frontend)
+docker compose -f ./docker-compose.dev.yml up -d --build
+Compose can now delegate builds to bake for better performance.
+ To do so, set COMPOSE_BAKE=true.
+#0 building with "default" instance using docker driver
+
+#1 [backend internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.36kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 1.7s
+
+#3 [backend internal] load .dockerignore
+#3 transferring context: 147B done
+#3 DONE 0.0s
+
+#4 [backend 1/8] FROM docker.io/library/python:3.11-slim@sha256:193fdd0bbcb3d2ae612bd6cc3548d2f7c78d65b549fcaa8af75624c47474444d
+#4 DONE 0.0s
+
+#5 [backend internal] load build context
+#5 transferring context: 17.65kB done
+#5 DONE 0.0s
+
+#6 [backend 2/8] WORKDIR /app
+#6 CACHED
+
+#7 [backend 4/8] RUN python -m pip install --upgrade pip
+#7 CACHED
+
+#8 [backend 6/8] RUN pip install --no-cache-dir -r requirements.txt
+#8 CACHED
+
+#9 [backend 3/8] RUN apt-get update && apt-get install -y     build-essential     gcc     libpq-dev     python3-dev     libffi-dev     curl   && rm -rf /var/lib/apt/lists/*
+#9 CACHED
+
+#10 [backend 5/8] COPY ./requirements.txt .
+#10 CACHED
+
+#11 [backend 7/8] RUN which uvicorn && uvicorn --version
+#11 CACHED
+
+#12 [backend 8/8] COPY . .
+#12 CACHED
+
+#13 [backend] exporting to image
+#13 exporting layers done
+#13 writing image sha256:b9d417cbe27c027cdb6857dc7b200c6e71c26f81e4b6564d46af52bb85ba4a4d done
+#13 naming to docker.io/library/aequitas-backend done
+#13 DONE 0.0s
+
+#14 [backend] resolving provenance for metadata file
+#14 DONE 0.0s
+
+#15 [frontend internal] load build definition from Dockerfile.dev
+#15 transferring dockerfile: 246B done
+#15 DONE 0.0s
+
+#16 [frontend internal] load metadata for docker.io/library/node:20-alpine
+#16 DONE 0.8s
+
+#17 [frontend internal] load .dockerignore
+#17 transferring context: 127B done
+#17 DONE 0.0s
+
+#18 [frontend 1/5] FROM docker.io/library/node:20-alpine@sha256:16858294071a56ffd4cce9f17b57136cc39e41507b40e245b4f8e906f7a19463
+#18 DONE 0.0s
+
+#19 [frontend internal] load build context
+#19 transferring context: 29.24kB done
+#19 DONE 0.0s
+
+#20 [frontend 3/5] COPY package.json package-lock.json ./
+#20 CACHED
+
+#21 [frontend 4/5] RUN npm install
+#21 CACHED
+
+#22 [frontend 2/5] WORKDIR /app
+#22 CACHED
+
+#23 [frontend 5/5] COPY . .
+#23 CACHED
+
+#24 [frontend] exporting to image
+#24 exporting layers done
+#24 writing image sha256:e33c666cbb554cba9ea21a20ed168fe175493f055c467d679db4fcc02a9ec9ce done
+#24 naming to docker.io/library/aequitas-frontend done
+#24 DONE 0.0s
+
+#25 [frontend] resolving provenance for metadata file
+#25 DONE 0.0s
+ backend  Built
+ frontend  Built
+ Container chartforge-ollama-dev  Running
+ Container chartforge-postgres-dev  Running
+ Container chartforge-backend-dev  Running
+ Container chartforge-frontend-dev  Running
+Unified Dev Mode is running.
+Frontend: http://localhost:5173
+Backend: http://localhost:8000
+Ollama: http://localhost:11434
+Postgres: localhost:5432

@@ -19,7 +19,7 @@ services:
     image: ollama/ollama
     container_name: chartforge-ollama-dev
     ports:
-      - "11434:11434"
+      - "11435:11434"
     volumes:
       - ollama_data_dev:/root/.ollama
     networks:

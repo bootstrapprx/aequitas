@@ -5,7 +5,7 @@ import { useManualCRUD } from '@/hooks/useManualCRUD';
 import { MasterAccount } from '@/types/masterchart';
 import { Company } from '@/types/company';
 import { CompanyAccount } from '@/types/company_account';
-import { QueryKey } from '@/lib/queryKeys';
+import { QueryKey, companyChartKeys } from '@/lib/queryKeys';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useManualMode } from '@/contexts/ManualModeContext';
@@ -69,8 +69,8 @@ const MappingsPage: React.FC = () => {
         <ManualMappingEditor
           masterChart={masterChartAccounts}
           companyChart={companyChartAccounts}
-          onMap={() => {}}
-          onAddCustomAccount={() => {}}
+          onMap={() => { }}
+          onAddCustomAccount={() => { }}
         />
       )}
 
