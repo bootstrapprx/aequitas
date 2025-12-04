@@ -1,136 +1,82 @@
-You are Claude Code working inside the Aequitas repository.  
-Today we must implement a critical patch for user registration and initial bootstrapping.
+You are Claude Code working inside the Aequitas repository. The system currently has two critical regressions:
 
-CONTEXT / SUMMARY
-- A previous change disabled public signup. There is currently NO "Pay & Register" option in the registration UI.
-- There is no guaranteed default admin account available after deploy.
-- We require a robust sign-up flow compatible with the new company hierarchy: users must belong to one or more Companies (CUID). The preferred sign-up behavior is:
-  - Public sign-up (when enabled) must create a Company + first admin user if a company is being created during sign-up.
-  - Paid sign-up (Pay & Register) must accept payment and only after successful payment create the Company and the user with admin rights.
-- We must ensure a default superuser exists: `actpm@aequitas.com`. The password for this account MUST come from an environment variable (in `.env`) and should be set only at first-run if the user does not exist.
+1) The default superuser account "actpm@aequitas.com" cannot log in (login returns 401).
+2) The registration UI is broken because the frontend expects an auth config object (allow_public_signup) which is undefined; also the Pay & Register flow is failing or falling back inconsistently.
 
-GOAL
-Implement a safe, testable, and non-breaking patch that:
-1. Re-enables public sign-up when allowed by config.
-2. Adds a "Pay & Register" (paid onboarding) flow with Stripe support (fallback to a mock mode when STRIPE not configured).
-3. Seeds a default superuser `actpm@aequitas.com` with password from `.env` at startup if it doesn't already exist.
-4. Ensures sign-up always associates a user with a Company (create company during sign-up if needed).
-5. Adds server-side and frontend guards to prevent unauthorized creation of users without companies.
-6. Provide clear file diffs for every change and include unit/integration tests for the critical paths.
+Your task: implement a robust, idempotent patch that fixes authentication, the auth/config endpoint, the sign-up & payment flows, and adds defensive logging and fallbacks so the frontend never crashes reading undefined.
 
-IMPORTANT ENVIRONMENT VARIABLES (to be added to `.env` or `.env.dev`)
-- DEFAULT_SUPERUSER_EMAIL=actpm@aequitas.com
-- DEFAULT_SUPERUSER_PASSWORD=<set_this_in_env>   # REQUIRED for seeding superuser on startup
-- ALLOW_PUBLIC_SIGNUP=true|false                 # toggle to allow normal signup
-- STRIPE_API_KEY=sk_... (optional)               # if provided, use real Stripe checkout
-- STRIPE_WEBHOOK_SECRET=whsec_... (optional)
-- VITE_STRIPE_PUBLISHABLE_KEY=pk_... (frontend)
+Requirements (high level)
+- Fix backend login/auth so that existing seeded superuser can authenticate using the password from DEFAULT_SUPERUSER_PASSWORD in .env (idempotent seed).
+- Ensure an endpoint `/api/v1/auth/config` (or whatever frontend expects) reliably returns JSON with `allow_public_signup` and other flags; backend must always return valid JSON (with defaults) even on error.
+- Make frontend registration code defensive: check for undefined before accessing `allow_public_signup`, and use a sensible default (false).
+- Fix paid registration flow: if Stripe keys are missing, return a clear JSON response indicating `stripe_configured: false` and enable a mock mode only when `ALLOW_MOCK_PAYMENTS=true` env var exists.
+- Add temporary server-side debug logs for auth, config fetch, and stripe-related actions; keep logs minimal and non-sensitive (do not print passwords).
+- Add tests for: seed creation, config endpoint, free registration allowed vs forbidden, and paid registration fallback.
 
-BACKEND (FastAPI / SQLAlchemy) TASKS
-1) Config & Startup seed
-- Add config entries in `app/core/config.py` for DEFAULT_SUPERUSER_EMAIL, DEFAULT_SUPERUSER_PASSWORD and ALLOW_PUBLIC_SIGNUP.
-- Modify `app/db/init_db.py` (or startup routine) to:
-  - If DEFAULT_SUPERUSER_EMAIL & DEFAULT_SUPERUSER_PASSWORD exist and account not present, create user with is_superuser=True and assign it to no company (superuser global).
-  - Use secure bcrypt hashing (existing hashing utils).
-  - Log a single-line message on creation (do NOT print the password).
-- Ensure creating the default superuser does NOT overwrite an existing account.
+Concrete Backend tasks (FastAPI + SQLAlchemy)
+1. Startup seed:
+   - In `app/core/config.py`: add DEFAULT_SUPERUSER_EMAIL, DEFAULT_SUPERUSER_PASSWORD, ALLOW_PUBLIC_SIGNUP, ALLOW_MOCK_PAYMENTS env vars (with defaults).
+   - In startup script (e.g., `app/db/init_db.py` or `app/main.py` on startup event) ensure:
+     * If DEFAULT_SUPERUSER_EMAIL and DEFAULT_SUPERUSER_PASSWORD are set and user not exists, create superuser (is_superuser=True) using existing password hashing util.
+     * Log: "Default superuser created: actpm@aequitas.com" (no password).
+   - Ensure this is idempotent (do not update existing user).
 
-2) Signup endpoints
-- Create or update POST `/api/v1/auth/register` to support two flows:
-  A) `register_type=free` (only allowed if ALLOW_PUBLIC_SIGNUP=true)
-  B) `register_type=paid`
-- Required payload:
-  {
-    "email": "...",
-    "password": "...",                  // or password may be set on webhook confirmation for paid flows
-    "company": { "name": "...", ... },  // either select existing CUID or create new company
-    "cuid": "<optional existing cuid>", // if joining an existing company
-    "register_type": "free" | "paid",
-    "plan": "starter" | "pro"           // optional
-  }
-- Backend behavior:
-  - Validate company presence: if cuid provided → ensure it exists and user is being invited/joining; if creating a new company → create Company with generate_ucid() and set this user as Company admin (UserCompany with is_admin=true).
-  - For `register_type=free`: enforce ALLOW_PUBLIC_SIGNUP == true. Create user + create/join company immediately, return tokens.
-  - For `register_type=paid`: if STRIPE_API_KEY exists:
-      * Create a Stripe Checkout Session (or PaymentIntent) and return session id / checkout url to frontend.
-      * Do NOT create the user until Stripe webhook confirms payment.
-      * Store a temporary pending registration record in DB with a secure token and expiry (e.g., 24h).
-    If STRIPE not configured:
-      * Fallback to "mock payment" mode where the server accepts the payment immediately for dev/test (controlled by an env flag). Document clearly.
-  - Create `POST /api/v1/auth/register/confirm` to be called by webhook or by client after successful payment:
-    * Accept the pending token and finalize creation of Company + User + UserCompany admin, then issue JWT.
-  - Create `POST /api/v1/payments/webhook` to receive Stripe webhooks:
-    * On successful checkout session completion → call confirm flow server-side.
+2. Login verification:
+   - Ensure login endpoint (`/api/v1/auth/login-json`) verifies password using current hasher. If the codebase changed the hasher, add a legacy-check fallback: if verify_password(old_algo) passes, re-hash using new hasher and persist.
+   - Add clear error messages in logs on failed authentication (e.g., "Failed login for email X: user not found" or "password mismatch").
 
-3) DB models & pending registration
-- Add a `PendingRegistration` model in `app/db/models/pending_registration.py`:
-  - id, email, hashed_meta (encrypt any sensitive data), payload_json, token, expires_at, stripe_session_id (nullable), created_at.
-- Add Alembic migration or simple SQLAlchemy model creation and ensure test database handles it.
+3. Auth config endpoint:
+   - Add or fix `GET /api/v1/auth/config` returning:
+     {
+       "allow_public_signup": <bool from config.ALLOW_PUBLIC_SIGNUP>,
+       "stripe_configured": <true|false>,
+       "mock_payments_allowed": <true|false>
+     }
+   - Always return 200 with JSON. If an internal exception occurs, return defaults with a `warning` field.
 
-4) Auth & security
-- Ensure existing `user_service.create_user()` can accept a company list and create UserCompany links atomically.
-- Create a guard to disallow creating a user with no linked companies unless the caller is a superuser or the action is performed by the registration confirm flow that explicitly creates company + user together.
-- Ensure that JWT returned after registration includes company_ids and preferred_company_id.
+4. Registration endpoints:
+   - Validate `register_type` and enforce server-side guard:
+     * If register_type == "free": require ALLOW_PUBLIC_SIGNUP true else return 403 with helpful message.
+     * If register_type == "paid": if STRIPE_API_KEY present create Stripe session, else if ALLOW_MOCK_PAYMENTS true create a mock paid pending registration. If neither, return 503 with message "payments unavailable".
+   - Ensure pending registration record created for paid flows with token & expiry.
+   - Implement webhook endpoint that finalizes pending registration upon confirmed payment.
+   - Ensure `create_user()` is only called in flows where company association is present or special-case superuser seed.
 
-5) Unit tests (backend)
-- Add tests in `backend/tests/` for:
-  - free registration success (when ALLOW_PUBLIC_SIGNUP=true): creates company + user + usercompany.
-  - free registration forbidden when ALLOW_PUBLIC_SIGNUP=false.
-  - paid registration: creates pending registration and returns checkout session id (mock Stripe if STRIPE not configured).
-  - webhook confirm flow: finalizes user creation and issues token.
-  - startup seed: if DEFAULT_SUPERUSER_PASSWORD present and user absent, superuser created.
-  - security: cannot create user without company via public endpoints.
+5. Add/adjust unit tests:
+   - test_superuser_seeding()
+   - test_config_endpoint_returns_defaults()
+   - test_free_registration_guard()
+   - test_paid_registration_fallback_to_mock()
 
-FRONTEND (React + TS + TanStack Query) TASKS
-1) Registration page UI updates
-- Update `frontend/src/pages/auth/Register.tsx` (or registration form) to show two options:
-  - "Create account (Free)" — visible only when VITE_ALLOW_PUBLIC_SIGNUP is true (pass flag from backend or read from VITE env).
-  - "Pay & Register" — always visible if STRIPE publishable key available OR in mock mode.
-- Form fields:
-  - Email, Password (for free flow) OR Email + optional phone (for paid — optional), Company Name OR CUID selection dropdown, Plan selection.
-- When user chooses "Pay & Register":
-  - POST to `/api/v1/auth/register` with register_type=paid.
-  - Receive Stripe session id / checkout url → redirect to Stripe Checkout.
-  - Alternatively, if in mock mode, call `register/confirm` immediately to simulate payment success.
+Concrete Frontend tasks (React + TS)
+1. Defensive config fetch:
+   - Update `frontend/src/pages/auth/Register.tsx` (or wherever fetchConfig is called) to:
+     * Try/catch the fetch of `/api/v1/auth/config`.
+     * If response missing or malformed, fallback to `{ allow_public_signup: false, stripe_configured: false, mock_payments_allowed: false }`.
+     * Do not access `allow_public_signup` without checking presence.
+   - Add a small spinner and a user-friendly message if payments are unavailable.
 
-2) Payment handling
-- Implement a small `frontend/src/lib/payments/stripe.ts` helper that uses Stripe.js (if publishable key present) to redirect to checkout.
-- Implement `frontend/src/pages/auth/PaymentSuccess.tsx` which handles the redirect after checkout and calls the confirm endpoint if needed.
+2. Login diagnostics:
+   - On login failure show server message if present (e.g., "Invalid credentials" vs "account locked").
+   - Ensure login request uses `email` and `password` fields (not uid).
 
-3) Pending registration UX
-- After starting a paid registration, show a “Pending payment — check your email” message with the pending token link (if applicable).
-- After successful payment, user is redirected and logged in automatically.
+3. Payment UI:
+   - If `stripe_configured` false and `mock_payments_allowed` false, hide "Pay & Register" button and show explanation: "Payments not configured. Contact admin."
+   - If `stripe_configured` false and `mock_payments_allowed` true, make the Pay & Register button trigger a mock checkout flow calling the backend confirm endpoint.
 
-4) Environment & feature flags
-- Add Vite env variables:
-  - VITE_ALLOW_PUBLIC_SIGNUP
-  - VITE_STRIPE_PUBLISHABLE_KEY
-- Ensure `AuthContext` reads company list after login and respects preferred_company_id.
+4. Minimal tests:
+   - verify that Register page does not crash when `/auth/config` returns 500 or empty.
+   - verify login displays server error on 401.
 
-5) Frontend tests
-- Add simple unit tests or integration tests covering:
-  - Register page renders both options and enforces validation.
-  - Paid flow makes POST to backend and handles returned checkout url.
+Deliverables
+- File-by-file diffs in ```diff``` blocks for all changed files.
+- Short explanation for each change (1-2 sentences).
+- Tests added and high-level results (pass/fail).
+- Add a short README note describing env variables and the mock payments fallback.
 
-GENERAL SAFETY RULES
-- Do NOT set or log real secret values anywhere in code or diffs (show env var names only).
-- The seed operation must be idempotent: do not re-create or override existing users.
-- A superuser must not be silently demoted by this change.
-- Operations should be atomic where necessary (DB transactions) to avoid partial creation (company without admin).
+Safety & non-breaking constraints
+- Do not log secrets.
+- Do not overwrite an existing superuser.
+- Keep behavior backwards-compatible for other modules.
 
-EXPECTED DELIVERABLES
-1. Provide clear file-by-file diffs in ```diff fenced blocks``` for every modified or new file.
-2. Include new or updated unit tests and their results (brief summary).
-3. Add documentation to `CLAUDE.md` or `README.md` describing:
-   - how to set DEFAULT_SUPERUSER_PASSWORD and other env vars
-   - how the paid flow works and how to run it in mock mode
-   - how to seed dev Stripe keys for testing (if applicable)
-4. Add migration or model changes with instructions to run alembic migrations (or note if using metadata.create_all).
-5. Provide an ordered checklist of steps to test the whole flow locally (dev steps: `make dev`, run Stripe mock, do register flows, verify superuser exists).
-
-ADDITIONAL CONSTRAINTS
-- Keep changes minimal and non-breaking to other modules (master chart, dexter, chartforge).
-- All TypeScript must compile with no errors.
-- Backend must pass pytest for modified/new tests.
-
-Begin now. Generate the diffs and tests as output when you finish.
+Begin now. Provide diffs and test changes when finished.
