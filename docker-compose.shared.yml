@@ -1,0 +1,18 @@
+services:
+  nginx-proxy:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - chartforge-dev-net
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://nginx-proxy:80
+    depends_on:
+      - nginx-proxy
+    networks:
+      - chartforge-dev-net

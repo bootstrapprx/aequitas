@@ -34,6 +34,14 @@ logs:
 	@echo "Following Docker logs..."
 	docker compose -f $(DOCKER_COMPOSE_DEV) logs -f
 
+shared:
+	@echo "Starting Shared Dev Mode..."
+	@echo "Starting Docker services with Tunnel..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) -f docker-compose.shared.yml up -d --build
+	@echo "Shared Dev Mode is running."
+	@echo "To view the public URL, run: docker compose -f $(DOCKER_COMPOSE_DEV) -f docker-compose.shared.yml logs tunnel | grep 'trycloudflare.com'"
+
+
 # Placeholder for optional services
 services:
 	@echo "Managing optional services..."
