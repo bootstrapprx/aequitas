@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
+from typing import List
 from app.db.session import get_db
 from app.schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse, CompanyInactivate
+from app.schemas.user import UserResponse
 from app.services.company_service import CompanyService
+from app.services.permission_service import PermissionService
 
 router = APIRouter()
 
@@ -139,3 +142,31 @@ def restore_company(
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
+
+@router.get("/{company_id}/users", response_model=List[UserResponse])
+def get_company_users(
+    company_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all users assigned to a specific company.
+
+    Args:
+        company_id: UUID of the company
+        db: Database session
+
+    Returns:
+        List of users with access to the company
+    """
+    # Verify company exists
+    company = CompanyService.get_company_by_id(db, company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Get all user-company relationships for this company
+    permission_service = PermissionService(db)
+    user_companies = permission_service.get_company_users(company_id)
+
+    # Extract users from the relationships
+    users = [uc.user for uc in user_companies]
+    return users

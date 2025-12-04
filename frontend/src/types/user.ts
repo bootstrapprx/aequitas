@@ -1,8 +1,10 @@
 export interface User {
   id: string;
+  user_uid: string;
   email: string;
   is_active: boolean;
   is_superuser: boolean;
+  preferred_company_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -10,6 +12,16 @@ export interface User {
 export interface UserCreate {
   email: string;
   password: string;
+  company_ids?: string[];
+  is_initial_signup?: boolean;
+  company_name?: string;
+}
+
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  company_ids?: string[];
+  preferred_company_id?: string;
 }
 
 export interface UserUpdate {

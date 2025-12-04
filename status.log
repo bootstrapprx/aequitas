@@ -1,0 +1,46 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   .gitignore
+	deleted:    AEQUITAS_TRANSFORMATION_COMPLETE.md
+
+Changes not staged for commit:
+  (use "git add/rm <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   backend/app/api/v1/auth.py
+	modified:   backend/app/api/v1/companies.py
+	modified:   backend/app/db/models/user.py
+	modified:   backend/app/schemas/user.py
+	modified:   backend/app/services/user_service.py
+	modified:   frontend/src/components/manual/companies/CompaniesList.tsx
+	modified:   frontend/src/contexts/AuthContext.tsx
+	modified:   frontend/src/pages/auth/RegisterPage.tsx
+	modified:   frontend/src/types/user.ts
+	deleted:    prompt.md
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	IDENTITY_LAYER_IMPLEMENTATION.md
+	backend/migration_identity_layer.sql
+	compose_version_check.txt
+	compose_version_check_2.txt
+	curl_output.txt
+	currentRequest.txt
+	docker_config.txt
+	docker_config_check.txt
+	docker_info.txt
+	find_results.txt
+	frontend/src/components/manual/companies/CompanyUsers.tsx
+	git_status.txt
+	local_plugins.txt
+	ls_check.txt
+	plugin_files.txt
+	ps_ollama.txt
+	pull_log.txt
+	rpm_verify.txt
+	status.log
+	symlink_check.txt
+	version_check.txt
+

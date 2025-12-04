@@ -1,23 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '@/integrations/api';
 import { useNavigate } from 'react-router-dom';
-
-interface User {
-  id: string;
-  email: string;
-  is_active: boolean;
-  is_superuser: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { User, LoginResponse } from '@/types/user';
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  companyIds: string[];
+  currentCompanyId: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, isInitialSignup?: boolean, companyName?: string, companyIds?: string[]) => Promise<void>;
   logout: () => void;
+  switchCompany: (companyId: string) => void;
   isAuthenticated: boolean;
 }
 
@@ -25,22 +20,36 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'chartforge_token';
 const USER_KEY = 'chartforge_user';
+const COMPANY_IDS_KEY = 'chartforge_company_ids';
+const CURRENT_COMPANY_KEY = 'chartforge_current_company';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [companyIds, setCompanyIds] = useState<string[]>([]);
+  const [currentCompanyId, setCurrentCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token and user from localStorage on mount
+  // Load token, user, and company context from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem(TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_KEY);
+    const storedCompanyIds = localStorage.getItem(COMPANY_IDS_KEY);
+    const storedCurrentCompany = localStorage.getItem(CURRENT_COMPANY_KEY);
 
     if (storedToken && storedUser) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
       // Set default authorization header
       api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+
+      if (storedCompanyIds) {
+        setCompanyIds(JSON.parse(storedCompanyIds));
+      }
+
+      if (storedCurrentCompany) {
+        setCurrentCompanyId(storedCurrentCompany);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -56,9 +65,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post('/auth/login-json', { email, password });
-      const { access_token } = response.data;
-      
+      const response = await api.post<LoginResponse>('/auth/login-json', { email, password });
+      const { access_token, company_ids, preferred_company_id } = response.data;
+
       setToken(access_token);
       localStorage.setItem(TOKEN_KEY, access_token);
 
@@ -66,14 +75,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const userResponse = await api.get('/auth/me');
       setUser(userResponse.data);
       localStorage.setItem(USER_KEY, JSON.stringify(userResponse.data));
+
+      // Store company context
+      if (company_ids && company_ids.length > 0) {
+        setCompanyIds(company_ids);
+        localStorage.setItem(COMPANY_IDS_KEY, JSON.stringify(company_ids));
+
+        // Set current company to preferred or first available
+        const initialCompany = preferred_company_id || company_ids[0];
+        setCurrentCompanyId(initialCompany);
+        localStorage.setItem(CURRENT_COMPANY_KEY, initialCompany);
+      }
     } catch (error: any) {
       throw new Error(error.response?.data?.detail || 'Login failed');
     }
   };
 
-  const register = async (email: string, password: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    isInitialSignup: boolean = false,
+    companyName?: string,
+    companyIds?: string[]
+  ) => {
     try {
-      await api.post('/auth/register', { email, password });
+      const payload: any = { email, password };
+
+      if (isInitialSignup && companyName) {
+        payload.is_initial_signup = true;
+        payload.company_name = companyName;
+      } else if (companyIds && companyIds.length > 0) {
+        payload.company_ids = companyIds;
+      }
+
+      await api.post('/auth/register', payload);
       // After registration, automatically log in
       await login(email, password);
     } catch (error: any) {
@@ -81,11 +116,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const switchCompany = (companyId: string) => {
+    if (companyIds.includes(companyId)) {
+      setCurrentCompanyId(companyId);
+      localStorage.setItem(CURRENT_COMPANY_KEY, companyId);
+      // Optionally invalidate queries here if using React Query
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
+    setCompanyIds([]);
+    setCurrentCompanyId(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(COMPANY_IDS_KEY);
+    localStorage.removeItem(CURRENT_COMPANY_KEY);
     delete api.defaults.headers.common['Authorization'];
   };
 
@@ -93,9 +140,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     token,
     isLoading,
+    companyIds,
+    currentCompanyId,
     login,
     register,
     logout,
+    switchCompany,
     isAuthenticated: !!token && !!user,
   };
 

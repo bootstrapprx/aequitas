@@ -1,0 +1,9 @@
+/usr/libexec/docker/cli-plugins/docker-compose
+/usr/share/doc/docker-compose-plugin
+/usr/share/doc/docker-compose-plugin/LICENSE
+/usr/share/doc/docker-compose-plugin/MAINTAINERS
+/usr/share/doc/docker-compose-plugin/NOTICE
+/usr/share/doc/docker-compose-plugin/README.md
+/usr/share/licenses/docker-compose-plugin
+/usr/share/licenses/docker-compose-plugin/LICENSE
+/usr/share/licenses/docker-compose-plugin/NOTICE

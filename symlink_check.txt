@@ -1,0 +1,1 @@
+lrwxrwxrwx. 1 actpm actpm 46 dez  3 20:28 /home/actpm/.docker/cli-plugins/docker-compose -> /usr/libexec/docker/cli-plugins/docker-compose

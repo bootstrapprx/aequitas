@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Mail, Phone, MapPin, Building2, Eye, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import CompanyUsers from './CompanyUsers';
 
 interface CompaniesListProps {
   companies: Company[];
@@ -137,6 +138,8 @@ const CompaniesList: React.FC<CompaniesListProps> = ({
                     )}
                   </div>
                 </div>
+                {/* Display users for this company */}
+                <CompanyUsers companyId={company.id} />
               </li>
             );
           })}

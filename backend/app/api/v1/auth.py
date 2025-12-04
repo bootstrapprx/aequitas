@@ -16,6 +16,7 @@ from app.schemas.user import (
     Token,
     LoginRequest
 )
+from app.schemas.user_company import UserCompanyUpdate
 from app.core.security import create_access_token, verify_password
 from app.services.user_service import UserService
 from app.core.config import settings
@@ -76,18 +77,53 @@ def register(
 ):
     """
     Register a new user.
-    
+
+    For initial sign-up: provide is_initial_signup=True and company_name
+    For joining existing company: provide company_ids list
+
     Args:
-        user_data: User registration data (email and password)
+        user_data: User registration data (email, password, and company info)
         db: Database session
-    
+
     Returns:
         Created user information
     """
+    from app.services.company_service import CompanyService
+    from app.schemas.company import CompanyCreate
+    from app.services.permission_service import PermissionService
+
     user_service = UserService(db)
+
     try:
-        user = user_service.create_user(user_data)
-        return user
+        # Handle initial sign-up (create company + user)
+        if user_data.is_initial_signup:
+            if not user_data.company_name:
+                raise ValueError("Company name is required for initial sign-up")
+
+            # Create company
+            company_service = CompanyService()
+            company_data = CompanyCreate(name=user_data.company_name)
+            company = company_service.create_company(db, company_data)
+
+            # Create user with company association
+            user = user_service.create_user(user_data, company_ids=[company.id])
+
+            # Make user admin of their company
+            permission_service = PermissionService(db)
+            user_company = permission_service.get_user_company(user.id, company.id)
+            if user_company:
+                permission_service.update_user_company_permissions(
+                    user.id,
+                    company.id,
+                    UserCompanyUpdate(is_admin=True)
+                )
+
+            db.refresh(user)
+            return user
+        else:
+            # Join existing company
+            user = user_service.create_user(user_data)
+            return user
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -100,32 +136,46 @@ def login(
     db: Session = Depends(get_db)
 ):
     """
-    Login and get access token.
-    
+    Login and get access token with company information.
+
     Args:
         form_data: OAuth2 form data (username=email, password)
         db: Database session
-    
+
     Returns:
-        Access token
+        Access token with company_ids and preferred_company_id
     """
     user_service = UserService(db)
     user = user_service.authenticate_user(form_data.username, form_data.password)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    # Get user's company IDs
+    company_ids = user.get_company_ids()
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email},
+        data={
+            "sub": str(user.id),
+            "email": user.email,
+            "company_ids": [str(cid) for cid in company_ids],
+            "preferred_company_id": str(user.preferred_company_id) if user.preferred_company_id else None,
+            "is_superuser": user.is_superuser
+        },
         expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "company_ids": company_ids,
+        "preferred_company_id": user.preferred_company_id
+    }
 
 @router.post("/login-json", response_model=Token)
 def login_json(
@@ -134,31 +184,45 @@ def login_json(
 ):
     """
     Login using JSON body (alternative to OAuth2 form).
-    
+
     Args:
         login_data: Login request with email and password
         db: Database session
-    
+
     Returns:
-        Access token
+        Access token with company information
     """
     user_service = UserService(db)
     user = user_service.authenticate_user(login_data.email, login_data.password)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
+    # Get user's company IDs
+    company_ids = user.get_company_ids()
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email},
+        data={
+            "sub": str(user.id),
+            "email": user.email,
+            "company_ids": [str(cid) for cid in company_ids],
+            "preferred_company_id": str(user.preferred_company_id) if user.preferred_company_id else None,
+            "is_superuser": user.is_superuser
+        },
         expires_delta=access_token_expires
     )
-    
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "company_ids": company_ids,
+        "preferred_company_id": user.preferred_company_id
+    }
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user)):

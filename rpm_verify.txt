@@ -1,0 +1,1 @@
+missing     /usr/libexec/docker/cli-plugins/docker-compose

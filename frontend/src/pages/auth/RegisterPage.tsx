@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -12,6 +13,9 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [companyCuid, setCompanyCuid] = useState('');
+  const [signupMode, setSignupMode] = useState<'create' | 'join'>('create');
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -38,10 +42,42 @@ const RegisterPage = () => {
       return;
     }
 
+    if (signupMode === 'create' && !companyName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Company name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (signupMode === 'join' && !companyCuid.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Company CUID is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await register(email, password);
+      if (signupMode === 'create') {
+        // Initial sign-up: create company + user
+        await register(email, password, true, companyName);
+      } else {
+        // Join existing company (requires fetching company ID from CUID)
+        // For now, we'll implement a basic version
+        toast({
+          title: 'Info',
+          description: 'Join existing company feature coming soon. Please create a new company for now.',
+          variant: 'default',
+        });
+        setIsLoading(false);
+        return;
+      }
+
       toast({
         title: 'Success',
         description: 'Account created successfully',
@@ -66,6 +102,13 @@ const RegisterPage = () => {
           <CardDescription>Enter your information to get started</CardDescription>
         </CardHeader>
         <CardContent>
+          <Tabs value={signupMode} onValueChange={(v) => setSignupMode(v as 'create' | 'join')} className="mb-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="create">Create Company</TabsTrigger>
+              <TabsTrigger value="join">Join Company</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -105,6 +148,41 @@ const RegisterPage = () => {
                 disabled={isLoading}
               />
             </div>
+
+            {signupMode === 'create' ? (
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  placeholder="Acme Inc."
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  A unique company ID will be generated automatically
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="companyCuid">Company CUID</Label>
+                <Input
+                  id="companyCuid"
+                  type="text"
+                  placeholder="Enter company CUID"
+                  value={companyCuid}
+                  onChange={(e) => setCompanyCuid(e.target.value)}
+                  required
+                  disabled={isLoading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the unique company ID provided by your administrator
+                </p>
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>

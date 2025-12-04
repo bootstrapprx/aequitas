@@ -1,0 +1,5 @@
+ backend Skipped - No image to be pulled 
+ frontend Skipped - No image to be pulled 
+ ollama Pulling 
+ postgres Pulling 
+error getting credentials - err: exec: "docker-credential-desktop": executable file not found in $PATH, out: ``

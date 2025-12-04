@@ -1,0 +1,2 @@
+ollama     26396       1  0 19:02 ?        00:00:36 /usr/local/bin/ollama serve
+actpm      57468   48576  0 20:46 pts/4    00:00:00 grep --color=auto ollama

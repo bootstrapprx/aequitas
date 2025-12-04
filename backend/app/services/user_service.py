@@ -8,6 +8,7 @@ from uuid import UUID
 import logging
 
 from app.db.models.user import User
+from app.db.models.user_company import UserCompany
 from app.core.security import get_password_hash, verify_password
 from app.schemas.user import UserCreate, UserUpdate
 
@@ -19,36 +20,62 @@ class UserService:
     def __init__(self, db: Session):
         self.db = db
     
-    def create_user(self, user_data: UserCreate) -> User:
+    def create_user(self, user_data: UserCreate, company_ids: Optional[List[UUID]] = None) -> User:
         """
-        Create a new user with hashed password.
-        
+        Create a new user with hashed password and company associations.
+
         Args:
             user_data: UserCreate schema with email and password
-        
+            company_ids: List of company IDs to assign user to (from user_data if not provided)
+
         Returns:
             Created User object
-        
+
         Raises:
-            ValueError: If user already exists
+            ValueError: If user already exists or no company assignment provided
         """
         # Check if user already exists
         existing_user = self.db.query(User).filter(User.email == user_data.email).first()
         if existing_user:
             raise ValueError(f"User with email {user_data.email} already exists")
-        
+
+        # Get company IDs from parameter or user_data
+        if company_ids is None:
+            company_ids = user_data.company_ids or []
+
+        # Validate company assignment (unless this is initial sign-up or superuser)
+        if not company_ids and not user_data.is_initial_signup:
+            raise ValueError("User must be assigned to at least one company")
+
         # Create new user
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
             email=user_data.email,
             hashed_password=hashed_password
         )
-        
+
         try:
             self.db.add(db_user)
+            self.db.flush()  # Flush to get user ID
+
+            # Create UserCompany associations
+            if company_ids:
+                for company_id in company_ids:
+                    user_company = UserCompany(
+                        user_id=db_user.id,
+                        company_id=company_id,
+                        is_admin=False,  # Default to non-admin
+                        can_edit=True,
+                        can_view=True
+                    )
+                    self.db.add(user_company)
+
+                # Set preferred company to first one
+                db_user.preferred_company_id = company_ids[0]
+
             self.db.commit()
             self.db.refresh(db_user)
-            logger.info(f"Created user: {user_data.email}")
+            logger.info(f"Created user: {user_data.email} with {len(company_ids)} company assignments")
             return db_user
         except IntegrityError as e:
             self.db.rollback()
