@@ -1,4 +1,4 @@
-.PHONY: dev stop reset-db logs
+.PHONY: dev stop reset-db logs reset rebuild
 
 # Default shell
 SHELL := /bin/bash
@@ -29,6 +29,34 @@ reset-db:
 	docker compose -f $(DOCKER_COMPOSE_DEV) down -v
 	docker compose -f $(DOCKER_COMPOSE_DEV) up -d postgres
 	@echo "Database reset complete."
+
+reset:
+	@echo "Resetting all containers..."
+	@echo "Stopping services..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) down
+	@echo "Removing containers, networks, and volumes..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) down -v
+	@echo "Recreating services..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) up -d --build
+	@echo "Reset complete!"
+	@echo "Frontend: http://localhost:5173"
+	@echo "Backend: http://localhost:8000"
+	@echo "Ollama: http://localhost:11435"
+	@echo "Postgres: localhost:5432"
+
+rebuild:
+	@echo "Rebuilding containers without cache..."
+	@echo "Stopping services..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) down
+	@echo "Rebuilding with --no-cache..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) build --no-cache
+	@echo "Starting services..."
+	docker compose -f $(DOCKER_COMPOSE_DEV) up -d
+	@echo "Rebuild complete!"
+	@echo "Frontend: http://localhost:5173"
+	@echo "Backend: http://localhost:8000"
+	@echo "Ollama: http://localhost:11435"
+	@echo "Postgres: localhost:5432"
 
 logs:
 	@echo "Following Docker logs..."
