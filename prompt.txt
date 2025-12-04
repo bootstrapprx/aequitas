@@ -1,151 +1,136 @@
-ollama   | 2025-12-04 18:23:47.447 | Couldn't find '/root/.ollama/id_ed25519'. Generating new private key.
-ollama   | 2025-12-04 18:23:47.449 | Your new public key is: 
-ollama   | 2025-12-04 18:23:47.449 | 
-ollama   | 2025-12-04 18:23:47.449 | ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICPmIu1omICe6i/Q2SGihwLqW2AFOfnayeP4FQNZ0lNt
-ollama   | 2025-12-04 18:23:47.449 | 
-ollama   | 2025-12-04 18:23:47.457 | time=2025-12-04T22:23:47.456Z level=INFO source=routes.go:1544 msg="server config" env="map[CUDA_VISIBLE_DEVICES: GGML_VK_VISIBLE_DEVICES: GPU_DEVICE_ORDINAL: HIP_VISIBLE_DEVICES: HSA_OVERRIDE_GFX_VERSION: HTTPS_PROXY: HTTP_PROXY: NO_PROXY: OLLAMA_CONTEXT_LENGTH:4096 OLLAMA_DEBUG:INFO OLLAMA_FLASH_ATTENTION:false OLLAMA_GPU_OVERHEAD:0 OLLAMA_HOST:http://0.0.0.0:11434 OLLAMA_KEEP_ALIVE:5m0s OLLAMA_KV_CACHE_TYPE: OLLAMA_LLM_LIBRARY: OLLAMA_LOAD_TIMEOUT:5m0s OLLAMA_MAX_LOADED_MODELS:0 OLLAMA_MAX_QUEUE:512 OLLAMA_MODELS:/root/.ollama/models OLLAMA_MULTIUSER_CACHE:false OLLAMA_NEW_ENGINE:false OLLAMA_NOHISTORY:false OLLAMA_NOPRUNE:false OLLAMA_NUM_PARALLEL:1 OLLAMA_ORIGINS:[http://localhost https://localhost http://localhost:* https://localhost:* http://127.0.0.1 https://127.0.0.1 http://127.0.0.1:* https://127.0.0.1:* http://0.0.0.0 https://0.0.0.0 http://0.0.0.0:* https://0.0.0.0:* app://* file://* tauri://* vscode-webview://* vscode-file://*] OLLAMA_REMOTES:[ollama.com] OLLAMA_SCHED_SPREAD:false OLLAMA_VULKAN:false ROCR_VISIBLE_DEVICES: http_proxy: https_proxy: no_proxy:]"
-ollama   | 2025-12-04 18:23:47.457 | time=2025-12-04T22:23:47.457Z level=INFO source=images.go:522 msg="total blobs: 0"
-ollama   | 2025-12-04 18:23:47.457 | time=2025-12-04T22:23:47.457Z level=INFO source=images.go:529 msg="total unused blobs removed: 0"
-ollama   | 2025-12-04 18:23:47.458 | time=2025-12-04T22:23:47.458Z level=INFO source=routes.go:1597 msg="Listening on [::]:11434 (version 0.13.1)"
-ollama   | 2025-12-04 18:23:47.462 | time=2025-12-04T22:23:47.462Z level=INFO source=runner.go:67 msg="discovering available GPUs..."
-ollama   | 2025-12-04 18:23:47.465 | time=2025-12-04T22:23:47.464Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 42767"
-ollama   | 2025-12-04 18:23:47.577 | time=2025-12-04T22:23:47.576Z level=INFO source=server.go:392 msg="starting runner" cmd="/usr/bin/ollama runner --ollama-engine --port 44629"
-ollama   | 2025-12-04 18:23:47.643 | time=2025-12-04T22:23:47.642Z level=INFO source=runner.go:106 msg="experimental Vulkan support disabled.  To enable, set OLLAMA_VULKAN=1"
-ollama   | 2025-12-04 18:23:47.643 | time=2025-12-04T22:23:47.643Z level=INFO source=types.go:60 msg="inference compute" id=cpu library=cpu compute="" name=cpu description=cpu libdirs=ollama driver="" pci_id="" type="" total="1.8 GiB" available="1.7 GiB"
-ollama   | 2025-12-04 18:23:47.643 | time=2025-12-04T22:23:47.643Z level=INFO source=routes.go:1638 msg="entering low vram mode" "total vram"="0 B" threshold="20.0 GiB"
-postgres | 2025-12-04 18:23:48.350 | The files belonging to this database system will be owned by user "postgres".
-postgres | 2025-12-04 18:23:48.350 | This user must also own the server process.
-postgres | 2025-12-04 18:23:48.350 | 
-postgres | 2025-12-04 18:23:48.350 | The database cluster will be initialized with locale "en_US.utf8".
-postgres | 2025-12-04 18:23:48.350 | The default database encoding has accordingly been set to "UTF8".
-postgres | 2025-12-04 18:23:48.350 | The default text search configuration will be set to "english".
-postgres | 2025-12-04 18:23:48.350 | 
-postgres | 2025-12-04 18:23:48.350 | Data page checksums are disabled.
-postgres | 2025-12-04 18:23:48.350 | 
-postgres | 2025-12-04 18:23:48.350 | fixing permissions on existing directory /var/lib/postgresql/data ... ok
-postgres | 2025-12-04 18:23:48.352 | creating subdirectories ... ok
-postgres | 2025-12-04 18:23:48.352 | selecting dynamic shared memory implementation ... posix
-postgres | 2025-12-04 18:23:48.514 | selecting default max_connections ... 100
-postgres | 2025-12-04 18:23:48.554 | selecting default shared_buffers ... 128MB
-postgres | 2025-12-04 18:23:48.566 | selecting default time zone ... Etc/UTC
-postgres | 2025-12-04 18:23:48.574 | creating configuration files ... ok
-postgres | 2025-12-04 18:23:48.828 | running bootstrap script ... ok
-postgres | 2025-12-04 18:23:49.672 | performing post-bootstrap initialization ... ok
-postgres | 2025-12-04 18:23:59.652 | syncing data to disk ... ok
-postgres | 2025-12-04 18:23:59.652 | 
-postgres | 2025-12-04 18:23:59.652 | 
-postgres | 2025-12-04 18:23:59.652 | Success. You can now start the database server using:
-postgres | 2025-12-04 18:23:59.652 | 
-postgres | 2025-12-04 18:23:59.652 |     pg_ctl -D /var/lib/postgresql/data -l logfile start
-postgres | 2025-12-04 18:23:59.652 | 
-postgres | 2025-12-04 18:23:59.652 | initdb: warning: enabling "trust" authentication for local connections
-postgres | 2025-12-04 18:23:59.652 | initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the next time you run initdb.
-backend  | 2025-12-04 18:23:59.746 | INFO:     Will watch for changes in these directories: ['/app']
-backend  | 2025-12-04 18:23:59.747 | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-backend  | 2025-12-04 18:23:59.754 | INFO:     Started reloader process [1] using WatchFiles
-postgres | 2025-12-04 18:23:59.893 | waiting for server to start....2025-12-04 22:23:59.893 UTC [48] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
-postgres | 2025-12-04 18:24:00.204 | 2025-12-04 22:24:00.204 UTC [48] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-postgres | 2025-12-04 18:24:00.535 | 2025-12-04 22:24:00.535 UTC [51] LOG:  database system was shut down at 2025-12-04 22:23:49 UTC
-postgres | 2025-12-04 18:24:00.578 | 2025-12-04 22:24:00.578 UTC [48] LOG:  database system is ready to accept connections
-postgres | 2025-12-04 18:24:00.642 |  done
-postgres | 2025-12-04 18:24:00.642 | server started
-postgres | 2025-12-04 18:24:01.816 | CREATE DATABASE
-postgres | 2025-12-04 18:24:01.818 | 
-postgres | 2025-12-04 18:24:01.818 | 
-postgres | 2025-12-04 18:24:01.818 | /usr/local/bin/docker-entrypoint.sh: ignoring /docker-entrypoint-initdb.d/*
-postgres | 2025-12-04 18:24:01.818 | 
-postgres | 2025-12-04 18:24:01.819 | waiting for server to shut down....2025-12-04 22:24:01.819 UTC [48] LOG:  received fast shutdown request
-postgres | 2025-12-04 18:24:01.959 | 2025-12-04 22:24:01.959 UTC [48] LOG:  aborting any active transactions
-postgres | 2025-12-04 18:24:01.961 | 2025-12-04 22:24:01.961 UTC [48] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
-postgres | 2025-12-04 18:24:01.961 | 2025-12-04 22:24:01.961 UTC [49] LOG:  shutting down
-postgres | 2025-12-04 18:24:02.064 | 2025-12-04 22:24:02.064 UTC [49] LOG:  checkpoint starting: shutdown immediate
-postgres | 2025-12-04 18:24:03.057 | .2025-12-04 22:24:03.057 UTC [49] LOG:  checkpoint complete: wrote 918 buffers (5.6%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.168 s, sync=0.596 s, total=1.096 s; sync files=301, longest=0.311 s, average=0.002 s; distance=4222 kB, estimate=4222 kB
-postgres | 2025-12-04 18:24:03.061 | 2025-12-04 22:24:03.061 UTC [48] LOG:  database system is shut down
-postgres | 2025-12-04 18:24:03.131 |  done
-postgres | 2025-12-04 18:24:03.131 | server stopped
-postgres | 2025-12-04 18:24:03.138 | 
-postgres | 2025-12-04 18:24:03.138 | PostgreSQL init process complete; ready for start up.
-postgres | 2025-12-04 18:24:03.138 | 
-frontend | 2025-12-04 18:24:03.432 | 
-frontend | 2025-12-04 18:24:03.432 | > aequitas@0.0.0 dev
-frontend | 2025-12-04 18:24:03.432 | > vite --host
-frontend | 2025-12-04 18:24:03.432 | 
-postgres | 2025-12-04 18:24:03.503 | 2025-12-04 22:24:03.503 UTC [1] LOG:  starting PostgreSQL 15.15 (Debian 15.15-1.pgdg12+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit
-postgres | 2025-12-04 18:24:03.504 | 2025-12-04 22:24:03.504 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
-postgres | 2025-12-04 18:24:03.504 | 2025-12-04 22:24:03.504 UTC [1] LOG:  listening on IPv6 address "::", port 5432
-postgres | 2025-12-04 18:24:03.607 | 2025-12-04 22:24:03.606 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
-postgres | 2025-12-04 18:24:03.785 | 2025-12-04 22:24:03.785 UTC [64] LOG:  database system was shut down at 2025-12-04 22:24:02 UTC
-postgres | 2025-12-04 18:24:04.010 | 2025-12-04 22:24:04.010 UTC [1] LOG:  database system is ready to accept connections
-frontend | 2025-12-04 18:24:04.444 | 
-frontend | 2025-12-04 18:24:04.444 |   VITE v7.2.4  ready in 948 ms
-frontend | 2025-12-04 18:24:04.444 | 
-frontend | 2025-12-04 18:24:04.444 |   ➜  Local:   http://localhost:5173/
-frontend | 2025-12-04 18:24:04.444 |   ➜  Network: http://172.18.0.5:5173/
-frontend | 2025-12-04 18:24:08.018 | 
-frontend | 2025-12-04 18:24:08.018 | Unable to parse HTML; parse5 error code missing-whitespace-between-attributes
-frontend | 2025-12-04 18:24:08.018 |  at /app/index.html:2:29
-frontend | 2025-12-04 18:24:08.018 | 1  |  <!doctype html>
-frontend | 2025-12-04 18:24:08.018 | 2  |  <html lang="en" class="dark"style="color-scheme: dark;">
-frontend | 2025-12-04 18:24:08.018 |    |                              ^
-frontend | 2025-12-04 18:24:08.018 | 3  |    <head>
-frontend | 2025-12-04 18:24:08.018 | 4  |      <meta charset="UTF-8" />
-backend  | 2025-12-04 18:24:10.651 | Process SpawnProcess-1:
-backend  | 2025-12-04 18:24:11.460 | Traceback (most recent call last):
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/multiprocessing/process.py", line 314, in _bootstrap
-backend  | 2025-12-04 18:24:11.461 |     self.run()
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/multiprocessing/process.py", line 108, in run
-backend  | 2025-12-04 18:24:11.461 |     self._target(*self._args, **self._kwargs)
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/_subprocess.py", line 78, in subprocess_started
-backend  | 2025-12-04 18:24:11.461 |     target(sockets=sockets)
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 65, in run
-backend  | 2025-12-04 18:24:11.461 |     return asyncio.run(self.serve(sockets=sockets))
-backend  | 2025-12-04 18:24:11.461 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 190, in run
-backend  | 2025-12-04 18:24:11.461 |     return runner.run(main)
-backend  | 2025-12-04 18:24:11.461 |            ^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
-backend  | 2025-12-04 18:24:11.461 |     return self._loop.run_until_complete(task)
-backend  | 2025-12-04 18:24:11.461 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 69, in serve
-backend  | 2025-12-04 18:24:11.461 |     await self._serve(sockets)
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 76, in _serve
-backend  | 2025-12-04 18:24:11.461 |     config.load()
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/config.py", line 433, in load
-backend  | 2025-12-04 18:24:11.461 |     self.loaded_app = import_from_string(self.app)
-backend  | 2025-12-04 18:24:11.461 |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
-backend  | 2025-12-04 18:24:11.461 |     module = importlib.import_module(module_str)
-backend  | 2025-12-04 18:24:11.461 |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
-backend  | 2025-12-04 18:24:11.461 |     return _bootstrap._gcd_import(name[level:], package, level)
-backend  | 2025-12-04 18:24:11.461 |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
-backend  | 2025-12-04 18:24:11.461 |   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-backend  | 2025-12-04 18:24:11.461 |   File "/app/app/main.py", line 4, in <module>
-backend  | 2025-12-04 18:24:11.461 |     from app.api.v1 import (
-backend  | 2025-12-04 18:24:11.461 |   File "/app/app/api/v1/__init__.py", line 1, in <module>
-backend  | 2025-12-04 18:24:11.461 |     from . import elevation
-backend  | 2025-12-04 18:24:11.461 |   File "/app/app/api/v1/elevation.py", line 11, in <module>
-backend  | 2025-12-04 18:24:11.461 |     from app.core.security import get_current_user
-backend  | 2025-12-04 18:24:11.461 | ImportError: cannot import name 'get_current_user' from 'app.core.security' (/app/app/core/security.py)
-frontend | 2025-12-04 18:24:28.147 | 
-frontend | 2025-12-04 18:24:28.147 | Unable to parse HTML; parse5 error code missing-whitespace-between-attributes
-frontend | 2025-12-04 18:24:28.147 |  at /app/index.html:2:29
-frontend | 2025-12-04 18:24:28.147 | 1  |  <!doctype html>
-frontend | 2025-12-04 18:24:28.147 | 2  |  <html lang="en" class="dark"style="color-scheme: dark;">
-frontend | 2025-12-04 18:24:28.147 |    |                              ^
-frontend | 2025-12-04 18:24:28.147 | 3  |    <head>
-frontend | 2025-12-04 18:24:28.147 | 4  |      <meta charset="UTF-8" />
-frontend | 2025-12-04 18:24:46.928 | 
-frontend | 2025-12-04 18:24:46.928 | Unable to parse HTML; parse5 error code missing-whitespace-between-attributes
-frontend | 2025-12-04 18:24:46.928 |  at /app/index.html:2:29
-frontend | 2025-12-04 18:24:46.928 | 1  |  <!doctype html>
-frontend | 2025-12-04 18:24:46.928 | 2  |  <html lang="en" class="dark"style="color-scheme: dark;">
-frontend | 2025-12-04 18:24:46.928 |    |                              ^
-frontend | 2025-12-04 18:24:46.928 | 3  |    <head>
-frontend | 2025-12-04 18:24:46.928 | 4  |      <meta charset="UTF-8" />
+You are Claude Code working inside the Aequitas repository.  
+Today we must implement a critical patch for user registration and initial bootstrapping.
+
+CONTEXT / SUMMARY
+- A previous change disabled public signup. There is currently NO "Pay & Register" option in the registration UI.
+- There is no guaranteed default admin account available after deploy.
+- We require a robust sign-up flow compatible with the new company hierarchy: users must belong to one or more Companies (CUID). The preferred sign-up behavior is:
+  - Public sign-up (when enabled) must create a Company + first admin user if a company is being created during sign-up.
+  - Paid sign-up (Pay & Register) must accept payment and only after successful payment create the Company and the user with admin rights.
+- We must ensure a default superuser exists: `actpm@aequitas.com`. The password for this account MUST come from an environment variable (in `.env`) and should be set only at first-run if the user does not exist.
+
+GOAL
+Implement a safe, testable, and non-breaking patch that:
+1. Re-enables public sign-up when allowed by config.
+2. Adds a "Pay & Register" (paid onboarding) flow with Stripe support (fallback to a mock mode when STRIPE not configured).
+3. Seeds a default superuser `actpm@aequitas.com` with password from `.env` at startup if it doesn't already exist.
+4. Ensures sign-up always associates a user with a Company (create company during sign-up if needed).
+5. Adds server-side and frontend guards to prevent unauthorized creation of users without companies.
+6. Provide clear file diffs for every change and include unit/integration tests for the critical paths.
+
+IMPORTANT ENVIRONMENT VARIABLES (to be added to `.env` or `.env.dev`)
+- DEFAULT_SUPERUSER_EMAIL=actpm@aequitas.com
+- DEFAULT_SUPERUSER_PASSWORD=<set_this_in_env>   # REQUIRED for seeding superuser on startup
+- ALLOW_PUBLIC_SIGNUP=true|false                 # toggle to allow normal signup
+- STRIPE_API_KEY=sk_... (optional)               # if provided, use real Stripe checkout
+- STRIPE_WEBHOOK_SECRET=whsec_... (optional)
+- VITE_STRIPE_PUBLISHABLE_KEY=pk_... (frontend)
+
+BACKEND (FastAPI / SQLAlchemy) TASKS
+1) Config & Startup seed
+- Add config entries in `app/core/config.py` for DEFAULT_SUPERUSER_EMAIL, DEFAULT_SUPERUSER_PASSWORD and ALLOW_PUBLIC_SIGNUP.
+- Modify `app/db/init_db.py` (or startup routine) to:
+  - If DEFAULT_SUPERUSER_EMAIL & DEFAULT_SUPERUSER_PASSWORD exist and account not present, create user with is_superuser=True and assign it to no company (superuser global).
+  - Use secure bcrypt hashing (existing hashing utils).
+  - Log a single-line message on creation (do NOT print the password).
+- Ensure creating the default superuser does NOT overwrite an existing account.
+
+2) Signup endpoints
+- Create or update POST `/api/v1/auth/register` to support two flows:
+  A) `register_type=free` (only allowed if ALLOW_PUBLIC_SIGNUP=true)
+  B) `register_type=paid`
+- Required payload:
+  {
+    "email": "...",
+    "password": "...",                  // or password may be set on webhook confirmation for paid flows
+    "company": { "name": "...", ... },  // either select existing CUID or create new company
+    "cuid": "<optional existing cuid>", // if joining an existing company
+    "register_type": "free" | "paid",
+    "plan": "starter" | "pro"           // optional
+  }
+- Backend behavior:
+  - Validate company presence: if cuid provided → ensure it exists and user is being invited/joining; if creating a new company → create Company with generate_ucid() and set this user as Company admin (UserCompany with is_admin=true).
+  - For `register_type=free`: enforce ALLOW_PUBLIC_SIGNUP == true. Create user + create/join company immediately, return tokens.
+  - For `register_type=paid`: if STRIPE_API_KEY exists:
+      * Create a Stripe Checkout Session (or PaymentIntent) and return session id / checkout url to frontend.
+      * Do NOT create the user until Stripe webhook confirms payment.
+      * Store a temporary pending registration record in DB with a secure token and expiry (e.g., 24h).
+    If STRIPE not configured:
+      * Fallback to "mock payment" mode where the server accepts the payment immediately for dev/test (controlled by an env flag). Document clearly.
+  - Create `POST /api/v1/auth/register/confirm` to be called by webhook or by client after successful payment:
+    * Accept the pending token and finalize creation of Company + User + UserCompany admin, then issue JWT.
+  - Create `POST /api/v1/payments/webhook` to receive Stripe webhooks:
+    * On successful checkout session completion → call confirm flow server-side.
+
+3) DB models & pending registration
+- Add a `PendingRegistration` model in `app/db/models/pending_registration.py`:
+  - id, email, hashed_meta (encrypt any sensitive data), payload_json, token, expires_at, stripe_session_id (nullable), created_at.
+- Add Alembic migration or simple SQLAlchemy model creation and ensure test database handles it.
+
+4) Auth & security
+- Ensure existing `user_service.create_user()` can accept a company list and create UserCompany links atomically.
+- Create a guard to disallow creating a user with no linked companies unless the caller is a superuser or the action is performed by the registration confirm flow that explicitly creates company + user together.
+- Ensure that JWT returned after registration includes company_ids and preferred_company_id.
+
+5) Unit tests (backend)
+- Add tests in `backend/tests/` for:
+  - free registration success (when ALLOW_PUBLIC_SIGNUP=true): creates company + user + usercompany.
+  - free registration forbidden when ALLOW_PUBLIC_SIGNUP=false.
+  - paid registration: creates pending registration and returns checkout session id (mock Stripe if STRIPE not configured).
+  - webhook confirm flow: finalizes user creation and issues token.
+  - startup seed: if DEFAULT_SUPERUSER_PASSWORD present and user absent, superuser created.
+  - security: cannot create user without company via public endpoints.
+
+FRONTEND (React + TS + TanStack Query) TASKS
+1) Registration page UI updates
+- Update `frontend/src/pages/auth/Register.tsx` (or registration form) to show two options:
+  - "Create account (Free)" — visible only when VITE_ALLOW_PUBLIC_SIGNUP is true (pass flag from backend or read from VITE env).
+  - "Pay & Register" — always visible if STRIPE publishable key available OR in mock mode.
+- Form fields:
+  - Email, Password (for free flow) OR Email + optional phone (for paid — optional), Company Name OR CUID selection dropdown, Plan selection.
+- When user chooses "Pay & Register":
+  - POST to `/api/v1/auth/register` with register_type=paid.
+  - Receive Stripe session id / checkout url → redirect to Stripe Checkout.
+  - Alternatively, if in mock mode, call `register/confirm` immediately to simulate payment success.
+
+2) Payment handling
+- Implement a small `frontend/src/lib/payments/stripe.ts` helper that uses Stripe.js (if publishable key present) to redirect to checkout.
+- Implement `frontend/src/pages/auth/PaymentSuccess.tsx` which handles the redirect after checkout and calls the confirm endpoint if needed.
+
+3) Pending registration UX
+- After starting a paid registration, show a “Pending payment — check your email” message with the pending token link (if applicable).
+- After successful payment, user is redirected and logged in automatically.
+
+4) Environment & feature flags
+- Add Vite env variables:
+  - VITE_ALLOW_PUBLIC_SIGNUP
+  - VITE_STRIPE_PUBLISHABLE_KEY
+- Ensure `AuthContext` reads company list after login and respects preferred_company_id.
+
+5) Frontend tests
+- Add simple unit tests or integration tests covering:
+  - Register page renders both options and enforces validation.
+  - Paid flow makes POST to backend and handles returned checkout url.
+
+GENERAL SAFETY RULES
+- Do NOT set or log real secret values anywhere in code or diffs (show env var names only).
+- The seed operation must be idempotent: do not re-create or override existing users.
+- A superuser must not be silently demoted by this change.
+- Operations should be atomic where necessary (DB transactions) to avoid partial creation (company without admin).
+
+EXPECTED DELIVERABLES
+1. Provide clear file-by-file diffs in ```diff fenced blocks``` for every modified or new file.
+2. Include new or updated unit tests and their results (brief summary).
+3. Add documentation to `CLAUDE.md` or `README.md` describing:
+   - how to set DEFAULT_SUPERUSER_PASSWORD and other env vars
+   - how the paid flow works and how to run it in mock mode
+   - how to seed dev Stripe keys for testing (if applicable)
+4. Add migration or model changes with instructions to run alembic migrations (or note if using metadata.create_all).
+5. Provide an ordered checklist of steps to test the whole flow locally (dev steps: `make dev`, run Stripe mock, do register flows, verify superuser exists).
+
+ADDITIONAL CONSTRAINTS
+- Keep changes minimal and non-breaking to other modules (master chart, dexter, chartforge).
+- All TypeScript must compile with no errors.
+- Backend must pass pytest for modified/new tests.
+
+Begin now. Generate the diffs and tests as output when you finish.
