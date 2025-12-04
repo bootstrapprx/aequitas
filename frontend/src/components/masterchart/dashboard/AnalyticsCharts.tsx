@@ -6,6 +6,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { MasterAccount, MasterChartStats } from '@/types/masterchart';
+import { useTheme } from 'next-themes';
 
 interface AnalyticsChartsProps {
     accounts: MasterAccount[];
@@ -21,6 +22,8 @@ const COLORS = [
 ];
 
 const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ accounts, stats }) => {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark';
     // Account Types Distribution
     const typeDistribution = useMemo(() => {
         const categoryCounts: Record<string, number> = {};
@@ -83,7 +86,25 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ accounts, stats }) =>
                                 cx="50%"
                                 cy="50%"
                                 labelLine={false}
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                label={(props) => {
+                                    const { name, percent, cx, cy, midAngle, innerRadius, outerRadius } = props;
+                                    const RADIAN = Math.PI / 180;
+                                    const radius = outerRadius + 25;
+                                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                                    return (
+                                        <text
+                                            x={x}
+                                            y={y}
+                                            fill={isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))'}
+                                            textAnchor={x > cx ? 'start' : 'end'}
+                                            dominantBaseline="central"
+                                            fontSize={12}
+                                        >
+                                            {`${name} ${(percent * 100).toFixed(0)}%`}
+                                        </text>
+                                    );
+                                }}
                                 outerRadius={80}
                                 fill="#8884d8"
                                 dataKey="value"
@@ -107,10 +128,27 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ accounts, stats }) =>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={categoriesBreakdown}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                            <XAxis dataKey="category" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                                opacity={isDark ? 0.2 : 0.1}
+                            />
+                            <XAxis
+                                dataKey="category"
+                                tick={{ fontSize: 12, fill: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))' }}
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                            />
+                            <YAxis
+                                tick={{ fontSize: 12, fill: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))' }}
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: isDark ? 'hsl(var(--popover))' : 'hsl(var(--popover))',
+                                    borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+                                    color: isDark ? 'hsl(var(--popover-foreground))' : 'hsl(var(--popover-foreground))'
+                                }}
+                            />
                             <Legend />
                             <Bar dataKey="headers" fill={COLORS[0]} name="Headers" animationDuration={800} />
                             <Bar dataKey="details" fill={COLORS[1]} name="Details" animationDuration={800} />
@@ -127,10 +165,27 @@ const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ accounts, stats }) =>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={hierarchyDepth}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                            <XAxis dataKey="level" tick={{ fontSize: 12 }} />
-                            <YAxis tick={{ fontSize: 12 }} />
-                            <Tooltip />
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                                opacity={isDark ? 0.2 : 0.1}
+                            />
+                            <XAxis
+                                dataKey="level"
+                                tick={{ fontSize: 12, fill: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))' }}
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                            />
+                            <YAxis
+                                tick={{ fontSize: 12, fill: isDark ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))' }}
+                                stroke={isDark ? 'hsl(var(--border))' : 'hsl(var(--border))'}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: isDark ? 'hsl(var(--popover))' : 'hsl(var(--popover))',
+                                    borderColor: isDark ? 'hsl(var(--border))' : 'hsl(var(--border))',
+                                    color: isDark ? 'hsl(var(--popover-foreground))' : 'hsl(var(--popover-foreground))'
+                                }}
+                            />
                             <Bar dataKey="count" fill={COLORS[2]} name="Accounts" animationDuration={800} />
                         </BarChart>
                     </ResponsiveContainer>

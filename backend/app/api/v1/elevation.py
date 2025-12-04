@@ -8,7 +8,7 @@ from datetime import datetime
 from app.db.session import get_db
 from app.db.models.user import User
 from app.db.models.elevation_request import ElevationRequest, ElevationStatus
-from app.core.security import get_current_user
+from app.api.v1.auth import get_current_user
 
 router = APIRouter()
 
