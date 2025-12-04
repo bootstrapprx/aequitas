@@ -30,11 +30,12 @@ class Settings(BaseSettings):
 
     # --- Registration Settings ---
     ALLOW_PUBLIC_SIGNUP: bool = False
+    ALLOW_MOCK_PAYMENTS: bool = True  # Allow mock payments when Stripe not configured
 
     # --- Stripe Settings (Optional) ---
     STRIPE_API_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    STRIPE_MOCK_MODE: bool = True  # Use mock payments when Stripe not configured
+    STRIPE_MOCK_MODE: bool = True  # Deprecated, use ALLOW_MOCK_PAYMENTS
 
     # --- QuickBooks Online (QBO) Integration (Optional) ---
     QBO_CLIENT_ID: Optional[str] = None

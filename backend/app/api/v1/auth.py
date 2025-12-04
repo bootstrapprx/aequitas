@@ -430,15 +430,27 @@ def login(
         Access token with company_ids and preferred_company_id
     """
     user_service = UserService(db)
+    
+    # Debug: Log login attempt (no password!)
+    logger.info(f"Login attempt for email: {form_data.username}")
+    
     user = user_service.authenticate_user(form_data.username, form_data.password)
 
     if not user:
+        # Debug: Log failed login
+        existing_user = db.query(User).filter(User.email == form_data.username).first()
+        if existing_user:
+            logger.warning(f"Failed login for {form_data.username}: password mismatch")
+        else:
+            logger.warning(f"Failed login for {form_data.username}: user not found")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    logger.info(f"Successful login for: {user.email}")
     return _generate_user_token(user)
 
 @router.post("/login-json", response_model=Token)
@@ -457,15 +469,27 @@ def login_json(
         Access token with company information
     """
     user_service = UserService(db)
+    
+    # Debug: Log login attempt (no password!)
+    logger.info(f"Login-JSON attempt for email: {login_data.email}")
+    
     user = user_service.authenticate_user(login_data.email, login_data.password)
 
     if not user:
+        # Debug: Log failed login
+        existing_user = db.query(User).filter(User.email == login_data.email).first()
+        if existing_user:
+            logger.warning(f"Failed login-json for {login_data.email}: password mismatch")
+        else:
+            logger.warning(f"Failed login-json for {login_data.email}: user not found")
+        
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    logger.info(f"Successful login-json for: {user.email}")
     return _generate_user_token(user)
 
 @router.get("/me", response_model=UserResponse)
@@ -489,12 +513,29 @@ def get_auth_config():
     
     Returns:
         Configuration for frontend (signup enabled, Stripe key, etc.)
+    
+    Always returns valid JSON with defaults even on error.
     """
-    return {
-        "allow_public_signup": settings.ALLOW_PUBLIC_SIGNUP,
-        "stripe_enabled": settings.STRIPE_ENABLED,
-        "stripe_mock_mode": not settings.STRIPE_ENABLED and settings.STRIPE_MOCK_MODE
-    }
-
-
+    try:
+        stripe_configured = settings.STRIPE_ENABLED
+        mock_payments_allowed = not stripe_configured and settings.ALLOW_MOCK_PAYMENTS
+        
+        return {
+            "allow_public_signup": settings.ALLOW_PUBLIC_SIGNUP,
+            "stripe_configured": stripe_configured,
+            "stripe_enabled": stripe_configured,  # Legacy compatibility
+            "mock_payments_allowed": mock_payments_allowed,
+            "stripe_mock_mode": mock_payments_allowed,  # Legacy compatibility
+        }
+    except Exception as e:
+        logger.error(f"Error fetching auth config: {e}")
+        # Return safe defaults on error
+        return {
+            "allow_public_signup": False,
+            "stripe_configured": False,
+            "stripe_enabled": False,
+            "mock_payments_allowed": False,
+            "stripe_mock_mode": False,
+            "warning": "Configuration unavailable"
+        }
 

@@ -1,4 +1,7 @@
-.PHONY: dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend
+.PHONY: help dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend shared services
+
+# Default target
+.DEFAULT_GOAL := help
 
 # Default shell
 SHELL := /bin/bash
@@ -8,7 +11,47 @@ BACKEND_DIR = ./backend
 FRONTEND_DIR = ./frontend
 DOCKER_COMPOSE_DEV = ./docker-compose.dev.yml
 
-dev:
+# Colors for help output
+CYAN := \033[36m
+GREEN := \033[32m
+YELLOW := \033[33m
+RESET := \033[0m
+
+help: ## Show this help message
+	@echo ""
+	@echo "$(GREEN)Aequitas Development Commands$(RESET)"
+	@echo "=============================="
+	@echo ""
+	@echo "$(CYAN)Docker Commands:$(RESET)"
+	@echo "  $(GREEN)make dev$(RESET)              Start all Docker services (frontend, backend, postgres, ollama)"
+	@echo "  $(GREEN)make stop$(RESET)             Stop all Docker services"
+	@echo "  $(GREEN)make logs$(RESET)             Follow Docker container logs"
+	@echo "  $(GREEN)make reset$(RESET)            Full reset: stop, remove volumes, rebuild and start"
+	@echo "  $(GREEN)make reset-db$(RESET)         Reset database only (removes postgres volume)"
+	@echo "  $(GREEN)make rebuild$(RESET)          Rebuild containers without cache"
+	@echo "  $(GREEN)make shared$(RESET)           Start with Cloudflare Tunnel for external access"
+	@echo ""
+	@echo "$(CYAN)Dependency Management (Local IDE Support):$(RESET)"
+	@echo "  $(GREEN)make install-deps$(RESET)     Install all dependencies (frontend + backend)"
+	@echo "  $(GREEN)make install-frontend$(RESET) Install frontend dependencies (npm install)"
+	@echo "  $(GREEN)make install-backend$(RESET)  Install backend dependencies (pip install)"
+	@echo "  $(GREEN)make clean-deps$(RESET)       Remove dependency caches (node_modules, __pycache__)"
+	@echo "  $(GREEN)make reinstall-frontend$(RESET) Clean and reinstall frontend dependencies"
+	@echo "  $(GREEN)make reinstall-backend$(RESET)  Clean and reinstall backend dependencies"
+	@echo "  $(GREEN)make reinstall-deps$(RESET)   Clean and reinstall all dependencies"
+	@echo ""
+	@echo "$(CYAN)Other:$(RESET)"
+	@echo "  $(GREEN)make services$(RESET)         Scan and manage optional services (C++, Go, Rust)"
+	@echo ""
+	@echo "$(YELLOW)Service URLs when running:$(RESET)"
+	@echo "  Frontend:  http://localhost:5173"
+	@echo "  Backend:   http://localhost:8000"
+	@echo "  API Docs:  http://localhost:8000/docs"
+	@echo "  Ollama:    http://localhost:11435"
+	@echo "  Postgres:  localhost:5432"
+	@echo ""
+
+dev: ## Start all Docker services
 	@echo "Starting Unified Dev Mode..."
 	@echo "Starting Docker services (Postgres, Ollama, Backend, Frontend)"
 	docker compose -f $(DOCKER_COMPOSE_DEV) up -d --build

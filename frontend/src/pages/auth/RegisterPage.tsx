@@ -15,8 +15,19 @@ import { api } from '@/lib/api';
 interface AuthConfig {
   allow_public_signup: boolean;
   stripe_enabled: boolean;
+  stripe_configured: boolean;
   stripe_mock_mode: boolean;
+  mock_payments_allowed: boolean;
 }
+
+// Default safe config when backend is unavailable
+const DEFAULT_AUTH_CONFIG: AuthConfig = {
+  allow_public_signup: false,
+  stripe_enabled: false,
+  stripe_configured: false,
+  stripe_mock_mode: false,
+  mock_payments_allowed: false,
+};
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -33,7 +44,8 @@ const RegisterPage = () => {
 
   // UI state
   const [isLoading, setIsLoading] = useState(false);
-  const [authConfig, setAuthConfig] = useState<AuthConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [authConfig, setAuthConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('paid');
 
@@ -43,15 +55,33 @@ const RegisterPage = () => {
   // Fetch auth config on mount
   useEffect(() => {
     const fetchConfig = async () => {
+      setConfigLoading(true);
       try {
         const response = await api.get('/auth/config');
-        setAuthConfig(response.data);
-        // If public signup is allowed, default to free tab
-        if (response.data.allow_public_signup) {
-          setActiveTab('free');
+        // Defensive: only use response.data if it's a valid object
+        if (response?.data && typeof response.data === 'object') {
+          const data = response.data;
+          setAuthConfig({
+            allow_public_signup: data.allow_public_signup ?? false,
+            stripe_enabled: data.stripe_enabled ?? data.stripe_configured ?? false,
+            stripe_configured: data.stripe_configured ?? data.stripe_enabled ?? false,
+            stripe_mock_mode: data.stripe_mock_mode ?? data.mock_payments_allowed ?? false,
+            mock_payments_allowed: data.mock_payments_allowed ?? data.stripe_mock_mode ?? false,
+          });
+          // If public signup is allowed, default to free tab
+          if (data.allow_public_signup) {
+            setActiveTab('free');
+          }
+        } else {
+          console.warn('Auth config response invalid, using defaults');
+          setAuthConfig(DEFAULT_AUTH_CONFIG);
         }
       } catch (err) {
         console.error('Failed to fetch auth config:', err);
+        // Use safe defaults on error
+        setAuthConfig(DEFAULT_AUTH_CONFIG);
+      } finally {
+        setConfigLoading(false);
       }
     };
     fetchConfig();
@@ -147,7 +177,7 @@ const RegisterPage = () => {
   };
 
   // Show loading while fetching config
-  if (!authConfig) {
+  if (configLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
