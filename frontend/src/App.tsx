@@ -61,6 +61,7 @@ import DocumentationPage from "./pages/DocumentationPage";
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
 
 // User Management Pages (legacy)
 import UsersPage from "./pages/users/UsersPage";
@@ -80,6 +81,7 @@ const App = () => (
               {/* Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
 
               {/* Protected Dashboard Routes */}
               <Route

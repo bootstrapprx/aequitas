@@ -21,8 +21,20 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+psycopg2://user:password@localhost:5432/chartforge_dev"
     
     # --- Superuser Settings ---
+    # New naming convention (preferred)
+    DEFAULT_SUPERUSER_EMAIL: Optional[str] = None
+    DEFAULT_SUPERUSER_PASSWORD: Optional[str] = None
+    # Legacy naming (backward compatibility)
     FIRST_SUPERUSER: str = "admin@chartforge.com"
     FIRST_SUPERUSER_PASSWORD: str = "ChangeMe!123"
+
+    # --- Registration Settings ---
+    ALLOW_PUBLIC_SIGNUP: bool = False
+
+    # --- Stripe Settings (Optional) ---
+    STRIPE_API_KEY: Optional[str] = None
+    STRIPE_WEBHOOK_SECRET: Optional[str] = None
+    STRIPE_MOCK_MODE: bool = True  # Use mock payments when Stripe not configured
 
     # --- QuickBooks Online (QBO) Integration (Optional) ---
     QBO_CLIENT_ID: Optional[str] = None
@@ -56,6 +68,16 @@ class Settings(BaseSettings):
     )
 
     @property
+    def SUPERUSER_EMAIL(self) -> str:
+        """Returns the superuser email, preferring new naming."""
+        return self.DEFAULT_SUPERUSER_EMAIL or self.FIRST_SUPERUSER
+
+    @property
+    def SUPERUSER_PASSWORD(self) -> Optional[str]:
+        """Returns the superuser password, preferring new naming."""
+        return self.DEFAULT_SUPERUSER_PASSWORD or self.FIRST_SUPERUSER_PASSWORD
+
+    @property
     def QBO_INTEGRATION_ENABLED(self) -> bool:
         """Returns True if QBO is fully configured."""
         return all([self.QBO_CLIENT_ID, self.QBO_CLIENT_SECRET, self.QBO_REDIRECT_URI])
@@ -65,5 +87,11 @@ class Settings(BaseSettings):
         """Returns True if the Organizer AI (Ollama) is fully configured."""
         return all([self.OLLAMA_HOST, self.OLLAMA_MODEL])
 
+    @property
+    def STRIPE_ENABLED(self) -> bool:
+        """Returns True if Stripe is configured."""
+        return bool(self.STRIPE_API_KEY)
+
 # Instantiate the settings object
 settings = Settings()
+

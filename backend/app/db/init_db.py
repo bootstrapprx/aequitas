@@ -24,25 +24,49 @@ def init_db(db: Session) -> None:
     except Exception as e:
         logger.error(f"Schema migration failed: {e}")
         logger.warning("Continuing with initialization...")
-    # Initialize superuser
-    user_service = UserService(db)
+
+    # Step 2: Initialize superuser
+    _seed_superuser(db)
     
-    user = user_service.get_user_by_email(settings.FIRST_SUPERUSER)
+    # Step 3: Initialize Master Chart of Accounts
+    _seed_master_chart(db)
+
+
+def _seed_superuser(db: Session) -> None:
+    """
+    Seed the default superuser if configured and not already exists.
+    Uses SUPERUSER_EMAIL and SUPERUSER_PASSWORD properties which handle
+    both new (DEFAULT_SUPERUSER_*) and legacy (FIRST_SUPERUSER*) env vars.
+    """
+    user_service = UserService(db)
+    superuser_email = settings.SUPERUSER_EMAIL
+    superuser_password = settings.SUPERUSER_PASSWORD
+    
+    if not superuser_password:
+        logger.warning("⚠ No superuser password configured - skipping superuser seed")
+        logger.info("  Set DEFAULT_SUPERUSER_PASSWORD in .env to create a superuser")
+        return
+    
+    user = user_service.get_user_by_email(superuser_email)
     if not user:
         user = User(
-            email=settings.FIRST_SUPERUSER,
-            hashed_password=get_password_hash(settings.FIRST_SUPERUSER_PASSWORD),
+            email=superuser_email,
+            hashed_password=get_password_hash(superuser_password),
             is_superuser=True,
             is_active=True,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(f"✓ Superuser {settings.FIRST_SUPERUSER} created")
+        logger.info(f"✓ Superuser created: {superuser_email}")
+        print(f"✓ Superuser {superuser_email} created")
     else:
-        print(f"✓ Superuser {settings.FIRST_SUPERUSER} already exists")
-    
-    # Initialize Master Chart of Accounts
+        logger.info(f"✓ Superuser already exists: {superuser_email}")
+        print(f"✓ Superuser {superuser_email} already exists")
+
+
+def _seed_master_chart(db: Session) -> None:
+    """Seed the Master Chart of Accounts if not already loaded."""
     master_chart_count = db.query(MasterAccount).count()
     if master_chart_count == 0:
         print("\n" + "="*60)
@@ -62,3 +86,4 @@ def init_db(db: Session) -> None:
         print("="*60 + "\n")
     else:
         print(f"✓ Master Chart already loaded ({master_chart_count} accounts)")
+

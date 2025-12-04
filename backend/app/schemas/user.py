@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from uuid import UUID
 
@@ -48,6 +48,26 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+# Registration schemas
+class RegistrationRequest(BaseModel):
+    """Request schema for user registration."""
+    email: EmailStr
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    company_name: str = Field(..., min_length=2, description="Name for the new company")
+    register_type: Literal["free", "paid"] = Field("free", description="Registration type")
+    plan: Literal["starter", "pro"] = Field("starter", description="Subscription plan")
+    cuid: Optional[str] = Field(None, description="Existing company UCID to join (optional)")
+
+class RegistrationConfirmRequest(BaseModel):
+    """Request schema for confirming pending registration."""
+    token: str = Field(..., description="Confirmation token from pending registration")
+
+class CheckoutSessionResponse(BaseModel):
+    """Response schema for Stripe checkout session."""
+    checkout_url: str
+    session_id: str
+    pending_token: str
+
 # Database configuration schemas
 class DatabaseConfigBase(BaseModel):
     db_host: str = Field(..., description="Database host")
@@ -72,4 +92,5 @@ class DatabaseConfigResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
 

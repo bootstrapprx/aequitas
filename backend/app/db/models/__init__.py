@@ -10,6 +10,7 @@ from .account_mapping import AccountMapping
 from .template import Template
 from .user import User
 from .user_company import UserCompany
+from .pending_registration import PendingRegistration
 
 __all__ = [
     "Company",
@@ -24,4 +25,6 @@ __all__ = [
     "Template",
     "User",
     "UserCompany",
+    "PendingRegistration",
 ]
+

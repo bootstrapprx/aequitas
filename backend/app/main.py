@@ -18,6 +18,7 @@ from app.api.v1 import (
     permissions, # New
     admin, # New
     elevation, # New
+    payments, # New - Stripe webhooks
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -39,6 +40,7 @@ from app.db.models import (
     user, # New
     user_company, # New
     elevation_request, # New
+    pending_registration, # New - for paid registration flow
 )
 
 # Create all tables in the database on startup
@@ -98,6 +100,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["Permissions"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(elevation.router, prefix="/api/v1/elevation", tags=["Elevation"])
+app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
 
 @app.get("/health", tags=["Health"])
 def health_check():
