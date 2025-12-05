@@ -15,6 +15,7 @@ from app.api.v1 import (
     settings, # New
     auth, # New
     users, # New
+    users_management, # New - Users Management module
     permissions, # New
     admin, # New
     elevation, # New
@@ -97,6 +98,7 @@ app.include_router(code_generator_router, prefix="/api/v1/code", tags=["CodeGene
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(users_management.router, prefix="/api/v1", tags=["Users Management"])
 app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["Permissions"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(elevation.router, prefix="/api/v1/elevation", tags=["Elevation"])
