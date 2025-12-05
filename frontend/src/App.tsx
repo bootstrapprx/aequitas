@@ -12,10 +12,12 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 
 // General Pages
 import Landing from "./pages/Landing";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 
 // Dashboard
 import DashboardPage from "./pages/dashboard/DashboardPage";
+import CompanyDashboard from "./pages/dashboard/CompanyDashboard";
 
 // Registration Module
 import Companies from "./pages/Companies";
@@ -76,7 +78,8 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing-old" element={<Landing />} />
 
               {/* Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
@@ -93,7 +96,9 @@ const App = () => (
                 }
               >
                 {/* Main Dashboard */}
-                <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="dashboard" element={<CompanyDashboard />} />
+                <Route path="dashboard/overview" element={<CompanyDashboard />} />
+                <Route path="dashboard/old" element={<DashboardPage />} />
 
                 {/* Registration Module */}
                 <Route path="companies" element={<Companies />} />
