@@ -20,6 +20,8 @@ from app.api.v1 import (
     admin, # New
     elevation, # New
     payments, # New - Stripe webhooks
+    journal_entries, # Accounting - Journal Entries
+    accounting, # Accounting - Ledger, Financial Statements, Fiscal Periods
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -29,10 +31,10 @@ from app.db.base import Base
 from app.db.session import engine
 # Import all models to ensure they are registered with Base
 from app.db.models import (
-    master_account, 
-    snapshot, 
-    template, 
-    company_account, 
+    master_account,
+    snapshot,
+    template,
+    company_account,
     account_mapping,
     qbo_token, # New
     organizer_memory,
@@ -42,6 +44,11 @@ from app.db.models import (
     user_company, # New
     elevation_request, # New
     pending_registration, # New - for paid registration flow
+    # Accounting models
+    fiscal_period,
+    journal_entry,
+    journal_entry_line,
+    account_balance,
 )
 
 # Create all tables in the database on startup
@@ -103,6 +110,10 @@ app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["Perm
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(elevation.router, prefix="/api/v1/elevation", tags=["Elevation"])
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"])
+
+# Accounting routers
+app.include_router(journal_entries.router, prefix="/api/v1/journal-entries", tags=["Accounting - Journal Entries"])
+app.include_router(accounting.router, prefix="/api/v1/accounting", tags=["Accounting - Reports & Periods"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

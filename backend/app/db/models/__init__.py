@@ -12,6 +12,12 @@ from .user import User
 from .user_company import UserCompany
 from .pending_registration import PendingRegistration
 
+# Accounting models
+from .fiscal_period import FiscalPeriod, PeriodStatus, PeriodType
+from .journal_entry import JournalEntry, EntryType, EntryStatus
+from .journal_entry_line import JournalEntryLine
+from .account_balance import AccountBalance
+
 __all__ = [
     "Company",
     "CompanyAccount",
@@ -26,5 +32,14 @@ __all__ = [
     "User",
     "UserCompany",
     "PendingRegistration",
+    # Accounting models
+    "FiscalPeriod",
+    "PeriodStatus",
+    "PeriodType",
+    "JournalEntry",
+    "EntryType",
+    "EntryStatus",
+    "JournalEntryLine",
+    "AccountBalance",
 ]
 

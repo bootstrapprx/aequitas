@@ -32,9 +32,13 @@ class Company(Base):
     description = Column(Text, nullable=True)
 
     accounts = relationship("CompanyAccount", back_populates="company", cascade="all, delete-orphan")
-    
+
     # Relationship to users (many-to-many through UserCompany)
     user_companies = relationship("UserCompany", back_populates="company", cascade="all, delete-orphan")
+
+    # Accounting relationships
+    fiscal_periods = relationship("FiscalPeriod", back_populates="company", cascade="all, delete-orphan")
+    journal_entries = relationship("JournalEntry", back_populates="company", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index('ix_companies_ucid_active', 'ucid', unique=True, postgresql_where=(is_active == True)),
