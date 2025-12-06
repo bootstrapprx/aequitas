@@ -20,6 +20,7 @@ import {
   GitMerge,
   Share2,
   BookOpen,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -177,7 +178,7 @@ const Sidebar = () => {
           {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
 
-        <div className="p-2 border-t mt-auto flex-shrink-0 space-y-2">
+        <div className="p-2 border-t border-sidebar-border/10 mt-auto flex-shrink-0 space-y-2">
           {isOpen && (
             <div className="flex items-center justify-center space-x-2 mb-2">
               <Label htmlFor="manual-mode">Manual Mode</Label>

@@ -16,7 +16,8 @@ All colors MUST be HSL.
   }
 
   :root {
-    --background: 210 20% 98%;
+    /* Light Mode */
+    --background: 210 20% 97%; /* #F5F7FA */
     --foreground: 215 25% 15%;
 
     --card: 0 0% 100%;
@@ -25,17 +26,21 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    --primary: 200 95% 35%;
+    /* Primary: Teal #00B8A9 -> HSL 175 100 36 */
+    /* Adjusting to match visually: 175 100% 36% looks right for #00B8A9 */
+    --primary: 175 100% 36%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 195 65% 92%;
-    --secondary-foreground: 200 95% 25%;
+    /* Secondary: Dark Navy #1A2B4A -> HSL 219 48 20 */
+    --secondary: 219 48% 20%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 210 20% 95%;
     --muted-foreground: 215 15% 45%;
 
-    --accent: 185 85% 45%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent: Yellow/Gold #F8B739 -> HSL 40 92 60 */
+    --accent: 40 92% 60%;
+    --accent-foreground: 215 25% 15%;
 
     --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -48,17 +53,17 @@ All colors MUST be HSL.
 
     --border: 215 20% 88%;
     --input: 215 20% 88%;
-    --ring: 200 95% 35%;
+    --ring: 175 100% 36%; /* Primary Match */
 
     --radius: 0.5rem;
 
-    --hero-gradient-start: 200 95% 35%;
-    --hero-gradient-end: 185 85% 45%;
+    --hero-gradient-start: 175 100% 36%;
+    --hero-gradient-end: 219 48% 20%;
 
-    --chart-1: 200 95% 35%;
-    --chart-2: 185 85% 45%;
-    --chart-3: 145 65% 45%;
-    --chart-4: 40 95% 55%;
+    --chart-1: 175 100% 36%;
+    --chart-2: 219 48% 20%;
+    --chart-3: 40 92% 60%;
+    --chart-4: 145 65% 45%;
     --chart-5: 0 84% 55%;
 
     --sidebar-background: 215 25% 15%;
@@ -74,26 +79,29 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 215 25% 10%;
+    /* Dark Mode */
+    --background: 219 48% 10%; /* Darker Navy */
     --foreground: 210 20% 95%;
 
-    --card: 215 25% 14%;
+    --card: 219 48% 13%; /* Slightly lighter Navy */
     --card-foreground: 210 20% 95%;
 
-    --popover: 215 25% 14%;
+    --popover: 219 48% 13%;
     --popover-foreground: 210 20% 95%;
 
-    --primary: 200 95% 45%;
+    /* Primary in Dark: Brighter Teal */
+    --primary: 175 100% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 20% 22%;
+    /* Secondary in Dark: Lighter Navy/Blue */
+    --secondary: 219 30% 30%;
     --secondary-foreground: 210 20% 95%;
 
-    --muted: 215 20% 22%;
+    --muted: 219 30% 25%;
     --muted-foreground: 215 15% 60%;
 
-    --accent: 185 85% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 40 92% 60%;
+    --accent-foreground: 219 48% 10%;
 
     --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 100%;
@@ -104,9 +112,9 @@ All colors MUST be HSL.
     --warning: 40 95% 55%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 215 20% 25%;
-    --input: 215 20% 25%;
-    --ring: 200 95% 45%;
+    --border: 219 30% 25%;
+    --input: 219 30% 25%;
+    --ring: 175 100% 45%;
 
     --sidebar-background: 215 25% 12%;
     --sidebar-foreground: 210 20% 95%;

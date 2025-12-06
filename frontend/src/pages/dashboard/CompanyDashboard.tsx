@@ -78,21 +78,21 @@ const CompanyDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-40">
+      <header className="bg-card border-b sticky top-0 z-40">
         <div className="px-8 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Logo + Company Selector */}
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2">
-                <Building2 className="h-6 w-6 text-teal-600" />
-                <span className="text-xl font-bold text-gray-900">aequitas</span>
+                <Building2 className="h-6 w-6 text-primary" />
+                <span className="text-xl font-bold text-foreground">aequitas</span>
               </div>
-              <div className="h-8 w-px bg-gray-300"></div>
+              <div className="h-8 w-px bg-border"></div>
               <div className="min-w-[250px]">
                 <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
-                  <SelectTrigger className="border-0 text-lg font-semibold text-gray-900 hover:bg-gray-50">
+                  <SelectTrigger className="border-0 text-lg font-semibold text-foreground hover:bg-muted/50">
                     <SelectValue placeholder="Select company..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -111,25 +111,25 @@ const CompanyDashboard = () => {
 
             {/* Center: Page Title */}
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">Overview</h1>
+              <h1 className="text-xl font-semibold text-foreground">Overview</h1>
             </div>
 
             {/* Right: Icon Toolbar */}
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                <RefreshCw className="h-5 w-5 text-gray-600" />
+              <Button variant="ghost" size="icon" className="hover:bg-muted">
+                <RefreshCw className="h-5 w-5 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                <Download className="h-5 w-5 text-gray-600" />
+              <Button variant="ghost" size="icon" className="hover:bg-muted">
+                <Download className="h-5 w-5 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                <Settings className="h-5 w-5 text-gray-600" />
+              <Button variant="ghost" size="icon" className="hover:bg-muted">
+                <Settings className="h-5 w-5 text-muted-foreground" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-teal-50">
-                <Bell className="h-5 w-5 text-teal-600" />
+              <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                <Bell className="h-5 w-5 text-primary" />
               </Button>
-              <Button variant="ghost" size="icon" className="hover:bg-gray-100">
-                <MoreVertical className="h-5 w-5 text-gray-600" />
+              <Button variant="ghost" size="icon" className="hover:bg-muted">
+                <MoreVertical className="h-5 w-5 text-muted-foreground" />
               </Button>
             </div>
           </div>
@@ -144,7 +144,7 @@ const CompanyDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="bg-gradient-to-r from-teal-600 to-blue-600 border-0 text-white">
+          <Card className="bg-gradient-to-r from-primary to-secondary border-0 text-primary-foreground">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -223,39 +223,39 @@ const CompanyDashboard = () => {
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="lg:col-span-2"
               >
-                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle>Account Mapping Progress</CardTitle>
-                        <CardDescription>Monthly mapping activity</CardDescription>
+                        <CardTitle className="text-foreground">Account Mapping Progress</CardTitle>
+                        <CardDescription className="text-muted-foreground">Monthly mapping activity</CardDescription>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
+                          <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-muted">
                             Last 30 days
                             <ChevronDown className="ml-2 h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Last 7 days</DropdownMenuItem>
-                          <DropdownMenuItem>Last 30 days</DropdownMenuItem>
-                          <DropdownMenuItem>Last 90 days</DropdownMenuItem>
-                          <DropdownMenuItem>This year</DropdownMenuItem>
+                        <DropdownMenuContent align="end" className="bg-popover text-popover-foreground border-border">
+                          <DropdownMenuItem className="hover:bg-muted">Last 7 days</DropdownMenuItem>
+                          <DropdownMenuItem className="hover:bg-muted">Last 30 days</DropdownMenuItem>
+                          <DropdownMenuItem className="hover:bg-muted">Last 90 days</DropdownMenuItem>
+                          <DropdownMenuItem className="hover:bg-muted">This year</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
                   </CardHeader>
                   <CardContent>
                     {/* Mock Chart - Replace with actual chart library */}
-                    <div className="h-64 flex items-end justify-around space-x-2 p-4 bg-gradient-to-t from-gray-50 to-transparent rounded-lg">
+                    <div className="h-64 flex items-end justify-around space-x-2 p-4 bg-gradient-to-t from-muted/20 to-transparent rounded-lg">
                       {[65, 80, 55, 90, 70, 85, 75, 95, 80, 85, 90, 93].map((height, i) => (
                         <div key={i} className="flex-1 flex flex-col items-center">
                           <div
-                            className="w-full bg-gradient-to-t from-teal-600 to-teal-400 rounded-t-lg transition-all hover:opacity-80"
+                            className="w-full bg-gradient-to-t from-primary to-primary/60 rounded-t-lg transition-all hover:opacity-80"
                             style={{ height: `${height}%` }}
                           ></div>
-                          <span className="text-xs text-gray-500 mt-2">
+                          <span className="text-xs text-muted-foreground mt-2">
                             {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}
                           </span>
                         </div>
@@ -271,10 +271,10 @@ const CompanyDashboard = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
                   <CardHeader>
-                    <CardTitle>Account Distribution</CardTitle>
-                    <CardDescription>By category</CardDescription>
+                    <CardTitle className="text-foreground">Account Distribution</CardTitle>
+                    <CardDescription className="text-muted-foreground">By category</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {/* Mock Donut Chart */}
@@ -285,7 +285,7 @@ const CompanyDashboard = () => {
                           cy="80"
                           r="60"
                           fill="none"
-                          stroke="#1A2B4A"
+                          stroke="hsl(var(--secondary))"
                           strokeWidth="20"
                           strokeDasharray="113 377"
                         />
@@ -294,7 +294,7 @@ const CompanyDashboard = () => {
                           cy="80"
                           r="60"
                           fill="none"
-                          stroke="#F8B739"
+                          stroke="hsl(var(--accent))"
                           strokeWidth="20"
                           strokeDasharray="132 377"
                           strokeDashoffset="-113"
@@ -304,7 +304,7 @@ const CompanyDashboard = () => {
                           cy="80"
                           r="60"
                           fill="none"
-                          stroke="#00B8A9"
+                          stroke="hsl(var(--primary))"
                           strokeWidth="20"
                           strokeDasharray="132 377"
                           strokeDashoffset="-245"
@@ -312,34 +312,34 @@ const CompanyDashboard = () => {
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-900">
+                          <div className="text-2xl font-bold text-foreground">
                             {mappingPercentage}%
                           </div>
-                          <div className="text-xs text-gray-500">Mapped</div>
+                          <div className="text-xs text-muted-foreground">Mapped</div>
                         </div>
                       </div>
                     </div>
                     <div className="mt-6 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-[#1A2B4A] mr-2"></div>
-                          <span className="text-sm text-gray-700">Assets</span>
+                          <div className="w-3 h-3 rounded-full bg-secondary mr-2"></div>
+                          <span className="text-sm text-foreground">Assets</span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900">30%</span>
+                        <span className="text-sm font-semibold text-foreground">30%</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-[#F8B739] mr-2"></div>
-                          <span className="text-sm text-gray-700">Liabilities</span>
+                          <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
+                          <span className="text-sm text-foreground">Liabilities</span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900">35%</span>
+                        <span className="text-sm font-semibold text-foreground">35%</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-[#00B8A9] mr-2"></div>
-                          <span className="text-sm text-gray-700">Equity</span>
+                          <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
+                          <span className="text-sm text-foreground">Equity</span>
                         </div>
-                        <span className="text-sm font-semibold text-gray-900">35%</span>
+                        <span className="text-sm font-semibold text-foreground">35%</span>
                       </div>
                     </div>
                   </CardContent>
@@ -353,14 +353,14 @@ const CompanyDashboard = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow">
+              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle>Recent Activity</CardTitle>
-                      <CardDescription>Latest updates across your company</CardDescription>
+                      <CardTitle className="text-foreground">Recent Activity</CardTitle>
+                      <CardDescription className="text-muted-foreground">Latest updates across your company</CardDescription>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-muted">
                       View All
                     </Button>
                   </div>
@@ -370,39 +370,38 @@ const CompanyDashboard = () => {
                     {mockMetrics.recentActivity.map((activity) => (
                       <div
                         key={activity.id}
-                        className="flex items-start space-x-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                        className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div
-                          className={`p-2 rounded-lg ${
-                            activity.type === 'mapping'
-                              ? 'bg-teal-50'
+                          className={`p-2 rounded-lg ${activity.type === 'mapping'
+                              ? 'bg-primary/10'
                               : activity.type === 'user'
-                              ? 'bg-blue-50'
-                              : activity.type === 'export'
-                              ? 'bg-yellow-50'
-                              : 'bg-purple-50'
-                          }`}
+                                ? 'bg-secondary/10'
+                                : activity.type === 'export'
+                                  ? 'bg-accent/10'
+                                  : 'bg-muted'
+                            }`}
                         >
                           {activity.type === 'mapping' && (
-                            <TrendingUp className="h-4 w-4 text-teal-600" />
+                            <TrendingUp className="h-4 w-4 text-primary" />
                           )}
                           {activity.type === 'user' && (
-                            <Users className="h-4 w-4 text-blue-600" />
+                            <Users className="h-4 w-4 text-secondary" />
                           )}
                           {activity.type === 'export' && (
-                            <Download className="h-4 w-4 text-yellow-600" />
+                            <Download className="h-4 w-4 text-accent-foreground" />
                           )}
                           {activity.type === 'sync' && (
-                            <RefreshCw className="h-4 w-4 text-purple-600" />
+                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-foreground">
                             {activity.action}
                           </p>
-                          <p className="text-sm text-gray-500">{activity.user}</p>
+                          <p className="text-sm text-muted-foreground">{activity.user}</p>
                         </div>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {activity.time}
                         </span>
                       </div>

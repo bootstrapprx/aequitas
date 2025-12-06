@@ -6,7 +6,7 @@ import { ManualModeProvider } from "@/contexts/ManualModeContext";
 const DashboardLayout = () => {
   return (
     <ManualModeProvider>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="flex min-h-screen bg-background">
         <AequitasSidebar />
         <main className="flex-1 overflow-y-auto">
           <Outlet />
