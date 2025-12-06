@@ -1,5 +1,0 @@
-find: ‘/usr/lib/containers/storage/overlay-images’: Permission denied
-find: ‘/usr/lib/containers/storage/overlay-layers’: Permission denied
-find: ‘/usr/libexec/initscripts/legacy-actions/auditd’: Permission denied
-find: ‘/usr/share/empty.sshd’: Permission denied
-find: ‘/usr/share/ollama’: Permission denied

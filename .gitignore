@@ -32,7 +32,17 @@ htmlcov/
 # OS
 Thumbs.db
 
-# Docker
+# Logs and Diagnostics
+*.log
+*_logs.txt
+*_output.txt
+*_check.txt
+docker_*.txt
+ps_*.txt
+git_status.txt
+find_results.txt
+curl_output.txt
+pull_log.txt
 .docker/
 
 # Project specific
