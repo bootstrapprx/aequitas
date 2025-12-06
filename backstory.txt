@@ -1,0 +1,21 @@
+Let us proceed the developing of aequitas.
+Now that I have implemented a new layout (you missed this one, but nothing so different, just colors).
+I want to begin this day by fixing all functions, and the biggest of them all:
+The standard chart of accounts.
+This is the main service I was hired for. So it is paramount to the rest of the functions I will deliver, making aequitas looking like a QuickBooks alternative to the company.
+The client's name will be changed to respect He's privacy, but let us call Him Bob.
+Bob has 8+ companies, of management, Real Estate Development, Holdings -----
+He approached me on Upwork and complained to me about the current accountanty's lack of communication and availability.
+I informed Him that I neeeded to assess the situation after gaining information, via QuickBooks, Slack, and other access. 
+After my evaluation, I had a second meeting, in wich I estated that altought He had many companies, there is no way to review them all at once - Like the hability to zoom in and out - Quickbooks does not even show all companies on the same screen, let alone a dashboard. With this observation, I launched a proposal: a dashboard that collects all companies' data and shows an informative and visually appealing-easy to understand dashboard.
+He liked the idea and pointed out Google's Looker Studio.
+-And now I would like no make a note: Between us, He's solution was good... But we want challenge and I visualized, and that's my point of view' that He would save a lot of cash with QuickBooks and receive a centrul HUB of operations.-
+Back to the story: 
+But after the looker proposal, I pointed out that altought all of the companies under He's umbrella where managed by the same accountancy, they weren't standarized enough to culminate on a common category, thus we needed a step back and standarize them all.
+This point is important for He tested my research, thisi is what He wanted all along, but was waiting for me to propose.
+So we needed a Standard Master Chart of Accounts. He agreed firmly and pointed out that He has OCD, so even the capitalization of letter should follow a standard. Also, the accounts didn't had codes.
+This is how the central idea for the US_GAAP_Accounting_Workbook.xls
+From the cross check of all companies came the chart of account, crude on .xls but 70% done on enriched_master_chart.csv
+After doing the backbone I've decided to improve the deploy method/slash visualization by Bob, that's how ChartForge came about.
+Now, after doing ChartForge working, at least visually, I've decided to make a bold move: create **aequitas** to:
+Subtly, Bob by seeing aequitas, realizes that aequitas is all He needs, for Him and other... You know that this is a possibility, and our aim is to improve the odds in aequitas favor.
