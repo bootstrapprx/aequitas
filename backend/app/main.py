@@ -21,7 +21,9 @@ from app.api.v1 import (
     elevation, # New
     payments, # New - Stripe webhooks
     journal_entries, # Accounting - Journal Entries
+    journal_entries, # Accounting - Journal Entries
     accounting, # Accounting - Ledger, Financial Statements, Fiscal Periods
+    client_logs, # Session Logging
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -114,6 +116,7 @@ app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"]
 # Accounting routers
 app.include_router(journal_entries.router, prefix="/api/v1/journal-entries", tags=["Accounting - Journal Entries"])
 app.include_router(accounting.router, prefix="/api/v1/accounting", tags=["Accounting - Reports & Periods"])
+app.include_router(client_logs.router, prefix="/api/v1", tags=["Client Logs"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

@@ -14,6 +14,7 @@ import DashboardLayout from "./components/dashboard/DashboardLayout";
 import Landing from "./pages/Landing";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import { SessionLogger } from "./components/SessionLogger";
 
 // Dashboard
 import DashboardPage from "./pages/dashboard/DashboardPage";
@@ -77,6 +78,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <SessionLogger />
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/landing-old" element={<Landing />} />

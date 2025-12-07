@@ -51,3 +51,7 @@ prompt.md
 CLAUDE.md
 
 currentRequest.txt
+
+# Development Session Logs
+/dev_sessions/
+scripts/maintenance/*.log

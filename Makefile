@@ -42,6 +42,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(CYAN)Other:$(RESET)"
 	@echo "  $(GREEN)make services$(RESET)         Scan and manage optional services (C++, Go, Rust)"
+	@echo "  $(GREEN)make session$(RESET)          Start a logged development session"
 	@echo ""
 	@echo "$(YELLOW)Service URLs when running:$(RESET)"
 	@echo "  Frontend:  http://localhost:5173"
@@ -63,6 +64,10 @@ dev: ## Start all Docker services
 
 stop:
 	@echo "Stopping Unified Dev Mode..."
+	@if [ -L "dev_sessions/latest" ]; then \
+		echo "Saving Docker logs to current session..."; \
+		docker compose -f $(DOCKER_COMPOSE_DEV) logs > dev_sessions/latest/docker_logs_final.txt 2>&1 || true; \
+	fi
 	@echo "Stopping Docker services..."
 	docker compose -f $(DOCKER_COMPOSE_DEV) down
 	@echo "All services stopped."
@@ -162,7 +167,13 @@ shared:
 	@echo "To view the public URL, run: docker compose -f $(DOCKER_COMPOSE_DEV) -f docker-compose.shared.yml logs tunnel | grep 'trycloudflare.com'"
 
 
+
+session: ## Start a logged development session
+	@echo "Starting watched session..."
+	@./scripts/maintenance/dev_session_logger.sh wrap
+
 # Placeholder for optional services
+
 services:
 	@echo "Managing optional services..."
 	@if [ -d "services" ]; then \
