@@ -1,332 +1,327 @@
+You are now tasked with creating a complete, modular, production-ready CLI for the Aequitas system.
+This CLI must run side-by-side with the existing backend and serve as a full administrative, operational, diagnostic and development companion to the web version.
 
-# **Claude Code – Autonomous Implementation Prompt**
+Work inside the existing aequitas repository.
 
-### **Feature: GroupCompany (Umbrella View) + SU Manual Company Creation + CORS Fix**
+🎯 OBJECTIVE
 
-### **Instructions to the agent**
+Implement a full Aequitas CLI using Typer (preferred) to provide:
 
-Work directly in the existing `aequitas` repository.
-Make **small, atomic commits**, each with clear messages (e.g., `feat(groups): ...`, `fix(cors): ...`).
-Open PRs or provide patches in logical units.
-Do not remove or break existing features.
-Maintain compatibility with current permission system.
+1. Administrative operations
 
----
+Create/list/delete companies
 
-# **OBJECTIVE**
+Superuser-only “manual creation” (bypass payment)
 
-Implement the following end-to-end:
+Manage groups (GroupCompany)
 
-1. **CORS fix** (backend must accept frontend running at `localhost:5173`).
-2. **GroupCompany / Umbrella View**:
+Mapping propagation
 
-   * DB models
-   * Migrations
-   * CRUD endpoints
-   * Association table for companies
-   * Permission rules
-   * Frontend pages + components
-3. **SU manual company creation endpoint** (`/api/v1/companies/su-create`) that bypasses payment.
-4. **Mapping propagation** within a group.
-5. **Tests** for all core flows.
-6. **Documentation** update.
+User controls
 
-This feature is foundational to allow **Bob’s multi-company environment** to operate under a single “umbrella”, and to give the SU the power to create companies manually without payment.
+2. Developer/Operator utilities
 
----
+Database migrations (upgrade/downgrade)
 
-# **SCOPE – What must be delivered**
+DB inspection
 
-### **Backend**
+Seed commands
 
-* CORS middleware properly configured
-* SQLAlchemy models:
+Log viewer / internal logs dumper
 
-  * `GroupCompany`
-  * `GroupCompanyMember`
-* Alembic migration (with downgrade)
-* Service layer:
+Health check commands
 
-  * create/list groups
-  * add/remove company in group
-  * propagate mappings
-* API endpoints:
+Internal service runners (mapping engine, maintenance tasks)
 
-  * `GET /api/v1/groups`
-  * `POST /api/v1/groups`
-  * `GET /api/v1/groups/{id}`
-  * `POST /api/v1/groups/{id}/companies`
-  * `DELETE /api/v1/groups/{id}/companies/{company_id}`
-  * `POST /api/v1/groups/{id}/propagate-mappings`
-  * `POST /api/v1/companies/su-create` (restricted to superusers)
-* Integration of group–company relationships across existing modules
-* Tests (pytest) for:
+3. Observability
 
-  * CORS
-  * group creation
-  * manual SU company creation
-  * group membership
-  * mapping propagation
+Session logs
 
----
+System activity logs
 
-### **Frontend (React + TS + Tailwind/shadcn)**
+Error dumps
 
-* New pages:
+JSON/pretty output switches
 
-  * `/groups` list
-  * `/groups/:id` detail with company list, “Add Company”, “Create Company (SU)”, “Propagate Mappings”
-* New components:
+4. Modularity and easy extension
 
-  * `GroupForm`
-  * `AddCompanyToGroupDialog`
-  * `SUCreateCompanyDialog`
-* New API hooks under `src/lib/api/groups.ts`
-* Updated router entries
-* Clean, minimal shadcn layout; no breaking changes to existing pages
+Organize all commands under:
 
----
+backend/cli/
+    __main__.py
+    main.py
+    commands/
+        companies.py
+        groups.py
+        mappings.py
+        users.py
+        logs.py
+        db.py
+        diagnostics.py
 
-### **Documentation**
 
-* New file: `docs/groups.md`
+Make the CLI available via:
 
-  * ER diagram
-  * workflow of SU-create
-  * API examples (cURL)
-* Update main `README.md` with deployment instructions for the new modules
+aequitas <command> [options]
 
----
 
-# **TASKS – Execute in this order**
+using an entrypoint (pyproject or setup scripts).
 
----
+📦 HIGH-LEVEL REQUIREMENTS
+CLI must:
 
-## **Task A — Fix CORS**
+Use Typer
 
-File: `backend/app/main.py`
+Use the actual backend database & services (no mocks)
 
-Add:
+Reuse existing service functions wherever possible
 
-```py
-from fastapi.middleware.cors import CORSMiddleware
+Support JSON or human-readable output (--json flag on all major commands)
 
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-]
+Have complete, consistent auto-generated help documentation
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
+Have excellent error reporting
 
-Commit:
-`fix(cors): enable CORS for localhost:5173`
+Never break existing backend code
 
----
+All commands must:
 
-## **Task B — Database Models**
+Open DB sessions correctly
 
-Create `backend/app/db/models/group_company.py`:
+Validate permissions when needed (e.g., SU actions)
 
-```py
-import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, DateTime, func
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from app.db.base import Base
+Produce graceful error messages
 
-class GroupCompany(Base):
-    __tablename__ = "group_companies"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(255), nullable=False, unique=True)
-    description = Column(Text)
-    owner_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+Return exit codes correctly (0 success, 1 failure)
 
-    owner = relationship("User", back_populates="owned_groups")
-    members = relationship("GroupCompanyMember", back_populates="group", cascade="all, delete-orphan")
-```
+📁 DETAILED STRUCTURE TO IMPLEMENT
+1. CLI Root Application
 
-Create `backend/app/db/models/group_company_member.py`:
+File: backend/cli/main.py
 
-```py
-import uuid
-from sqlalchemy import Column, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from app.db.base import Base
+Create Typer app named “Aequitas CLI”
 
-class GroupCompanyMember(Base):
-    __tablename__ = "group_company_members"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    group_company_id = Column(UUID(as_uuid=True), ForeignKey("group_companies.id"), nullable=False)
-    company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
+Load sub-commands from backend/cli/commands/*
 
-    group = relationship("GroupCompany", back_populates="members")
-    company = relationship("Company")
-```
+Add global options:
 
-Register in `models/__init__.py`.
+--debug → enable verbose logging
 
-Commit:
-`feat(groups): add GroupCompany and GroupCompanyMember models`
+--json → return only JSON dict output
 
----
+Entrypoint runner in backend/cli/__main__.py:
 
-## **Task C — Migration**
+from .main import app
+app()
 
-Create alembic migration creating both tables and unique constraints.
-Include downgrade removing both tables.
 
-Commit:
-`chore(migrations): create group companies tables`
+Add to pyproject.toml:
 
----
+[project.scripts]
+aequitas = "backend.cli.__main__:app"
 
-## **Task D — Service Layer**
+2. Companies Commands
 
-Create `backend/app/services/group_service.py` with:
+File: backend/cli/commands/companies.py
 
-* `create_group(...)`
-* `get_groups_for_user(...)`
-* `add_company_to_group(...)`
-* `remove_company_from_group(...)`
-* `propagate_mappings(...)`:
+Implement:
 
-  * copy rows from `AccountMapping`
-  * do not overwrite unless `force=True`
-  * mark propagated rows with `propagated_from = source_company_id`
-  * decrease confidence if copied
+aequitas companies list
 
-Commit:
-`feat(groups): implement group service and mapping propagation`
+List all companies with essential metadata
 
----
+Support --json
 
-## **Task E — API Endpoints**
+aequitas companies create
 
-Create router: `backend/app/api/v1/groups.py`
+Arguments:
 
-Endpoints:
+--name
 
-* `GET /api/v1/groups`
-* `POST /api/v1/groups`
-* `GET /api/v1/groups/{group_id}`
-* `POST /api/v1/groups/{group_id}/companies`
-* `DELETE /api/v1/groups/{group_id}/companies/{company_id}`
-* `POST /api/v1/groups/{group_id}/propagate-mappings`
+--tax-id
 
-Create **SU manual company creation**:
+--group-id
 
-File: `backend/app/api/v1/companies_su.py`
+--skip-payment (default=True)
 
-Endpoint:
-`POST /api/v1/companies/su-create`
+SU permission check
 
-Rules:
+aequitas companies delete <company_id>
 
-* Only `current_user.is_superuser == True`
-* Creates a company with payment skipped
-* If `group_company_id` provided → associate immediately
+Soft delete or mark inactive depending current backend rules
 
-Commit:
-`feat(api): add groups router and su-create company route`
+aequitas companies info <company_id>
 
----
+Full structured output
 
-## **Task F — Permissions**
+Internally call existing service layer:
 
-Ensure only SU can use su-create route.
-Ensure only SU or group owner can create groups.
-Ensure group membership operations follow permission rules.
+company_service.create_company
 
-Commit:
-`feat(auth): implement permission checks for groups and su-create`
+company_service.list_companies
 
----
+validation against User.is_superuser
 
-## **Task G — Frontend**
+3. GroupCompany Commands
 
-Create:
+File: backend/cli/commands/groups.py
 
-`src/pages/groups/GroupsList.tsx`
-`src/pages/groups/GroupDetail.tsx`
-`src/components/groups/GroupForm.tsx`
-`src/components/groups/AddCompanyToGroupDialog.tsx`
-`src/components/groups/SUCreateCompanyDialog.tsx`
+Implement:
 
-Add API client:
+aequitas groups list
+aequitas groups create <name> [--description TEXT]
+aequitas groups add-company <group_id> <company_id>
+aequitas groups remove-company <group_id> <company_id>
+aequitas groups info <group_id>
 
-`src/lib/api/groups.ts`
+Reuse the backend GroupCompany implementation.
 
-Integrate router entries and nav links.
+4. Mappings Commands
 
-UI requirements:
+File: backend/cli/commands/mappings.py
 
-* Use shadcn/ui components
-* Keep consistent card-based layout
-* Add “Consolidated Dashboard” placeholder button
+Implement:
 
-Commit:
-`feat(frontend): implement groups pages, dialogs, api hooks`
+aequitas mappings propagate --source <company_id> --targets <ids...> [--force]
 
----
+Call backend mapping propagation service.
 
-## **Task H — Tests**
+aequitas mappings list <company_id>
 
-Add:
+List mapping rows.
 
-`tests/test_groups.py`
-`tests/test_su_create_company.py`
-`tests/test_cors.py`
+5. Users Commands
 
-Commit:
-`test(groups): add backend tests for groups, su-create, mappings and cors`
+File: backend/cli/commands/users.py
 
----
+Implement:
 
-## **Task I — Documentation**
+aequitas users list
+aequitas users create --email EMAIL --su/--no-su
+aequitas users info <user_id>
 
-Add:
+Add SU-only enforcement where needed.
 
-`docs/groups.md` with:
+6. Database Commands
 
-* ER diagram (mermaid or ascii)
-* API examples (cURL)
-* SU-create workflow
-* Mapping propagation flow
+File: backend/cli/commands/db.py
 
-Update `README.md`.
+Implement:
 
-Commit:
-`docs(groups): add groups.md and update README`
+aequitas db upgrade
 
----
+Run alembic upgrade head.
 
-# **ACCEPTANCE CRITERIA**
+aequitas db downgrade
 
-1. Frontend at `localhost:5173` communicates with backend without CORS errors.
-2. SU-create company works and bypasses payment.
-3. GroupCompany CRUD and membership fully functional.
-4. Mapping propagation works and is tested.
-5. All migrations apply and rollback cleanly.
-6. All new endpoints appear in OpenAPI.
-7. Frontend pages render group list and group details with no errors.
-8. All new tests pass.
+Downgrade one revision.
 
----
+aequitas db revision --msg "message"
 
-# **FINAL OUTPUT REQUIRED FROM CLAUDE**
+Generate new migration.
 
-Return:
+aequitas db inspect
 
-> “Branch `feature/group-company` created. All tasks completed. Commits summary, migrations, endpoints, tests, and documentation are ready. Provide PR for review.”
+Print database tables, row counts, or summary.
 
+aequitas db seed
 
+Call any seed scripts (you create a simple driver).
+
+7. Logs Commands
+
+File: backend/cli/commands/logs.py
+
+Implement:
+
+aequitas logs tail
+
+Follow backend logs (via subprocess to journalctl or log file)
+
+aequitas logs session
+
+Dump internal session/activity logs
+
+aequitas logs dump
+
+Export logs to file
+
+8. Diagnostics Commands
+
+File: backend/cli/commands/diagnostics.py
+
+Implement:
+
+aequitas diag health
+
+Ping DB, run small query.
+
+aequitas diag version
+
+Return app version, environment, Python version.
+
+aequitas diag env
+
+Display environment variables (safe subset).
+
+🧪 TESTS
+
+Create backend/tests/test_cli.py covering:
+
+CLI entrypoint loads
+
+Companies list
+
+Groups create
+
+SU create via CLI
+
+Mapping propagation command
+
+DB upgrade/downgrade
+
+JSON output flag
+
+Exit codes
+
+Use CliRunner from Typer.
+
+📘 DOCUMENTATION
+
+Create docs/cli.md including:
+
+Installation & usage
+
+Command reference (auto-generated help + examples)
+
+Architecture
+
+Integration with backend
+
+How to extend CLI with new commands
+
+Add CLI section to main README.md.
+
+📌 ACCEPTANCE CRITERIA
+
+Claude must deliver:
+
+New folder structure under backend/cli/
+
+All commands implemented and wired to backend services
+
+Fully functional Typer CLI available via aequitas executable
+
+Commands tested with pytest
+
+Documentation completed
+
+Commits small and atomic, branch name: feature/cli
+
+Final output message confirming success
+
+📝 REQUIRED FINAL OUTPUT FROM CLAUDE
+
+Claude should output at completion:
+
+“Aequitas CLI created successfully. Branch feature/cli with all modules, commands, entrypoint, tests, and documentation is ready. You may now run aequitas --help.”
