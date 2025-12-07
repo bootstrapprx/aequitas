@@ -22,7 +22,7 @@ const LandingPage = () => {
   const features = [
     {
       icon: ChartBar,
-      title: 'ChartForge',
+      title: 'Chart of Accounts',
       description: 'AI-powered chart of accounts management with 345 US-GAAP master accounts',
       color: 'text-teal-600',
       bgColor: 'bg-teal-50',

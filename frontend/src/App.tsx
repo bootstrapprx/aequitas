@@ -25,7 +25,7 @@ import CompanyRegistration from "./pages/companies/CompanyRegistration";
 import UsersListPage from "./pages/registration/users/UsersListPage";
 import SimpleCoAPage from "./pages/registration/coa/SimpleCoAPage";
 
-// ChartForge Module (formerly masterchart)
+// Chart of Accounts Module (formerly masterchart)
 import MasterChartDashboard from "./pages/masterchart/MasterChartDashboard";
 import MasterChartTreePage from "./pages/masterchart/MasterChartTreePage";
 import MasterChartInteractivePage from "./pages/masterchart/MasterChartInteractivePage";

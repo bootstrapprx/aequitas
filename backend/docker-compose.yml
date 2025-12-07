@@ -1,8 +1,8 @@
-# Defines the services, networks, and volumes for the ChartForge backend.
+# Defines the services, networks, and volumes for the Aequitas backend.
 services:
   # The main backend FastAPI application
   backend:
-    container_name: chartforge-backend-dev
+    container_name: aequitas-backend-dev
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,7 +21,7 @@ services:
   # PostgreSQL database service
   db:
     image: postgres:15
-    container_name: chartforge-postgres-dev
+    container_name: aequitas-postgres-dev
     env_file:
       - .env
     volumes:

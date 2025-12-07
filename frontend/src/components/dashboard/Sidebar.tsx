@@ -130,7 +130,7 @@ const Sidebar = () => {
         <div className="h-16 border-b flex items-center justify-between px-4 flex-shrink-0">
           <Link to="/" className="flex items-center space-x-2 overflow-hidden">
             <Network className="h-6 w-6 text-primary flex-shrink-0" />
-            {isOpen && <span className="font-bold whitespace-nowrap">ChartForge</span>}
+            {isOpen && <span className="font-bold whitespace-nowrap">Aequitas</span>}
           </Link>
         </div>
 

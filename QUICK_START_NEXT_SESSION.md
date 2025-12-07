@@ -280,7 +280,7 @@ export function BalanceSheet({ balanceSheet }) {
 ### **Environment Variables (Already Set):**
 ```bash
 # Backend (.env.dev)
-DATABASE_URL=postgresql://user:password@postgres:5432/chartforge_dev
+DATABASE_URL=postgresql://user:password@postgres:5432/aequitas_dev
 OLLAMA_BASE_URL=http://ollama:11434
 
 # Frontend (.env)

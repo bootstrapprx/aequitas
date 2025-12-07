@@ -3,27 +3,27 @@
 services:
   postgres:
     image: pgvector/pgvector:pg15
-    container_name: chartforge-postgres-dev
+    container_name: aequitas-postgres-dev
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: chartforge_dev
+      POSTGRES_DB: aequitas_dev
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
 
   ollama:
     image: ollama/ollama
-    container_name: chartforge-ollama-dev
+    container_name: aequitas-ollama-dev
     ports:
       - "11435:11434"
     volumes:
       - ollama_data_dev:/root/.ollama
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
     # This is a workaround to pull the model on startup.
     # It starts a temporary container that pulls the model, and then the main service starts.
     command: serve
@@ -32,26 +32,26 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: chartforge-backend-dev
+    container_name: aequitas-backend-dev
     volumes:
       - ./backend:/app
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres:5432/chartforge_dev
+      - DATABASE_URL=postgresql://user:password@postgres:5432/aequitas_dev
       - OLLAMA_BASE_URL=http://ollama:11434
     depends_on:
       - postgres
       - ollama
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: chartforge-frontend-dev
+    container_name: aequitas-frontend-dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -60,7 +60,7 @@ services:
     depends_on:
       - backend
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
 
 volumes:
   postgres_data_dev:
@@ -69,5 +69,5 @@ volumes:
     driver: local
 
 networks:
-  chartforge-dev-net:
+  aequitas-dev-net:
     driver: bridge

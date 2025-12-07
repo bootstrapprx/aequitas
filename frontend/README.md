@@ -1,6 +1,6 @@
-# ChartForge - Unified Chart of Accounts Management
+# Aequitas - Unified Chart of Accounts Management
 
-ChartForge is a web application designed to help businesses centralize, map, and synchronize their financial structures. It provides AI-assisted mapping and seamless integration with QuickBooks Online to reduce manual reconciliation time and improve financial data accuracy.
+Aequitas is a web application designed to help businesses centralize, map, and synchronize their financial structures. It provides AI-assisted mapping and seamless integration with QuickBooks Online to reduce manual reconciliation time and improve financial data accuracy.
 
 ## Features
 

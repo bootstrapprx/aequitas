@@ -18,10 +18,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'chartforge_token';
-const USER_KEY = 'chartforge_user';
-const COMPANY_IDS_KEY = 'chartforge_company_ids';
-const CURRENT_COMPANY_KEY = 'chartforge_current_company';
+const TOKEN_KEY = 'aequitas_token';
+const USER_KEY = 'aequitas_user';
+const COMPANY_IDS_KEY = 'aequitas_company_ids';
+const CURRENT_COMPANY_KEY = 'aequitas_current_company';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);

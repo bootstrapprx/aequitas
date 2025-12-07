@@ -1,4 +1,4 @@
-name = "chartforge-frontend"
+name = "aequitas-frontend"
 pages_build_output_dir = "dist"
 
 [build]

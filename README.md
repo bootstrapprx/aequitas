@@ -1,6 +1,6 @@
 # Aequitas - Integrated Accounting System
 
-**Aequitas** is a complete accounting system featuring intelligent chart of accounts management (powered by ChartForge), financial reporting, and integrated bookkeeping. Built with a modern React frontend and powerful FastAPI backend, Aequitas provides a seamless experience for managing your company's financial operations.
+**Aequitas** is a complete accounting system featuring intelligent chart of accounts management, financial reporting, and integrated bookkeeping. Built with a modern React frontend and powerful FastAPI backend, Aequitas provides a seamless experience for managing your company's financial operations.
 
 ## ✨ Features
 
@@ -11,7 +11,7 @@
 - **Reports Module:** Financial statements, custom reports, and export center (coming soon)
 - **Administration:** System settings, integrations, and audit logs
 
-### ChartForge - Intelligent Chart of Accounts
+### Chart of Accounts - Intelligent Management
 - **Master Chart Management:** Create and maintain standardized chart of accounts
 - **AI-Powered Mapping:** Automatic account classification and mapping using AI
 - **QuickBooks Integration:** OAuth2-based sync with QuickBooks Online
@@ -48,7 +48,7 @@ The project is organized into two main directories: `frontend` and `backend`.
 │   │   ├── pages/           # Page components
 │   │   │   ├── dashboard/   # Main dashboard
 │   │   │   ├── registration/ # Companies, users, CoA
-│   │   │   ├── chartforge/  # ChartForge module
+│   │   │   ├── chartforge/  # Chart of Accounts module
 │   │   │   ├── accountancy/ # Accounting operations
 │   │   │   ├── reports/     # Financial reports
 │   │   │   └── admin/       # Administration
@@ -180,7 +180,7 @@ Main landing page with company overview, user stats, and recent activity feed.
 - **Users:** User management and access control
 - **Chart of Accounts:** Simple CoA registration and management
 
-### ChartForge (Intelligent CoA Module)
+### Chart of Accounts (Intelligent Module)
 - **Master Chart:** Standardized US-GAAP chart of accounts (345 accounts)
 - **Mapping:** Automatic and manual account mapping
 - **Import/Export:** Excel-based data exchange
@@ -283,7 +283,7 @@ See [MASTER_CHART.md](MASTER_CHART.md) for complete details.
 ### Phase 1: Core Accounting (Current)
 - [x] Dashboard and navigation
 - [x] Company management
-- [x] ChartForge module (complete)
+- [x] Chart of Accounts module (complete)
 - [x] User authentication
 - [ ] User management UI
 - [ ] Simple CoA registration
@@ -331,7 +331,6 @@ For questions, issues, or feature requests:
 
 ## 🙏 Acknowledgments
 
-- **ChartForge:** The intelligent chart of accounts engine powering Aequitas
 - **shadcn/ui:** Beautiful and accessible component library
 - **FastAPI:** Modern, fast web framework for building APIs
 - **Ollama:** Local AI inference engine

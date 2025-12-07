@@ -55,7 +55,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <img src={Logo} alt="ChartForge Logo" className="h-10" />
+              <img src={Logo} alt="Aequitas Logo" className="h-10" />
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
@@ -126,10 +126,10 @@ const Landing = () => {
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2">
-              <img src={Logo} alt="ChartForge Logo" className="h-8" />
+              <img src={Logo} alt="Aequitas Logo" className="h-8" />
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 ChartForge. Unified Chart of Accounts Management.
+              © 2024 Aequitas. Unified Chart of Accounts Management.
             </p>
           </div>
         </div>
