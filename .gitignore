@@ -47,8 +47,7 @@ pull_log.txt
 
 # Project specific
 install_log*.txt
-prompt.md
-CLAUDE.md
+
 
 currentRequest.txt
 
