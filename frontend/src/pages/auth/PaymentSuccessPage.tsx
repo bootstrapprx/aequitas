@@ -30,11 +30,11 @@ const PaymentSuccessPage = () => {
 
             try {
                 // Confirm the registration
-                const response = await api.post('/auth/register/confirm', { token });
+                const response = await api.post<any>('/auth/register/confirm', { token });
 
-                if (response.data.access_token) {
+                if (response.access_token) {
                     // Store the token
-                    localStorage.setItem('token', response.data.access_token);
+                    localStorage.setItem('aequitas_token', response.access_token);
 
                     // Refresh auth context
                     await refreshAuth();

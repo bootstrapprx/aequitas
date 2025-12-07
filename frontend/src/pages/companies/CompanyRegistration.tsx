@@ -66,7 +66,7 @@ const CompanyRegistration = () => {
         );
 
         try {
-            const token = localStorage.getItem('access_token');
+            const token = localStorage.getItem('aequitas_token');
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
             };

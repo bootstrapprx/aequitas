@@ -57,10 +57,10 @@ const RegisterPage = () => {
     const fetchConfig = async () => {
       setConfigLoading(true);
       try {
-        const response = await api.get('/auth/config');
-        // Defensive: only use response.data if it's a valid object
-        if (response?.data && typeof response.data === 'object') {
-          const data = response.data;
+        const response = await api.get<any>('/auth/config');
+        // Defensive: use response directly as it is the data
+        if (response && typeof response === 'object') {
+          const data = response;
           setAuthConfig({
             allow_public_signup: data.allow_public_signup ?? false,
             stripe_enabled: data.stripe_enabled ?? data.stripe_configured ?? false,
@@ -115,7 +115,7 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/register', {
+      const response = await api.post<any>('/auth/register', {
         email,
         password,
         company_name: companyName,
@@ -124,7 +124,7 @@ const RegisterPage = () => {
       });
 
       // Free registration returns token directly
-      if (response.data.access_token) {
+      if (response && response.access_token) {
         toast({
           title: 'Registration successful!',
           description: 'Welcome to Aequitas. Redirecting to dashboard...',
@@ -150,7 +150,7 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      const response = await api.post('/auth/register', {
+      const response = await api.post<any>('/auth/register', {
         email,
         password,
         company_name: companyName,
@@ -159,14 +159,14 @@ const RegisterPage = () => {
       });
 
       // Paid registration returns checkout URL
-      if (response.data.checkout_url) {
+      if (response && response.checkout_url) {
         toast({
           title: 'Redirecting to payment...',
           description: 'You will be redirected to complete your payment.',
         });
 
         // Redirect to Stripe checkout or mock payment page
-        window.location.href = response.data.checkout_url;
+        window.location.href = response.checkout_url;
       }
     } catch (err: any) {
       const message = err.response?.data?.detail || 'Registration failed. Please try again.';

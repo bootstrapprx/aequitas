@@ -11,7 +11,7 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('chartforge_token');
+    const token = localStorage.getItem('aequitas_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,8 +28,8 @@ api.interceptors.response.use(
   (error: AxiosError<ApiError>) => {
     // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401) {
-      localStorage.removeItem('chartforge_token');
-      localStorage.removeItem('chartforge_user');
+      localStorage.removeItem('aequitas_token');
+      localStorage.removeItem('aequitas_user');
       // Only redirect if we're not already on the login page
       if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
         window.location.href = '/login';

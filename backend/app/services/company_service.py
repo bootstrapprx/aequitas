@@ -59,7 +59,6 @@ class CompanyService:
             tax_id=company_in.tax_id,
             industry=company_in.industry,
             description=company_in.description,
-            description=company_in.description,
             is_active=True,
             subscription_type=company_in.subscription_type
         )

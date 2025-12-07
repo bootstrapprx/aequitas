@@ -31,7 +31,15 @@ async function baseRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   options: BodyApiOptions = {}
 ): Promise<T> {
-  const { headers = {}, params, body } = options;
+  const { params, body } = options;
+  // Separate headers to avoid mutation
+  const headers = { ...options.headers };
+
+  // Auto-inject token
+  const token = localStorage.getItem('aequitas_token');
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   let url = `${API_URL}${endpoint}`;
 
@@ -92,7 +100,7 @@ async function baseRequest<T>(
 
 export const api = {
   get: <T>(endpoint: string, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'GET', options),
-  post: <T>(endpoint:string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'POST', { ...options, body }),
+  post: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'POST', { ...options, body }),
   put: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'PUT', { ...options, body }),
   delete: <T>(endpoint: string, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'DELETE', options),
   patch: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'PATCH', { ...options, body }),

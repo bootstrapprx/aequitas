@@ -308,7 +308,7 @@ export default function SettingsPage() {
                                                             const response = await fetch("http://localhost:8000/api/v1/admin/reset-db", {
                                                                 method: "POST",
                                                                 headers: {
-                                                                    "Authorization": `Bearer ${localStorage.getItem("chartforge_token")}`
+                                                                    "Authorization": `Bearer ${localStorage.getItem("aequitas_token")}`
                                                                 }
                                                             });
 
