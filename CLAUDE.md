@@ -196,7 +196,7 @@ python -m pytest -v
 4. Restart backend to create table (in dev mode, tables are auto-created on startup)
 5. For production, generate Alembic migration: `alembic revision --autogenerate -m "description"`
 
-### Working with the Master Chart
+### Working with the Standardized Master Chart
 
 The master chart is seeded from `backend/app/data/enriched_master_chart.json` or `us_gaap_master_chart.json`.
 

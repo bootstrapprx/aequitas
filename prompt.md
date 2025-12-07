@@ -329,6 +329,4 @@ Return:
 
 > “Branch `feature/group-company` created. All tasks completed. Commits summary, migrations, endpoints, tests, and documentation are ready. Provide PR for review.”
 
----
 
-Thome, this is ready for you to copy-paste into Claude Code exactly as is.
