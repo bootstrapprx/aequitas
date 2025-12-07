@@ -29,30 +29,21 @@ import {
   useVoidJournalEntry,
   useDeleteJournalEntry,
   useFiscalPeriods,
+  useCompanyAccounts,
 } from '@/hooks/useAccounting';
+import { useAuth } from '@/contexts/AuthContext';
 import type { JournalEntry, EntryStatus } from '@/types/accounting';
 
-// TODO: Get actual company ID from context/params
-const MOCK_COMPANY_ID = 'company-uuid-here';
-
-// TODO: Get actual user ID from auth context
-const MOCK_USER_ID = 'user-uuid-here';
-
-// TODO: Fetch actual company accounts
-const MOCK_ACCOUNTS = [
-  { id: 'acc-1', code: '1000', description: 'Cash' },
-  { id: 'acc-2', code: '4000', description: 'Revenue' },
-  { id: 'acc-3', code: '5000', description: 'Expenses' },
-];
-
 const JournalEntriesPage = () => {
+  const { user, currentCompanyId } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<EntryStatus | 'all'>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
 
   // Fetch data
-  const { data: fiscalPeriods = [] } = useFiscalPeriods(MOCK_COMPANY_ID);
-  const { data: entriesData, isLoading } = useJournalEntries(MOCK_COMPANY_ID, {
+  const { data: fiscalPeriods = [] } = useFiscalPeriods(currentCompanyId || undefined);
+  const { data: companyAccounts = [] } = useCompanyAccounts(currentCompanyId || undefined);
+  const { data: entriesData, isLoading } = useJournalEntries(currentCompanyId || '', {
     status: filterStatus !== 'all' ? filterStatus : undefined,
     fiscal_period_id: filterPeriod !== 'all' ? filterPeriod : undefined,
   });
@@ -76,12 +67,12 @@ const JournalEntriesPage = () => {
   };
 
   const handlePost = async (entry: JournalEntry) => {
-    if (!entry.id) return;
+    if (!entry.id || !user?.id) return;
 
     try {
       await postMutation.mutateAsync({
         entryId: entry.id,
-        userId: MOCK_USER_ID,
+        userId: user.id,
       });
       toast.success(`Entry ${entry.entry_number} posted successfully`);
     } catch (error: any) {
@@ -90,12 +81,12 @@ const JournalEntriesPage = () => {
   };
 
   const handleVoid = async (entry: JournalEntry, reason: string) => {
-    if (!entry.id) return;
+    if (!entry.id || !user?.id) return;
 
     try {
       await voidMutation.mutateAsync({
         entryId: entry.id,
-        userId: MOCK_USER_ID,
+        userId: user.id,
         reason,
       });
       toast.success(`Entry ${entry.entry_number} voided`);
@@ -242,9 +233,9 @@ const JournalEntriesPage = () => {
             <DialogTitle>Create Journal Entry</DialogTitle>
           </DialogHeader>
           <JournalEntryForm
-            companyId={MOCK_COMPANY_ID}
+            companyId={currentCompanyId || ''}
             fiscalPeriods={fiscalPeriods}
-            accounts={MOCK_ACCOUNTS}
+            accounts={companyAccounts}
             onSubmit={handleCreate}
             onCancel={() => setCreateDialogOpen(false)}
             isLoading={createMutation.isPending}

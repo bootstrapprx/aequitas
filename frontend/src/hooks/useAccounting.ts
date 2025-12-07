@@ -11,6 +11,7 @@ import type {
   AccountLedger,
   AccountBalance,
 } from '@/types/accounting';
+import type { CompanyAccount } from '@/types/company_account';
 
 // ===== Journal Entry Hooks =====
 
@@ -263,5 +264,18 @@ export const useCashFlowStatement = (
       return await api.get<CashFlowStatement>('/accounting/cash-flow', { params });
     },
     enabled: !!companyId && !!startDate && !!endDate,
+  });
+};
+
+// ===== Company Accounts Hook =====
+
+export const useCompanyAccounts = (companyId?: string) => {
+  return useQuery({
+    queryKey: ['company-accounts', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      return await api.get<CompanyAccount[]>(`/companychart/${companyId}`);
+    },
+    enabled: !!companyId,
   });
 };
