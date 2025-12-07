@@ -21,4 +21,6 @@ thefuzz==0.22.1
 authlib==1.3.0
 watchfiles
 cryptography==43.0.3
+typer[all]==0.9.0
+rich==13.7.0
 
