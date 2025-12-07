@@ -28,6 +28,7 @@ const formSchema = z.object({
     tax_id: z.string().optional(),
     industry: z.string().optional(),
     description: z.string().optional(),
+    subscription_type: z.enum(["stripe", "native"]).optional().default("stripe"),
 });
 
 const CompanyRegistration = () => {
@@ -51,6 +52,7 @@ const CompanyRegistration = () => {
             tax_id: "",
             industry: "",
             description: "",
+            subscription_type: "stripe",
         },
     });
 
@@ -64,11 +66,17 @@ const CompanyRegistration = () => {
         );
 
         try {
+            const token = localStorage.getItem('access_token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
             const response = await fetch('http://localhost:8000/api/v1/companies/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: headers,
                 body: JSON.stringify(sanitizedValues),
             });
 
@@ -317,6 +325,28 @@ const CompanyRegistration = () => {
                                                     </FormControl>
                                                     <FormDescription>
                                                         Employer Identification Number or Tax ID
+                                                    </FormDescription>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="subscription_type"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Subscription Type (Admin Only)</FormLabel>
+                                                    <FormControl>
+                                                        <select
+                                                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            {...field}
+                                                        >
+                                                            <option value="stripe">Standard (Stripe)</option>
+                                                            <option value="native">Native (Direct)</option>
+                                                        </select>
+                                                    </FormControl>
+                                                    <FormDescription>
+                                                        Select "Native" to bypass payment flow (Superusers only).
                                                     </FormDescription>
                                                     <FormMessage />
                                                 </FormItem>

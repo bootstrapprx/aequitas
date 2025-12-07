@@ -1,8 +1,12 @@
-import uuid
-from sqlalchemy import Column, String, Text, Boolean, Index, DateTime
+import enum
+from sqlalchemy import Column, String, Text, Boolean, Index, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+
+class SubscriptionType(str, enum.Enum):
+    NATIVE = "native"
+    STRIPE = "stripe"
 
 class Company(Base):
     __tablename__ = "companies"
@@ -11,7 +15,10 @@ class Company(Base):
     ucid = Column(String, unique=True, index=True, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     inactivated_at = Column(DateTime, nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    inactivated_at = Column(DateTime, nullable=True)
     inactivated_by = Column(String, nullable=True) # User ID or Name
+    subscription_type = Column(Enum(SubscriptionType), default=SubscriptionType.STRIPE, nullable=False)
     
     # Contact Information
     email = Column(String, nullable=True)

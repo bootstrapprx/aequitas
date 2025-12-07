@@ -101,6 +101,50 @@ def migrate_master_accounts_schema(db: Session) -> bool:
         return False
 
 
+
+def migrate_companies_schema(db: Session) -> bool:
+    """
+    Migrate companies table to include subscription_type field.
+    Returns True if migration was successful or not needed.
+    """
+    try:
+        logger.info("Checking companies schema...")
+        
+        has_subscription_type = check_column_exists(db, "companies", "subscription_type")
+        
+        if has_subscription_type:
+            logger.info("✓ Companies schema is up-to-date")
+            return True
+            
+        logger.info("⚠ Missing subscription_type in companies table")
+        logger.info("Running companies schema migration...")
+        
+        migration_sql = """
+        -- Create subscription_type enum type if not exists
+        DO $$ BEGIN
+            CREATE TYPE subscriptiontype AS ENUM ('native', 'stripe');
+        EXCEPTION
+            WHEN duplicate_object THEN null;
+        END $$;
+
+        -- Add subscription_type column
+        ALTER TABLE companies 
+        ADD COLUMN IF NOT EXISTS subscription_type subscriptiontype NOT NULL DEFAULT 'stripe';
+        """
+        
+        # Execute migration
+        db.execute(text(migration_sql))
+        db.commit()
+        
+        logger.info("✓ Companies schema migration completed successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"✗ Companies schema migration failed: {e}")
+        db.rollback()
+        return False
+
+
 def migrate_users_schema(db: Session) -> bool:
     """
     Migrate users table to include user_uid and preferred_company_id fields.
@@ -173,8 +217,11 @@ def ensure_schema_updated(db: Session) -> bool:
         
         # Migrate users table
         success_users = migrate_users_schema(db)
+
+        # Migrate companies table
+        success_companies = migrate_companies_schema(db)
         
-        if success_master and success_users:
+        if success_master and success_users and success_companies:
             logger.info("="*60)
             logger.info("✓ ALL SCHEMAS UP-TO-DATE")
             logger.info("="*60)

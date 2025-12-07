@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, EmailStr
+from app.db.models.company import SubscriptionType
 
 class CompanyBase(BaseModel):
     name: str
@@ -19,7 +20,7 @@ class CompanyBase(BaseModel):
     description: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
-    pass
+    subscription_type: Optional[SubscriptionType] = SubscriptionType.STRIPE
 
 class CompanyInactivate(BaseModel):
     confirmation: str
@@ -42,6 +43,7 @@ class CompanyUpdate(BaseModel):
 class CompanyResponse(CompanyBase):
     id: UUID
     ucid: str
+    subscription_type: SubscriptionType
     
     class Config:
         from_attributes = True
