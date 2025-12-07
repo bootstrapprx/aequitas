@@ -24,6 +24,8 @@ from app.api.v1 import (
     journal_entries, # Accounting - Journal Entries
     accounting, # Accounting - Ledger, Financial Statements, Fiscal Periods
     client_logs, # Session Logging
+    groups, # New - GroupCompany feature
+    companies_su, # New - SU manual company creation
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -46,6 +48,8 @@ from app.db.models import (
     user_company, # New
     elevation_request, # New
     pending_registration, # New - for paid registration flow
+    group_company, # New - GroupCompany feature
+    group_company_member, # New - GroupCompany feature
     # Accounting models
     fiscal_period,
     journal_entry,
@@ -75,6 +79,7 @@ app = FastAPI(
 # CORS (Cross-Origin Resource Sharing)
 origins = [
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
     "http://localhost:3000",
 ]
 
@@ -117,6 +122,10 @@ app.include_router(payments.router, prefix="/api/v1/payments", tags=["Payments"]
 app.include_router(journal_entries.router, prefix="/api/v1/journal-entries", tags=["Accounting - Journal Entries"])
 app.include_router(accounting.router, prefix="/api/v1/accounting", tags=["Accounting - Reports & Periods"])
 app.include_router(client_logs.router, prefix="/api/v1", tags=["Client Logs"])
+
+# Groups and SU routers
+app.include_router(groups.router, prefix="/api/v1/groups", tags=["Groups"])
+app.include_router(companies_su.router, prefix="/api/v1/companies", tags=["Companies - Superuser"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

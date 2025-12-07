@@ -21,7 +21,10 @@ class User(Base):
     
     # Relationship to companies (many-to-many through UserCompany)
     user_companies = relationship("UserCompany", back_populates="user", cascade="all, delete-orphan")
-    
+
+    # Relationship to owned groups
+    owned_groups = relationship("GroupCompany", back_populates="owner")
+
     def __repr__(self):
         return f"<User(id='{self.id}', email='{self.email}')>"
     

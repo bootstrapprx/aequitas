@@ -70,6 +70,10 @@ import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
 import UsersPage from "./pages/users/UsersPage";
 import PermissionsPage from "./pages/permissions/PermissionsPage";
 
+// Groups Module
+import GroupsList from "./pages/groups/GroupsList";
+import GroupDetail from "./pages/groups/GroupDetail";
+
 const App = () => (
   <ErrorBoundary>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -135,6 +139,10 @@ const App = () => (
                 <Route path="admin/integrations" element={<IntegrationsPage />} />
                 <Route path="admin/audit" element={<AuditLogPage />} />
                 <Route path="admin/requests" element={<AdminRequests />} />
+
+                {/* Groups Module */}
+                <Route path="groups" element={<GroupsList />} />
+                <Route path="groups/:groupId" element={<GroupDetail />} />
 
                 {/* Legacy Routes (backward compatibility) */}
                 <Route path="masterchart" element={<MasterChartDashboard />} />

@@ -11,6 +11,8 @@ from .template import Template
 from .user import User
 from .user_company import UserCompany
 from .pending_registration import PendingRegistration
+from .group_company import GroupCompany
+from .group_company_member import GroupCompanyMember
 
 # Accounting models
 from .fiscal_period import FiscalPeriod, PeriodStatus, PeriodType
@@ -32,6 +34,8 @@ __all__ = [
     "User",
     "UserCompany",
     "PendingRegistration",
+    "GroupCompany",
+    "GroupCompanyMember",
     # Accounting models
     "FiscalPeriod",
     "PeriodStatus",

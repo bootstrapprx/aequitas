@@ -7,8 +7,9 @@
 ### Core Accounting
 - **Dashboard:** Overview of companies, users, and recent activity
 - **Registration Module:** Centralized management of companies, users, and charts of accounts
-- **Accountancy Module:** Daily ledger, journal entries, and trial balance (coming soon)
-- **Reports Module:** Financial statements, custom reports, and export center (coming soon)
+- **GroupCompany (Umbrella View):** Manage multiple companies under a single group with shared mappings
+- **Accountancy Module:** Daily ledger, journal entries, and trial balance
+- **Reports Module:** Financial statements, custom reports, and export center
 - **Administration:** System settings, integrations, and audit logs
 
 ### Chart of Accounts - Intelligent Management
@@ -17,6 +18,7 @@
 - **QuickBooks Integration:** OAuth2-based sync with QuickBooks Online
 - **Template System:** Reusable chart of accounts templates
 - **Import/Export:** Excel-based data exchange
+- **Mapping Propagation:** Copy account mappings across companies in a group
 
 ### Technical Features
 - **Intuitive Frontend:** Responsive UI built with React, Vite, Tailwind CSS, and shadcn/ui
@@ -48,6 +50,7 @@ The project is organized into two main directories: `frontend` and `backend`.
 │   │   ├── pages/           # Page components
 │   │   │   ├── dashboard/   # Main dashboard
 │   │   │   ├── registration/ # Companies, users, CoA
+│   │   │   ├── groups/      # Company groups (umbrella view)
 │   │   │   ├── chartforge/  # Chart of Accounts module
 │   │   │   ├── accountancy/ # Accounting operations
 │   │   │   ├── reports/     # Financial reports
@@ -200,6 +203,22 @@ Main landing page with company overview, user stats, and recent activity feed.
 - **System Settings:** Application configuration
 - **Integrations:** QuickBooks and other integrations
 - **Audit Log:** System activity tracking
+
+### Company Groups (Umbrella View)
+- **Group Management:** Create and manage groups of related companies
+- **Company Association:** Add/remove companies from groups
+- **Mapping Propagation:** Copy account mappings from one company to all others in the group
+- **SU Manual Company Creation:** Superusers can create companies bypassing payment workflow
+- **Centralized Management:** Manage multiple companies under a single umbrella
+
+**Use Case:** Bob owns 5 restaurant locations. Instead of manually mapping accounts for each location, Bob can:
+1. Create a "Bob's Restaurant Group"
+2. Add all 5 locations to the group
+3. Set up mappings once for the first location
+4. Propagate mappings to all other locations automatically
+5. When adding a new location, use SU-create to bypass payment and auto-add to group
+
+See [docs/groups.md](docs/groups.md) for detailed documentation.
 
 ## 🔐 Authentication
 

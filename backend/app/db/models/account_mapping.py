@@ -23,8 +23,11 @@ class AccountMapping(Base):
     confidence = Column(Float, nullable=False)
     # Status can be 'suggested', 'confirmed', 'rejected', 'manual_review'
     status = Column(String, nullable=False, default="suggested", index=True)
-    
+
     notes = Column(String, nullable=True)
+
+    # For group propagation: tracks the source company if this mapping was propagated
+    propagated_from = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)
     
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
