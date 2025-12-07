@@ -64,6 +64,32 @@ The project is organized into two main directories: `frontend` and `backend`.
 └── README.md        # This file
 ```
 
+## 🖥️ Command-Line Interface (CLI)
+
+Aequitas includes a powerful CLI for administrative, operational, and diagnostic tasks:
+
+```bash
+# Install CLI
+cd backend && pip install -e .
+
+# Quick examples
+aequitas companies list                    # List all companies
+aequitas groups create "My Group"          # Create a company group
+aequitas mappings propagate -s SRC -g GRP  # Propagate account mappings
+aequitas db upgrade                        # Run database migrations
+aequitas diag health                       # Check system health
+```
+
+**CLI Features:**
+- Full CRUD operations for companies, groups, users, and mappings
+- Database migration management (Alembic integration)
+- Logs viewing and export
+- System diagnostics and health checks
+- JSON output mode for scripting
+- Rich, colorized terminal output
+
+See [docs/cli.md](docs/cli.md) for complete CLI documentation.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
