@@ -27,128 +27,177 @@ const CompaniesList: React.FC<CompaniesListProps> = ({
   isError,
   title = "Existing Companies"
 }) => {
-  if (isLoading) return <p>Loading companies...</p>;
-  if (isError) return <p className="text-destructive">Error loading companies.</p>;
+  if (isLoading) return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, i) => (
+        <Card key={i} className="animate-pulse h-[200px]">
+          <CardHeader className="space-y-2">
+            <div className="h-4 bg-muted rounded w-3/4"></div>
+            <div className="h-4 bg-muted rounded w-1/2"></div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-24 bg-muted rounded"></div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  if (isError) return (
+    <div className="flex flex-col items-center justify-center p-8 text-center border rounded-lg bg-destructive/10 text-destructive">
+      <h3 className="text-lg font-semibold mb-2">Error loading companies</h3>
+      <p>Please try refreshing the page.</p>
+    </div>
+  );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-3">
+    <div className="space-y-4">
+      {companies.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {companies.map((company) => {
             const isActive = company.is_active !== false;
             return (
-              <li
+              <Card
                 key={company.id}
-                className={`p-4 border rounded-lg transition-colors ${isActive ? 'hover:bg-muted/50' : 'bg-muted/30 opacity-75'}`}
+                className={`transition-all hover:shadow-md ${!isActive ? 'opacity-75 bg-muted/30 border-dashed' : ''}`}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1 cursor-pointer" onClick={() => isActive && onEdit(company)}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className={`font-semibold text-lg ${isActive ? 'hover:underline' : ''}`}>{company.name}</h3>
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg font-bold leading-none truncate cursor-pointer hover:underline" onClick={() => isActive && onEdit(company)}>
+                          {company.name}
+                        </CardTitle>
+                        {!isActive && (
+                          <Badge variant="secondary" className="text-[10px] px-1 h-5">Inactive</Badge>
+                        )}
+                      </div>
                       {company.ucid && (
-                        <Badge variant="outline" className="font-mono text-xs">
+                        <Badge variant="outline" className="font-mono text-[10px] text-muted-foreground">
                           {company.ucid}
                         </Badge>
                       )}
-                      {!isActive && (
-                        <Badge variant="secondary" className="text-xs">Inactive</Badge>
-                      )}
                     </div>
-                    <div className="space-y-1 text-sm text-muted-foreground">
-                      {company.industry && (
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          <span>{company.industry}</span>
-                        </div>
-                      )}
-                      {company.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          <span>{company.email}</span>
-                        </div>
-                      )}
-                      {company.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          <span>{company.phone}</span>
-                        </div>
-                      )}
-                      {(company.city || company.state) && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          <span>
-                            {[company.city, company.state].filter(Boolean).join(', ')}
-                            {company.country && `, ${company.country}`}
-                          </span>
-                        </div>
-                      )}
-                      {/* Audit info placeholder - requires backend support in Company model response */}
-                      {/* {company.inactivated_at && (
-                        <div className="text-xs text-red-500 mt-1">
-                          Inactivated on {new Date(company.inactivated_at).toLocaleDateString()}
-                        </div>
-                      )} */}
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onView(company)}
-                      title="View Details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
 
-                    {isActive ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onEdit(company)}
-                          title="Edit"
-                        >
-                          {/* Edit Icon? Using default text or maybe Pencil */}
-                          <span className="sr-only">Edit</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => onInactivate(company)}
-                          className="text-destructive hover:text-destructive"
-                          title="Inactivate"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
+                    <div className="flex items-start gap-1 -mr-2 -mt-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onActivate(company)}
-                        className="text-green-600 hover:text-green-700"
-                        title="Activate"
+                        onClick={() => onView(company)}
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        title="View Details"
                       >
-                        <RefreshCw className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
+                      {isActive ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onEdit(company)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            title="Edit"
+                          >
+                            <span className="sr-only">Edit</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => onInactivate(company)}
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            title="Inactivate"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onActivate(company)}
+                          className="h-8 w-8 text-muted-foreground hover:text-green-600"
+                          title="Activate"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-2.5 text-sm text-muted-foreground">
+                    {company.industry ? (
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 opacity-70" />
+                        <span className="truncate">{company.industry}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground/50">
+                        <Building2 className="h-4 w-4 opacity-70" />
+                        <span>No industry set</span>
+                      </div>
+                    )}
+
+                    {company.email ? (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 opacity-70" />
+                        <span className="truncate" title={company.email}>{company.email}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground/50">
+                        <Mail className="h-4 w-4 opacity-70" />
+                        <span>No email</span>
+                      </div>
+                    )}
+
+                    {company.phone ? (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 opacity-70" />
+                        <span className="truncate">{company.phone}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground/50">
+                        <Phone className="h-4 w-4 opacity-70" />
+                        <span>No phone</span>
+                      </div>
+                    )}
+
+                    {(company.city || company.state || company.country) ? (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 opacity-70" />
+                        <span className="truncate">
+                          {[company.city, company.state, company.country].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-muted-foreground/50">
+                        <MapPin className="h-4 w-4 opacity-70" />
+                        <span>No location</span>
+                      </div>
                     )}
                   </div>
-                </div>
-                {/* Display users for this company */}
-                <CompanyUsers companyId={company.id} />
-              </li>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <CompanyUsers companyId={company.id} />
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
-        </ul>
-        {companies.length === 0 && (
-          <p className="text-muted-foreground text-center py-8">No companies found.</p>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl bg-muted/20">
+          <Building2 className="h-10 w-10 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-semibold">{title === "Inactive Companies" ? "No inactive companies" : "No companies yet"}</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-sm">
+            {title === "Inactive Companies"
+              ? "Companies that have been deactivated will appear here."
+              : "Get started by registering your first company."}
+          </p>
+        </div>
+      )}
+    </div>
   );
 };
 

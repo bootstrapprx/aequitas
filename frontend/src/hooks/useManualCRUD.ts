@@ -13,14 +13,20 @@ interface CRUDOptions<T> {
   initialData?: T[];
 }
 
-export const useManualCRUD = <T extends Entity, TCreate = Omit<T, 'id'>>({ queryKey, endpoint, initialData = [], queryParams = {} }: CRUDOptions<T> & { queryParams?: Record<string, string> }) => {
+export const useManualCRUD = <T extends Entity, TCreate = Omit<T, 'id'>>({
+  queryKey,
+  endpoint,
+  initialData = [],
+  queryParams = {},
+  queryOptions = {}
+}: CRUDOptions<T> & { queryParams?: Record<string, string>, queryOptions?: Record<string, any> }) => {
   const queryClient = useQueryClient();
 
   // Construct query string
   const queryString = new URLSearchParams(queryParams).toString();
   const fetchUrl = queryString ? `${endpoint}?${queryString}` : endpoint;
 
-  const { data, isLoading, isError, refetch } = useQuery<T[]>({
+  const { data, isLoading, isError, refetch, dataUpdatedAt } = useQuery<T[]>({
     queryKey: [queryKey, queryParams],
     queryFn: async () => {
       try {
@@ -32,6 +38,7 @@ export const useManualCRUD = <T extends Entity, TCreate = Omit<T, 'id'>>({ query
       }
     },
     initialData,
+    ...queryOptions,
   });
 
   const createMutation = useMutation<T, Error, TCreate>({
@@ -69,5 +76,6 @@ export const useManualCRUD = <T extends Entity, TCreate = Omit<T, 'id'>>({ query
     updateItem: updateMutation.mutateAsync,
     deleteItem: deleteMutation.mutateAsync,
     refetch,
+    dataUpdatedAt,
   };
 };

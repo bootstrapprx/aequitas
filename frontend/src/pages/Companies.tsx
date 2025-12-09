@@ -30,15 +30,20 @@ const CompaniesPage: React.FC = () => {
     isLoading,
     isError,
     updateItem,
+    dataUpdatedAt,
     refetch,
   } = useManualCRUD<Company, CompanyCreate>({
     queryKey: QueryKey.COMPANIES,
     endpoint: '/companies',
     queryParams: { status: 'all' },
+    queryOptions: {
+      refetchInterval: 5000,
+    }
   });
 
   const activeCompanies = companies.filter(c => c.is_active !== false);
   const inactiveCompanies = companies.filter(c => c.is_active === false);
+
 
   const handleUpdate = async (data: CompanyUpdate) => {
     if (!editingCompany) return;
@@ -88,7 +93,12 @@ const CompaniesPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Companies</h1>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          {dataUpdatedAt && (
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
+            </span>
+          )}
           <Button
             variant="outline"
             size="icon"
