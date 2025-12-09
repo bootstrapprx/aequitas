@@ -41,7 +41,7 @@ class AddCompanyToGroupRequest(BaseModel):
     company_id: UUID
 
 
-class PropagateM appingsRequest(BaseModel):
+class PropagateMappingsRequest(BaseModel):
     source_company_id: UUID
     target_company_id: Optional[UUID] = None
     force: bool = False

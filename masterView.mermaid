@@ -1,0 +1,85 @@
+flowchart TD
+    subgraph "User Layer"
+        U[User Browser]
+    end
+    
+    subgraph "Frontend (React/Vite)"
+        subgraph "UI Pages"
+            P1[Dashboard]
+            P2[Registration]
+            P3[ChartForge]
+            P4[Accountancy]
+            P5[Reports]
+            P6[Admin]
+        end
+        
+        subgraph "Core Components"
+            C1[API Client]
+            C2[Auth Context]
+            C3[Protected Routes]
+        end
+        
+        P1 --> C1
+        P2 --> C1
+        P3 --> C1
+        P4 --> C1
+        P5 --> C1
+        P6 --> C1
+    end
+    
+    subgraph "Backend (FastAPI)"
+        subgraph "API Layer"
+            A1[Auth API]
+            A2[Companies API]
+            A3[MasterChart API]
+            A4[Organizer AI API]
+            A5[Journal API]
+            A6[Accounting API]
+            A7[Reports API]
+            A8[Admin API]
+        end
+        
+        subgraph "Service Layer"
+            S1[Company Service]
+            S2[ChartForge Service]
+            S3[Organizer AI Service]
+            S4[Journal Service]
+            S5[Accounting Service]
+            S6[Dexter AI Service]
+        end
+        
+        subgraph "Data Layer"
+            D1[(PostgreSQL)]
+            D2[Master Chart Data]
+            D3[AI Models/Embeddings]
+        end
+        
+        A1 --> S1
+        A2 --> S1
+        A3 --> S2
+        A4 --> S3
+        A5 --> S4
+        A6 --> S5
+        A7 --> S5
+        A8 --> S1
+        
+        S1 --> D1
+        S2 --> D1
+        S2 --> D2
+        S3 --> D3
+        S4 --> D1
+        S5 --> D1
+        S6 --> D3
+    end
+    
+    subgraph "External Services"
+        E1[Ollama AI]
+        E2[Cloudflare AI]
+        E3[QuickBooks API]
+    end
+    
+    U --> Frontend
+    C1 --> A1 & A2 & A3 & A4 & A5 & A6 & A7 & A8
+    S3 -.-> E1
+    S3 -.-> E2
+    S2 -.-> E3
