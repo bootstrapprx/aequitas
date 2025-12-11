@@ -9,11 +9,13 @@ from typing import List
 
 from app.db.session import get_db
 from app.db.models.user import User
+from app.db.models.company import Company
 from app.api.v1.auth import get_current_user
 from app.core.security import check_superuser
 from app.schemas.user import UserResponse
 from app.schemas.system_settings import SystemSettingsResponse, SystemSettingsUpdate
 from app.services.admin_service import AdminService
+from app.services.companychart_service import CompanyChartService
 
 router = APIRouter()
 
@@ -116,3 +118,114 @@ def update_settings(
     check_superuser(current_user)
 
     return admin_service.update_settings(settings)
+
+
+@router.post("/migrate-company-charts")
+def migrate_company_charts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Migrate existing companies to have chart of accounts initialized from master chart.
+    This is a one-time migration for companies created before the auto-initialization feature.
+    Requires superuser privileges.
+    """
+    # Check superuser
+    check_superuser(current_user)
+
+    chart_service = CompanyChartService(db)
+
+    # Get all active companies
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    results = {
+        "total_companies": len(companies),
+        "migrated": 0,
+        "skipped": 0,
+        "errors": [],
+        "details": []
+    }
+
+    for company in companies:
+        try:
+            # Check if company already has accounts
+            existing_accounts = chart_service.get_company_chart(company.id, active_only=False)
+
+            if existing_accounts:
+                results["skipped"] += 1
+                results["details"].append({
+                    "company_id": str(company.id),
+                    "ucid": company.ucid,
+                    "name": company.name,
+                    "status": "skipped",
+                    "reason": f"Already has {len(existing_accounts)} accounts"
+                })
+            else:
+                # Initialize from master chart
+                init_result = chart_service.initialize_from_master_chart(company.id)
+                results["migrated"] += 1
+                results["details"].append({
+                    "company_id": str(company.id),
+                    "ucid": company.ucid,
+                    "name": company.name,
+                    "status": "migrated",
+                    "accounts_created": init_result["accounts_created"]
+                })
+        except Exception as e:
+            results["errors"].append({
+                "company_id": str(company.id),
+                "ucid": company.ucid,
+                "name": company.name,
+                "error": str(e)
+            })
+
+    return results
+
+
+@router.get("/chart-status")
+def get_chart_initialization_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get status of master chart and company chart initialization.
+    Requires superuser privileges.
+    """
+    # Check superuser
+    check_superuser(current_user)
+
+    from app.db.models.master_account import MasterAccount
+    from app.db.models.company_account import CompanyAccount
+
+    # Master chart status
+    master_count = db.query(MasterAccount).count()
+
+    # Companies status
+    companies = db.query(Company).filter(Company.is_active == True).all()
+
+    company_status = []
+    for company in companies:
+        company_account_count = db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company.id
+        ).count()
+
+        company_status.append({
+            "company_id": str(company.id),
+            "ucid": company.ucid,
+            "name": company.name,
+            "account_count": company_account_count,
+            "status": "initialized" if company_account_count > 0 else "not_initialized"
+        })
+
+    return {
+        "master_chart": {
+            "loaded": master_count > 0,
+            "account_count": master_count,
+        },
+        "companies": {
+            "total": len(companies),
+            "initialized": sum(1 for c in company_status if c["status"] == "initialized"),
+            "not_initialized": sum(1 for c in company_status if c["status"] == "not_initialized"),
+            "details": company_status
+        }
+    }

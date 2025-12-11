@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.db.session import get_db
+from app.db.models.user import User
+from app.api.v1.auth import get_current_user
+from app.core.security import check_superuser
 from app.schemas.master_account import (
     MasterAccountSchema,
     MasterAccountCreate,
@@ -53,11 +56,19 @@ def get_master_chart_list(
     return accounts
 
 @router.post("", response_model=MasterAccountSchema, status_code=status.HTTP_201_CREATED, summary="Create Account", tags=["Master Chart"])
-def create_master_account(account_in: MasterAccountCreate, db: Session = Depends(get_db)):
+def create_master_account(
+    account_in: MasterAccountCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Creates a new master account. If the `code` is omitted, it will be auto-generated.
     If `parent_code` is provided in the request body, the new account will be a child of that parent.
+
+    **Requires superuser privileges.**
     """
+    check_superuser(current_user)
+
     service = MasterChartService(db)
     try:
         return service.create_account(account_in)
@@ -78,7 +89,17 @@ def get_chart_statistics(db: Session = Depends(get_db)):
     return service.get_coa_stats()
 
 @router.post("/rebuild-hierarchy", summary="Rebuild Hierarchy", tags=["Master Chart"])
-def rebuild_master_chart_hierarchy(db: Session = Depends(get_db)):
+def rebuild_master_chart_hierarchy(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Rebuild the master chart hierarchy.
+
+    **Requires superuser privileges.**
+    """
+    check_superuser(current_user)
+
     service = MasterChartService(db)
     service.rebuild_hierarchy()
     return {"status": "success", "message": "Hierarchy rebuilt successfully."}
@@ -106,7 +127,19 @@ def get_master_account_by_id(account_id: UUID, db: Session = Depends(get_db)):
     return account
 
 @router.put("/{code}", response_model=MasterAccountSchema, summary="Update Account", tags=["Master Chart"])
-def update_master_account(code: str, account_in: MasterAccountUpdate, db: Session = Depends(get_db)):
+def update_master_account(
+    code: str,
+    account_in: MasterAccountUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a master account.
+
+    **Requires superuser privileges.**
+    """
+    check_superuser(current_user)
+
     service = MasterChartService(db)
     try:
         updated_account = service.update_account(code, account_in)
@@ -117,7 +150,18 @@ def update_master_account(code: str, account_in: MasterAccountUpdate, db: Sessio
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.delete("/{code}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete Account", tags=["Master Chart"])
-def delete_master_account(code: str, db: Session = Depends(get_db)):
+def delete_master_account(
+    code: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a master account.
+
+    **Requires superuser privileges.**
+    """
+    check_superuser(current_user)
+
     service = MasterChartService(db)
     try:
         if not service.delete_account(code):

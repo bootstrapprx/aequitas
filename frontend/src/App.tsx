@@ -24,9 +24,9 @@ import CompanyDashboard from "./pages/dashboard/CompanyDashboard";
 import Companies from "./pages/Companies";
 import CompanyRegistration from "./pages/companies/CompanyRegistration";
 import UsersListPage from "./pages/registration/users/UsersListPage";
-import SimpleCoAPage from "./pages/registration/coa/SimpleCoAPage";
 
-// Chart of Accounts Module (formerly masterchart)
+// Chart of Accounts Module
+import CompanyChartPage from "./pages/chartofaccounts/CompanyChartPage";
 import MasterChartDashboard from "./pages/masterchart/MasterChartDashboard";
 import MasterChartTreePage from "./pages/masterchart/MasterChartTreePage";
 import MasterChartInteractivePage from "./pages/masterchart/MasterChartInteractivePage";
@@ -110,10 +110,20 @@ const App = () => (
                 <Route path="companies" element={<Companies />} />
                 <Route path="companies/register" element={<CompanyRegistration />} />
                 <Route path="registration/users" element={<UsersListPage />} />
-                <Route path="registration/coa" element={<SimpleCoAPage />} />
 
-                {/* ChartForge Module */}
-                <Route path="chartforge/masterchart" element={<MasterChartDashboard />} />
+                {/* Chart of Accounts Module (Unified) */}
+                <Route path="chartofaccounts" element={<CompanyChartPage />} />
+                <Route path="chartofaccounts/master" element={<MasterChartDashboard />} />
+                <Route path="chartofaccounts/master/tree" element={<MasterChartTreePage />} />
+                <Route path="chartofaccounts/master/interactive" element={<MasterChartInteractivePage />} />
+                <Route path="chartofaccounts/mapping" element={<Mappings />} />
+                <Route path="chartofaccounts/import" element={<MasterChartImportPage />} />
+                <Route path="chartofaccounts/export" element={<MasterChartExportPage />} />
+                <Route path="chartofaccounts/organizer" element={<OrganizerPage />} />
+                <Route path="chartofaccounts/organizer/review" element={<OrganizerReviewPage />} />
+
+                {/* Legacy ChartForge Routes (redirect to new paths) */}
+                <Route path="chartforge/masterchart" element={<CompanyChartPage />} />
                 <Route path="chartforge/masterchart/tree" element={<MasterChartTreePage />} />
                 <Route path="chartforge/masterchart/interactive" element={<MasterChartInteractivePage />} />
                 <Route path="chartforge/masterchart/import" element={<MasterChartImportPage />} />
@@ -122,6 +132,7 @@ const App = () => (
                 <Route path="chartforge/import" element={<MasterChartImportPage />} />
                 <Route path="chartforge/organizer" element={<OrganizerPage />} />
                 <Route path="chartforge/organizer/review" element={<OrganizerReviewPage />} />
+                <Route path="registration/coa" element={<CompanyChartPage />} />
 
                 {/* Accountancy Module */}
                 <Route path="accountancy/ledger" element={<DailyLedgerPage />} />

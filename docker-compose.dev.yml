@@ -1,5 +1,3 @@
-
-
 services:
   postgres:
     image: pgvector/pgvector:pg15
@@ -54,7 +52,6 @@ services:
     container_name: aequitas-frontend-dev
     volumes:
       - ./frontend:/app
-      - /app/node_modules
     ports:
       - "5173:5173"
     environment:

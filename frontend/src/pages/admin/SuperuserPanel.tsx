@@ -29,6 +29,7 @@ import {
   useUpdateSettings,
 } from '@/integrations/queries/useAdmin';
 import type { User } from '@/types/user';
+import ChartStatusPanel from '@/components/admin/ChartStatusPanel';
 
 const SuperuserPanel: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -115,6 +116,15 @@ const SuperuserPanel: React.FC = () => {
         <p className="text-lg text-gray-600 dark:text-gray-400">
           Manage user permissions and system-wide settings
         </p>
+      </motion.div>
+
+      {/* Chart of Accounts Status */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <ChartStatusPanel />
       </motion.div>
 
       {/* User Management Section */}

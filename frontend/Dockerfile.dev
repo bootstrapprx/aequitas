@@ -4,7 +4,8 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 
-RUN npm install
+# Skip npm install in Dockerfile.dev as we will mount node_modules from host
+# RUN npm install
 
 COPY . .
 

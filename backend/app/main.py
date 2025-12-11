@@ -5,11 +5,9 @@ from app.api.v1 import (
     companies,
     masterchart,
     companychart,
-    mapping,
     upload,
     snapshots,
     templates,
-    merge,
     merge,
     qbo,
     settings, # New
@@ -21,7 +19,6 @@ from app.api.v1 import (
     elevation, # New
     payments, # New - Stripe webhooks
     journal_entries, # Accounting - Journal Entries
-    journal_entries, # Accounting - Journal Entries
     accounting, # Accounting - Ledger, Financial Statements, Fiscal Periods
     client_logs, # Session Logging
     groups, # New - GroupCompany feature
@@ -32,7 +29,8 @@ from app.services.code_generator import router as code_generator_router
 from app.services.dexter.router import router as dexter_router
 
 from app.db.base import Base
-from app.db.session import engine
+from app.db.session import engine, SessionLocal
+from app.core.startup import startup_checks
 # Import all models to ensure they are registered with Base
 from app.db.models import (
     master_account,
@@ -63,10 +61,23 @@ Base.metadata.create_all(bind=engine)
 
 # Initialize database with superuser
 from app.db.init_db import init_db
-from app.db.session import SessionLocal
 db = SessionLocal()
 try:
     init_db(db)
+
+    # Run startup checks
+    print("\n" + "="*60)
+    print("RUNNING STARTUP CHECKS")
+    print("="*60)
+    startup_results = startup_checks(db)
+
+    if startup_results["errors"]:
+        print("\n⚠ WARNINGS:")
+        for error in startup_results["errors"]:
+            print(f"  - {error}")
+    else:
+        print("✓ All startup checks passed")
+    print("="*60 + "\n")
 finally:
     db.close()
 
@@ -100,8 +111,7 @@ app.add_middleware(
 app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
 app.include_router(dexter_router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(masterchart.router, prefix="/api/v1/masterchart", tags=["Master Chart"])
-app.include_router(companychart.router, prefix="/api/v1", tags=["Company Chart"])
-app.include_router(mapping.router, prefix="/api/v1", tags=["Mapping"])
+app.include_router(companychart.router, prefix="/api/v1", tags=["Chart of Accounts"])
 app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(snapshots.router, prefix="/api/v1", tags=["Snapshots"])
 app.include_router(templates.router, prefix="/api/v1/templates", tags=["Templates"])

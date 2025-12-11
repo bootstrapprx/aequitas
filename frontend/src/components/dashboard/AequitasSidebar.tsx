@@ -61,7 +61,7 @@ const AequitasSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [openSections, setOpenSections] = useState<string[]>([
     'registration',
-    'chartforge',
+    'chartofaccounts',
   ]);
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -99,17 +99,17 @@ const AequitasSidebar = () => {
       links: [
         { label: "Companies", path: "/companies", icon: Building2 },
         { label: "Users", path: "/registration/users", icon: Users },
-        { label: "Chart of Accounts", path: "/registration/coa", icon: FileText },
       ],
     },
-    chartforge: {
-      title: "CHARTFORGE",
+    chartofaccounts: {
+      title: "CHART OF ACCOUNTS",
       icon: Database,
       links: [
-        { label: "Master Chart", path: "/chartforge/masterchart", icon: Database },
-        { label: "Mapping", path: "/chartforge/mapping", icon: GitBranch },
-        { label: "Import / Export", path: "/chartforge/import", icon: Upload },
-        { label: "AI Organizer", path: "/chartforge/organizer", icon: Wand2 },
+        { label: "My Chart", path: "/chartofaccounts", icon: Database },
+        { label: "Master Reference", path: "/chartofaccounts/master", icon: FileText },
+        { label: "Account Mapping", path: "/chartofaccounts/mapping", icon: GitBranch },
+        { label: "Import / Export", path: "/chartofaccounts/import", icon: Upload },
+        { label: "AI Organizer", path: "/chartofaccounts/organizer", icon: Wand2 },
       ],
     },
     accountancy: {

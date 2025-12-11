@@ -17,6 +17,17 @@ class CompanyAccountBase(BaseModel):
 class CompanyAccountCreate(CompanyAccountBase):
     company_id: uuid.UUID
 
+class CompanyAccountUpdate(BaseModel):
+    """Schema for updating a company account. All fields are optional."""
+    description: Optional[str] = None
+    type: Optional[str] = None
+    parent_code: Optional[str] = None
+    name: Optional[str] = None
+    currency: Optional[str] = None
+    is_active: Optional[bool] = None
+    master_account_code: Optional[str] = None
+    json_data: Optional[Dict[str, Any]] = None
+
 class CompanyAccountSchema(CompanyAccountBase):
     id: uuid.UUID
     company_id: uuid.UUID
@@ -25,4 +36,4 @@ class CompanyAccountSchema(CompanyAccountBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-__all__ = ["CompanyAccountBase", "CompanyAccountCreate", "CompanyAccountSchema"]
+__all__ = ["CompanyAccountBase", "CompanyAccountCreate", "CompanyAccountUpdate", "CompanyAccountSchema"]
