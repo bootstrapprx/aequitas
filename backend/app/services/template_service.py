@@ -8,7 +8,7 @@ from app.db.models.master_account import MasterAccount
 from app.db.models.template import Template
 from app.schemas.master_account import MasterAccountCreate
 from app.schemas.template import TemplateValidationResult
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 from app.services.code_generator.patterns import get_active_pattern
 
 class TemplateService:

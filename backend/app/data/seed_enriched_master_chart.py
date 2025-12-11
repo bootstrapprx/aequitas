@@ -17,6 +17,12 @@ Enhanced Fields:
 - cost_center: Default cost center assignment
 
 Date: 2025-12-01
+
+UPDATED: 2025-12-11
+- Added validation using MasterChartValidator
+- Added normalization using MasterChartNormalizer
+- Improved error reporting
+- Made idempotent with force_reload option
 """
 
 import json
@@ -26,35 +32,57 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.models.master_account import MasterAccount
 from app.db.session import SessionLocal
+from app.core.validators.master_chart_validator import MasterChartValidator
+from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 import os
 
-def load_enriched_master_chart(db: Session, force_reload: bool = False):
+def load_enriched_master_chart(
+    db: Session,
+    force_reload: bool = False,
+    validate: bool = True,
+    normalize: bool = True
+):
     """
     Load the enriched US-GAAP master chart of accounts into the database.
     This includes 345 accounts with full IFRS/GAAP compliance and AI-ready fields.
-    
+
     Args:
         db: Database session
         force_reload: If True, delete existing accounts and reload
+        validate: If True, validate all accounts before loading (default: True)
+        normalize: If True, normalize account names and descriptions (default: True)
+
+    Returns:
+        dict: Status information including loaded count and any errors
     """
-    
+
+    # Initialize validator and normalizer
+    validator = MasterChartValidator()
+    normalizer = MasterChartNormalizer()
+
     # Determine the path to the CSV file
     data_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(data_dir, 'enriched_master_chart.csv')
-    
+
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"Enriched master chart CSV not found at {csv_path}")
-    
+
     print(f"Loading enriched master chart from {csv_path}...")
-    
-    # Check if accounts already exist
+
+    # Check if accounts already exist (IDEMPOTENT)
     existing_count = db.query(MasterAccount).count()
     if existing_count > 0 and not force_reload:
-        print(f"  Master chart already loaded ({existing_count} accounts). Use force_reload=True to reload.")
-        return False
-    
+        print(f"  ✓ Master chart already loaded ({existing_count} accounts).")
+        print(f"    Use force_reload=True to reload.")
+        return {
+            "status": "skipped",
+            "message": "Master chart already exists",
+            "existing_count": existing_count,
+            "loaded_count": 0
+        }
+
     if force_reload and existing_count > 0:
-        print(f"  Force reload: Deleting {existing_count} existing accounts...")
+        print(f"  ⚠ Force reload: Deleting {existing_count} existing accounts...")
         db.query(MasterAccount).delete()
         db.commit()
     
@@ -63,14 +91,32 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         accounts_data = list(reader)
-    
+
     print(f"Found {len(accounts_data)} accounts in CSV...")
-    
+
+    # Validate entire chart structure if validation is enabled
+    if validate:
+        print(f"  Validating chart structure...")
+        validation_result = validator.validate_chart(accounts_data)
+        if not validation_result.is_valid:
+            print(f"  ✗ Chart validation failed with {len(validation_result.errors)} error(s):")
+            for error in validation_result.errors[:5]:  # Show first 5 errors
+                print(f"    - {error}")
+            if len(validation_result.errors) > 5:
+                print(f"    ... and {len(validation_result.errors) - 5} more errors")
+            raise ValueError(f"Master chart validation failed: {len(validation_result.errors)} errors")
+
+        if validation_result.warnings:
+            print(f"  ⚠ {len(validation_result.warnings)} warning(s) found")
+        else:
+            print(f"  ✓ Chart validation passed")
+
     # First pass: Create all accounts without parent relationships
     code_to_id_map = {}
     loaded_count = 0
     skipped_count = 0
-    
+    validation_warnings = []
+
     for account_data in accounts_data:
         try:
             # Skip duplicates
@@ -108,7 +154,19 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
                 except json.JSONDecodeError:
                     print(f"  Warning: Invalid JSON in regulatory_mapping for {account_data['code']}")
                     regulatory_mapping = {}
-            
+
+            # Normalize account data if normalization is enabled
+            if normalize:
+                account_data['description'] = normalizer.normalize_account_name(account_data['description'])
+                if account_data.get('long_description'):
+                    account_data['long_description'] = normalizer.normalize_description(account_data['long_description'])
+                if account_data.get('category'):
+                    account_data['category'] = normalizer.normalize_category(account_data['category'])
+                if account_data.get('fs_mapping'):
+                    account_data['fs_mapping'] = normalizer.normalize_fs_mapping(account_data['fs_mapping'])
+                if account_data.get('normal_balance'):
+                    account_data['normal_balance'] = normalizer.normalize_normal_balance(account_data['normal_balance'])
+
             # Create account with all enriched fields
             account = MasterAccount(
                 code=account_data['code'],
@@ -165,8 +223,16 @@ def load_enriched_master_chart(db: Session, force_reload: bool = False):
     
     # Commit all changes
     db.commit()
-    
+
     print(f"\n✓ Successfully loaded {loaded_count} accounts")
+
+    # Return detailed status
+    return {
+        "status": "success",
+        "loaded_count": loaded_count,
+        "skipped_count": skipped_count,
+        "validation_warnings": len(validation_warnings) if validate else 0
+    }
     
     # Print summary statistics
     headers = db.query(MasterAccount).filter(MasterAccount.type == 'H').count()

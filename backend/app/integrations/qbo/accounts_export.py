@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 
 from app.integrations.qbo.client import QBOClient
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 
 # This mapping is crucial and may need to be more sophisticated
 # based on the full list of QBO AccountTypes and SubTypes.

@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Set
 
 from app.integrations.qbo.accounts_import import QBOAccountsImportService
 from app.integrations.qbo.mapper import map_account_to_master
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 from app.db.models import CompanyAccount, MasterAccount
 
 class QBOReconciliationService:

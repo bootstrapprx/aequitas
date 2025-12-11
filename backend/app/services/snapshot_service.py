@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.db.models.snapshot import Snapshot
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 
 class SnapshotService:
     def __init__(self, db: Session):

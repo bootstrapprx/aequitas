@@ -12,7 +12,7 @@ from . import heuristic_classifier
 from app.services.organizer_ai.utils import clean_text
 from app.services.organizer_ai.model import ollama_model
 from app.services.organizer_ai.prompts import create_prompt
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 from app.db.models.master_account import MasterAccount
 from app.services.organizer_ai.memory import MemoryService
 from app.services.organizer_ai.learning_rules import LearningRulesService

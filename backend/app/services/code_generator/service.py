@@ -13,7 +13,7 @@ class CodeGeneratorService:
 
     def _get_masterchart_service(self):
         """Lazy loader for MasterChartService to prevent circular imports."""
-        from app.services.masterchart_service import MasterChartService
+        from app.services.master_chart_service import MasterChartService
         return MasterChartService(self.db)
 
     def generate_new_code(self, parent_code: Optional[str] = None) -> Dict[str, Any]:

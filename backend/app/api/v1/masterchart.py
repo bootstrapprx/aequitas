@@ -13,7 +13,7 @@ from app.schemas.master_account import (
     MasterAccountUpdate,
     MasterAccountTree,
 )
-from app.services.masterchart_service import MasterChartService
+from app.services.master_chart_service import MasterChartService
 from app.services.code_generator.service import CodeGeneratorService
 from app.services.code_generator.exceptions import CodeGenerationException
 
