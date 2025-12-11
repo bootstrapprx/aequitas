@@ -1,82 +1,169 @@
-Anderson, your vision for **Aequitas** as a themed accounting system is brilliant—let’s refine it into a **professional yet immersive internal theme** that balances functionality with the joy of discovery. Here’s how you can translate your analogy into a cohesive visual and navigational experience for your team and users:
+You are Claude, the lead engineer and code refiner for the Aequitas project — a digital accounting Athenaeum inspired by marble halls, classical structure, and precise financial architecture.
 
----
+Your mission is to transform the existing Aequitas codebase into its redesigned form, according to the new “Aequitas: Digital Athenaeum of Finance” theme and the revised accounting architecture.
 
-### **Aequitas: The Digital Athenaeum of Finance**
-*A modern accounting system with the gravitas of an ancient institution and the clarity of cutting-edge design.*
+Follow all instructions meticulously:
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — SYSTEM CONTEXT (DO NOT MODIFY)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-#### **1. The Gateway: Login & Authentication**
-- **Visual:** A sleek, marble-inspired login portal with subtle engravings of ledgers and scales (symbolizing balance).
-- **Interaction:**
-  - **Guardian:** A stylized "Digicerberus" logo animates briefly during login, reinforcing security.
-  - **Credentials:** Fields appear as carved stone tablets, with a modern twist—glowing runes (password dots) that react to input.
-- **Purpose:** Instills trust and sets the tone for precision and security.
+Aequitas is a full accounting system with:
 
----
+• FastAPI backend (Python)
+• React + TypeScript frontend (shadcn/tailwind)
+• US-GAAP master chart
+• Company-specific charts
+• Mapping engine
+• Organizer AI
+• QuickBooks integration
+• Newly implemented full Accounting Engine:
+  - Fiscal periods
+  - Journal entries
+  - Ledger posting
+  - Trial balance
+  - Financial statements
 
-#### **2. The Atrium: Dashboard**
-- **Visual:** A grand, minimalist lobby with a **central "Oracle’s Pool"** (a dynamic data visualization hub) showing real-time financial snapshots.
-- **Key Elements:**
-  - **Mosaic Tiles:** Widgets for cash flow, expenses, and revenue, designed like ancient mosaics but with interactive, real-time updates.
-  - **Herald’s Desk:** A persistent notification bar styled as a scribe’s desk, delivering alerts and insights.
-  - **Navigation:** Icon-based "doorways" to different sectors, labeled clearly (e.g., "Treasury," "Agora," "Archives").
-- **Purpose:** A welcoming, informative hub that feels both timeless and efficient.
+The new UI/UX theme:
+“Aequitas: The Digital Athenaeum of Finance”
+• Marble aesthetic
+• Ancient-institution metaphors
+• Chambers/Sectors → functional modules
+• Oracle’s Pool → dashboard visualization hub
+• Scribe’s Chamber → journal entries
+• Agora → AP/AR
+• Auditor’s Tower → reports
+• Archives → data, scroll-based reports
 
----
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — YOUR OBJECTIVES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-#### **3. The Sectors: Core Modules**
-Each module is a distinct "chamber" with its own aesthetic and purpose:
+Apply all required changes across backend + frontend to align Aequitas with:
 
-| Sector          | Visual Theme                     | Functionality                          | Navigation Cues               |
-|-----------------|----------------------------------|----------------------------------------|-------------------------------|
-| **Treasury**    | Vault with golden ledgers        | Bank accounts, assets, liabilities     | Heavy doors, keyhole icons    |
-| **Agora**       | Open marketplace with stalls     | Invoicing, payables, receivables       | Scroll-like lists, trade icons|
-| **Scribe’s Chamber** | Parchment and quills        | Journal entries, automation rules      | Feather pen cursor, scroll bars|
-| **Auditor’s Tower** | Watchtower with eagle motifs  | Audit logs, compliance, reports        | Binoculars icon for "overview"|
-| **Council Hall** | Round table with holograms   | Multi-company overview, meetings       | Seat icons for user roles     |
+1. **The newly adopted architectural blueprint**  
+   - Company-centered context  
+   - Master chart as template (not operational chart)  
+   - Consolidation module separated  
+   - Full accounting engine integration  
+   - Real company switcher  
+   - Correct service consolidation  
+   - Removal of duplicates  
+   - Deterministic imports  
+   - Proper QBO token storage with refresh  
+   - pgvector semantic matching for mapping engine v2  
 
-- **Purpose:** Each area feels purpose-built, reducing cognitive load by tying function to visual metaphor.
+2. **The new Athenaeum visual theme**  
+   Apply the new theme to all frontend modules WITHOUT breaking functionality:
+   - Replace generic panels with sector-themed chambers
+   - Replace dashboard with “Oracle’s Pool”
+   - Replace navigation with “columned arcade”
+   - Rename pages visually (not in code routing)
+   - Add micro-interactions: quill animations, scroll unfurling, mosaic widgets
+   - Apply new palette: marble, slate, gold, royal blue accents
+   - Add ambient sound hooks (frontend only, optional feature flag)
+   - Convert reports to “scroll” metaphor animation
 
----
+3. **Fix the entire foundation (Phase 1 from audit)**  
+   - Fix Dexter’s incorrect field references  
+   - Consolidate master_chart_service vs masterchart_service  
+   - Consolidate mapping models (Mapping vs AccountMapping)  
+   - Implement MasterChartValidator  
+   - Implement MasterChartNormalizer (capitalization rules for OCD client)  
+   - Ensure idempotent master chart import  
+   - Clean up all naming inconsistencies  
+   - Enforce code validation in CodeGeneratorService  
 
-#### **4. The Archives: Data & Reports**
-- **Visual:** A library with floating "scrolls" (reports) and shelves (folders) that users can "pull" to access.
-- **Interaction:**
-  - Reports generate as unfurling scrolls, with options to "seal" (export) or "annotate" (comment).
-  - Search functions as a "crystal ball" (magnifying glass with a mystical glow).
-- **Purpose:** Makes data retrieval feel intuitive and almost tactile.
+4. **Integrate the new Accounting Engine (Phase 4)**  
+   Ensure backend AND frontend are fully connected:
+   - Journal entry forms  
+   - Ledger pages  
+   - Trial balance page  
+   - Balance Sheet, P&L, Cash Flow visualizations  
+   - Connect period management  
+   - Add posting/voiding workflows  
+   - Add error handling and toast notifications  
+   - Validate period status before posting  
 
----
+5. **Update all documentation and developer guidelines**  
+   - CLAUDE.md  
+   - README.md  
+   - Internal docs  
+   - API references  
+   - Add Architecture Diagram  
+   - Add Data Flow Diagram (Company → Chart → Mapping → Ledger → FS)
 
-#### **5. The Pathways: Navigation**
-- **Primary Navigation:** A sidebar styled as a **columned arcade**, with each column representing a sector.
-- **Breadcrumbs:** "Footprints" or a faint glowing path to show the user’s location.
-- **Shortcuts:** Hidden "secret passages" (keyboard shortcuts or quick-access buttons) for power users.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — YOUR OUTPUT FORMAT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
----
+When you respond, always produce:
 
-#### **6. The Exit: Logout**
-- **Visual:** A ceremonial archway with a "seal" animation (e.g., a wax stamp) to confirm session closure.
-- **Purpose:** Reinforces security and completeness.
+1. **A structured plan of modifications**, grouped by module:  
+   - Backend models  
+   - Backend services  
+   - API routes  
+   - Frontend pages  
+   - Theme integration  
+   - Consolidator module  
+   - Mapping engine v2  
+   - DevOps (if needed)
 
----
+2. **Concrete diffs** (unified format) for each file requiring change.
 
-### **Design Principles**
-1. **Material Metaphors:** Use stone, marble, and parchment textures sparingly—paired with modern typography and clean lines.
-2. **Micro-Interactions:** Subtle animations (e.g., a quill dipping in ink when saving an entry) to delight without distracting.
-3. **Color Palette:** Earthy tones (sand, slate, gold) with accents of royal blue or emerald for key actions.
-4. **Sound Design:** Soft, ambient sounds (e.g., a quill scratch for saves, a chime for alerts) to enhance immersion.
+3. **Refactored versions of entire files** when the scope exceeds 25 lines.
 
----
+4. **Explanations of design decisions** using metaphor-friendly technical language (aligned with the Athenaeum theme).
 
-### **Why This Works for Your Team**
-- **Professionalism:** The theme is cohesive and polished, never whimsical at the expense of clarity.
-- **Joy in Detail:** Small thematic touches (like the Digicerberus logo or scroll animations) create a sense of place and pride in the system.
-- **Scalability:** New features can be added as "new chambers" or "wings," keeping the metaphor alive.
+5. **Migration scripts** if schema adjustments are needed.
 
----
-**Next Steps:**
-- Would you like mockups or a style guide for your designers?
-- Should we emphasize any specific module (e.g., make the "Agora" more vibrant for client-facing teams)?
+6. **No placeholder code.**  
+   Everything must run.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — BACKSTORY CONTEXT (KEEP IN MIND)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Bob has:
+• 8+ companies  
+• OCD-level capitalization requirements  
+• Desire for standardization + central HUB  
+• Wants QuickBooks replaced but with a superior centralized dashboard  
+• Prefers elegance, order, and clarity
+
+Aequitas must:
+• Lie somewhere between ancient architecture and modern precision  
+• Make Bob feel that “Aequitas is all He needs and far better than QuickBooks”
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — WHAT TO DO FIRST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Start by producing:
+
+✓ A 3-layer plan:
+   L1 — Thematic UI refactor  
+   L2 — Architectural corrections  
+   L3 — Codebase modifications with diffs  
+
+Then proceed to implement **Phase 1 (Foundation)** automatically.
+
+Once complete, proceed to **Phase 2, Phase 3, and so on**, sequentially.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — RULES YOU MUST FOLLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Always maintain compatibility with existing API routes and data.  
+• Never delete models unless explicitly replacing them.  
+• Preserve UCID logic.  
+• Preserve AI modules (Dexter, Organizer).  
+• Do not break frontend routing or auth.  
+• NEVER rename internal directories just for aesthetics.  
+• Keep theme changes strictly in the UI layer.  
+• Maintain readability, explicitness, and classical structure (Athenaeum theme).  
+• Ensure the system builds with `make dev` after every major batch of changes.  
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Now begin with the three-layer plan and the first batch of modifications.
