@@ -2,29 +2,22 @@ import React, { useState } from 'react';
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Building2,
+  Landmark,
+  Building,
+  Scroll,
+  Feather,
+  Binoculars,
   Users,
-  FileText,
-  Database,
-  GitBranch,
-  Upload,
-  Wand2,
-  BookOpen,
-  Receipt,
-  Scale,
-  BarChart3,
-  FileSpreadsheet,
-  Download,
-  Settings,
-  Plug,
-  ScrollText,
+  Archive,
   ChevronLeft,
   ChevronRight,
   LogOut,
   User,
   ChevronDown,
+  LayoutDashboard,
   Shield,
+  Settings,
+  Scale,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -60,8 +53,9 @@ interface NavSection {
 const AequitasSidebar = () => {
   const [isOpen, setIsOpen] = useState(true);
   const [openSections, setOpenSections] = useState<string[]>([
-    'registration',
-    'chartofaccounts',
+    'treasury',
+    'agora',
+    'scribe',
   ]);
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -91,54 +85,56 @@ const AequitasSidebar = () => {
     return location.pathname.startsWith(path);
   };
 
-  // Navigation structure
+  // Navigation structure - The Digital Athenaeum
   const navSections: Record<string, NavSection> = {
-    registration: {
-      title: "REGISTRATION",
-      icon: FileText,
+    treasury: {
+      title: "TREASURY",
+      icon: Landmark,
       links: [
-        { label: "Companies", path: "/companies", icon: Building2 },
-        { label: "Users", path: "/registration/users", icon: Users },
+        { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
       ],
     },
-    chartofaccounts: {
-      title: "CHART OF ACCOUNTS",
-      icon: Database,
+    agora: {
+      title: "AGORA",
+      icon: Building,
       links: [
-        { label: "My Chart", path: "/chartofaccounts", icon: Database },
-        { label: "Master Reference", path: "/chartofaccounts/master", icon: FileText },
-        { label: "Account Mapping", path: "/chartofaccounts/mapping", icon: GitBranch },
-        { label: "Import / Export", path: "/chartofaccounts/import", icon: Upload },
-        { label: "AI Organizer", path: "/chartofaccounts/organizer", icon: Wand2 },
+        { label: "Companies", path: "/companies", icon: Building },
+        { label: "My Chart", path: "/chartofaccounts", icon: Scroll },
       ],
     },
-    accountancy: {
-      title: "ACCOUNTANCY",
-      icon: BookOpen,
+    scribe: {
+      title: "SCRIBE'S CHAMBER",
+      icon: Feather,
       links: [
-        { label: "Daily Ledger", path: "/accountancy/ledger", icon: Receipt },
-        { label: "Ledger Accounts", path: "/accountancy/journal", icon: BookOpen },
+        { label: "Daily Ledger", path: "/accountancy/ledger", icon: Scroll },
+        { label: "Journal Entries", path: "/accountancy/journal", icon: Feather },
         { label: "Trial Balance", path: "/accountancy/trial-balance", icon: Scale },
       ],
     },
-    reports: {
-      title: "REPORTS",
-      icon: BarChart3,
+    auditor: {
+      title: "AUDITOR'S TOWER",
+      icon: Binoculars,
       links: [
-        { label: "Financial Statements", path: "/reports/statements", icon: FileSpreadsheet },
-        { label: "Custom Reports", path: "/reports/custom", icon: BarChart3 },
-        { label: "Export Center", path: "/reports/export", icon: Download },
+        { label: "Financial Statements", path: "/reports/statements", icon: Scroll },
+        { label: "Custom Reports", path: "/reports/custom", icon: Binoculars },
+        { label: "Export Center", path: "/reports/export", icon: Archive },
       ],
     },
-    administration: {
-      title: "ADMINISTRATION",
-      icon: Settings,
+    council: {
+      title: "COUNCIL HALL",
+      icon: Users,
       links: [
-        // Conditionally add Superuser Panel if user is superuser
         ...(user?.is_superuser ? [{ label: "Superuser Panel", path: "/admin/superuser", icon: Shield }] : []),
         { label: "System Settings", path: "/admin/system", icon: Settings },
-        { label: "Integrations", path: "/admin/integrations", icon: Plug },
-        { label: "Audit Log", path: "/admin/audit", icon: ScrollText },
+        { label: "Users", path: "/registration/users", icon: Users },
+      ],
+    },
+    archives: {
+      title: "ARCHIVES",
+      icon: Archive,
+      links: [
+        { label: "Master Reference", path: "/chartofaccounts/master", icon: Archive },
+        { label: "Audit Log", path: "/admin/audit", icon: Scroll },
       ],
     },
   };
@@ -146,30 +142,38 @@ const AequitasSidebar = () => {
   return (
     <div
       className={cn(
-        "flex flex-col h-screen bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300",
-        isOpen ? "w-72" : "w-16"
+        "flex flex-col h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-300 marble-texture relative z-10",
+        isOpen ? "w-72" : "w-20"
       )}
     >
+      {/* Column Pattern Overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] column-pattern mix-blend-multiply" />
+
+
       {/* Header with Logo and Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="relative z-10 flex items-center justify-between p-6 border-b border-sidebar-border/50">
         {isOpen && (
-          <Link to="/dashboard" className="flex items-center space-x-2">
-            <span className="text-2xl">⚖️</span>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">
+          <Link to="/dashboard" className="flex items-center space-x-3 group animate-fade-up">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gold/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <span className="text-3xl relative z-10">⚖️</span>
+            </div>
+
+            <span className="text-2xl font-heading font-bold text-gradient-gold tracking-wide">
               Aequitas
             </span>
           </Link>
         )}
         {!isOpen && (
           <Link to="/dashboard" className="flex items-center justify-center w-full">
-            <span className="text-2xl">⚖️</span>
+            <span className="text-2xl drop-shadow-lg">⚖️</span>
           </Link>
         )}
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggle}
-          className={cn("ml-auto", !isOpen && "mx-auto")}
+          className={cn("ml-auto text-sidebar-foreground/70 hover:text-gold hover:bg-gold/10", !isOpen && "mx-auto")}
         >
           {isOpen ? (
             <ChevronLeft className="h-4 w-4" />
@@ -180,51 +184,45 @@ const AequitasSidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4 space-y-2">
-        {/* Dashboard - Always visible */}
-        <Link
-          to="/dashboard"
-          className={cn(
-            "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
-            isActive("/dashboard")
-              ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium"
-              : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-          )}
-        >
-          <LayoutDashboard className="h-5 w-5 flex-shrink-0" />
-          {isOpen && <span>Dashboard</span>}
-        </Link>
-
+      <nav className="relative z-10 flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {/* Sections */}
         {Object.entries(navSections).map(([sectionId, section]) => (
           <Collapsible
             key={sectionId}
             open={isSectionOpen(sectionId)}
             onOpenChange={() => toggleSection(sectionId)}
+            className="group/section"
           >
             <CollapsibleTrigger asChild>
               <button
                 className={cn(
-                  "flex items-center justify-between w-full px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-300 transition-colors",
+                  "flex items-center justify-between w-full px-3 py-3 text-xs font-bold text-sidebar-foreground/60 font-heading tracking-widest uppercase hover:text-gold transition-all duration-300 border-b border-transparent hover:border-gold/20",
                   !isOpen && "justify-center"
                 )}
               >
                 {isOpen ? (
                   <>
-                    <span>{section.title}</span>
+                    <div className="flex items-center space-x-3">
+                      <span className="p-1 rounded bg-sidebar-accent/50 text-gold group-hover/section:text-gold-light transition-colors">
+                        <section.icon className="h-4 w-4" />
+                      </span>
+                      <span>{section.title}</span>
+                    </div>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 transition-transform",
-                        isSectionOpen(sectionId) && "transform rotate-180"
+                        "h-3 w-3 transition-transform duration-300 opacity-50",
+                        isSectionOpen(sectionId) && "transform rotate-180 opacity-100 text-gold"
                       )}
                     />
                   </>
                 ) : (
-                  <section.icon className="h-5 w-5" />
+                  <div className="relative group/tooltip">
+                    <section.icon className="h-5 w-5 text-sidebar-foreground/70 hover:text-gold transition-colors" />
+                  </div>
                 )}
               </button>
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 mt-1">
+            <CollapsibleContent className="space-y-1 mt-2 ml-1 border-l border-sidebar-border/50 pl-2 animate-accordion-down">
               {section.links.map((link) => {
                 const Icon = link.icon;
                 return (
@@ -232,14 +230,14 @@ const AequitasSidebar = () => {
                     key={link.path}
                     to={link.path}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-sm",
+                      "flex items-center space-x-3 px-3 py-2 rounded-md transition-all duration-300 text-sm border border-transparent",
                       isActive(link.path)
-                        ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 font-medium"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800",
-                      !isOpen && "justify-center"
+                        ? "bg-gold/10 text-gold border-gold/20 shadow-sm shadow-gold/5 font-medium"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-gold-light hover:translate-x-1",
+                      !isOpen && "justify-center px-0 py-3 hover:bg-transparent"
                     )}
                   >
-                    {Icon && <Icon className="h-4 w-4 flex-shrink-0" />}
+                    {Icon && <Icon className={cn("h-4 w-4 flex-shrink-0", isActive(link.path) && "animate-pulse-glow")} />}
                     {isOpen && <span>{link.label}</span>}
                   </Link>
                 );
@@ -250,48 +248,53 @@ const AequitasSidebar = () => {
       </nav>
 
       {/* Footer with User Profile and Theme Toggle */}
-      <div className="border-t border-gray-200 dark:border-gray-800 p-4 space-y-2">
+      <div className="relative z-10 border-t border-sidebar-border/50 p-4 space-y-4 bg-sidebar/50 backdrop-blur-sm">
         {isOpen && (
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-heading text-sidebar-foreground/40 uppercase tracking-widest">Theme</span>
             <ThemeToggle />
           </div>
         )}
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                "flex items-center space-x-3 w-full px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+                "flex items-center space-x-3 w-full px-3 py-2.5 rounded-lg border border-transparent hover:border-gold/30 hover:bg-gold/5 transition-all duration-300 group",
                 !isOpen && "justify-center"
               )}
             >
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-400 font-semibold">
-                {user?.email?.[0].toUpperCase() || 'U'}
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald/20 rounded-full blur-sm group-hover:bg-emerald/30 transition-all" />
+                <div className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-emerald text-white font-bold font-heading shadow-lg border border-emerald-light/20">
+                  {user?.email?.[0].toUpperCase() || 'U'}
+                </div>
               </div>
+
               {isOpen && (
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user?.email || 'User'}
+                  <p className="text-sm font-bold text-sidebar-foreground font-heading group-hover:text-gold transition-colors">
+                    {user?.email?.split('@')[0] || 'User'}
                   </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user?.is_superuser ? 'Superuser' : 'User'}
+                  <p className="text-xs text-sidebar-foreground/50 truncate max-w-[120px]">
+                    {user?.is_superuser ? 'Council Member' : 'Scribe'}
                   </p>
                 </div>
               )}
-              {isOpen && <ChevronDown className="h-4 w-4 text-gray-500" />}
+              {isOpen && <ChevronDown className="h-4 w-4 text-sidebar-foreground/50 group-hover:text-gold" />}
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>My Account</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
+          <DropdownMenuContent align="end" className="w-60 bg-sidebar border-sidebar-border text-sidebar-foreground shadow-2xl shadow-black/50">
+            <DropdownMenuLabel className="font-heading text-gold">My Identity</DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-sidebar-border" />
+            <DropdownMenuItem onClick={() => navigate('/settings')} className="focus:bg-sidebar-accent focus:text-gold cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               Profile Settings
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+            <DropdownMenuSeparator className="bg-sidebar-border" />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              Return to Gateway
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

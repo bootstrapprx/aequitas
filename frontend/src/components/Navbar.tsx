@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
 const navItems = [
@@ -17,7 +18,7 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border/50">
       {/* Top decorative line */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
-      
+
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16 lg:h-20">
           <Logo />
@@ -42,12 +43,16 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-              Enter
-            </Button>
-            <Button variant="gold" size="sm">
-              Join the Fellowship
-            </Button>
+            <Link to="/login">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                Enter
+              </Button>
+            </Link>
+            <Link to="/register">
+              <Button variant="gold" size="sm">
+                Join the Fellowship
+              </Button>
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
@@ -74,12 +79,16 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-border/50 px-4">
-                <Button variant="ghost" size="sm" className="justify-start">
-                  Enter
-                </Button>
-                <Button variant="gold" size="sm">
-                  Join the Fellowship
-                </Button>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="justify-start w-full">
+                    Enter
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="gold" size="sm" className="w-full">
+                    Join the Fellowship
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>

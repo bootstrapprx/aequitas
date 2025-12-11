@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Columns, BookOpen, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
@@ -25,12 +26,12 @@ const HeroSection = () => {
               transparent 24px)`
           }} />
         </div>
-        
+
         {/* Ambient light from "torches" */}
         <div className="absolute top-1/4 left-20 w-64 h-64 bg-gold/8 rounded-full blur-[100px] animate-torch" />
         <div className="absolute top-1/4 right-20 w-64 h-64 bg-gold/8 rounded-full blur-[100px] animate-torch animation-delay-500" />
         <div className="absolute bottom-1/3 left-1/3 w-96 h-96 bg-emerald/5 rounded-full blur-[120px]" />
-        
+
         {/* Decorative Greek key pattern at top */}
         <div className="absolute top-20 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
         <div className="absolute top-24 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/15 to-transparent" />
@@ -63,20 +64,24 @@ const HeroSection = () => {
 
           {/* Descriptive Text */}
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12 font-body leading-relaxed opacity-0 animate-fade-up animation-delay-300">
-            Secure. Precise. Equitable. Enter the Athenaeum—where the gravitas of 
+            Secure. Precise. Equitable. Enter the Athenaeum—where the gravitas of
             ancient financial institutions meets cutting-edge AI technology.
           </p>
 
           {/* CTA Buttons styled as stone tablets */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-up animation-delay-400">
-            <Button variant="gold" size="xl" className="group">
-              <span>Enter the Atrium</span>
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button variant="outline" size="xl" className="group border-gold/30 hover:bg-gold/10 hover:border-gold/50">
-              <Play className="mr-2 h-5 w-5" />
-              <span>View the Archives</span>
-            </Button>
+            <Link to="/login">
+              <Button variant="gold" size="xl" className="group">
+                <span>Enter the Atrium</span>
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <a href="#features">
+              <Button variant="outline" size="xl" className="group border-gold/30 hover:bg-gold/10 hover:border-gold/50">
+                <Play className="mr-2 h-5 w-5" />
+                <span>View the Archives</span>
+              </Button>
+            </a>
           </div>
 
           {/* Sector Preview - The Pathways */}
@@ -90,8 +95,8 @@ const HeroSection = () => {
                 { name: "Agora", icon: BookOpen, desc: "Invoicing & Trade" },
                 { name: "Archives", icon: Columns, desc: "Reports & Data" },
               ].map((sector, i) => (
-                <div 
-                  key={sector.name} 
+                <div
+                  key={sector.name}
                   className="group flex items-center gap-3 px-5 py-3 rounded-sm stone-border bg-card/30 hover:bg-card/60 cursor-pointer transition-all hover:shadow-gold animate-column-glow"
                   style={{ animationDelay: `${i * 200}ms` }}
                 >
