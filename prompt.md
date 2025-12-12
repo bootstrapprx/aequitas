@@ -1,123 +1,112 @@
-/agent frontend-architect
+/agent backend-architect
 
-Implement Milestone 4.1: Complete Accounting UI for the Aequitas project.
+Implement secure login and password feedback flow for Council Members ("Super Users") during account creation.
+
+--------------------------------------------------
+CONTEXT
+--------------------------------------------------
+The system currently allows account creation without proper guidance or credential feedback.
+Council Members are privileged "super users" and must have a controlled, auditable onboarding flow.
 
 --------------------------------------------------
 SCOPE (STRICT)
 --------------------------------------------------
-This task is LIMITED to frontend implementation and real backend integration.
+This task is LIMITED to backend logic, API endpoints, and security enforcement.
 
 DO NOT:
-- Modify backend logic or API behavior
-- Modify database schemas or accounting rules
-- Introduce mock, placeholder, or hardcoded data
-- Recalculate financial values already computed by the backend
+- Redesign frontend UI
+- Implement accounting logic
+- Introduce insecure password handling
+- Bypass authentication best practices
 
 --------------------------------------------------
-DELIVERABLES
+OBJECTIVES
 --------------------------------------------------
-Implement the following production-ready UI pages:
+1. Allow creation of Super User (Council Member) accounts
+2. Provide clear credential feedback at creation time
+3. Allow controlled database population from within the application
+4. Enforce strict role-based access control
+5. Ensure security, auditability, and revocation capability
 
-1. Trial Balance page with real data
-2. Financial Statements pages:
-   - Balance Sheet
-   - Income Statement
-   - Cash Flow Statement
-3. Daily Ledger page with account-level detail
-4. Fiscal Period Management interface
+--------------------------------------------------
+REQUIREMENTS
+--------------------------------------------------
+
+1. Super User Role
+   - Define or confirm a role such as:
+     • SUPER_USER
+     • COUNCIL_MEMBER
+   - This role must:
+     • Have elevated permissions
+     • Be explicitly assigned
+     • Never be granted implicitly
+
+2. Account Creation Flow
+   - Implement a secure endpoint for creating Super Users
+   - Access restricted to:
+     • Existing Super Users
+     • Or bootstrap-only initial setup
+   - On creation:
+     • Generate a temporary password OR
+     • Accept a password that meets strict policy
+
+3. Password Feedback
+   - On successful account creation, return:
+     • Username / email
+     • Temporary password OR password status
+     • Forced password reset flag
+   - Password must:
+     • Never be logged
+     • Never be retrievable later
+     • Be hashed immediately
+
+4. Forced Password Reset
+   - Newly created Super Users must:
+     • Be required to change password on first login
+     • Be blocked from sensitive actions until reset
+
+5. Database Population
+   - Allow Super Users to:
+     • Create other Super Users
+     • Populate necessary reference data
+   - All such actions must:
+     • Be permission-checked
+     • Be auditable (created_by, timestamp)
+
+6. Security & Validation
+   - Enforce password policy:
+     • Minimum length
+     • Complexity
+   - Prevent duplicate privileged accounts
+   - Rate-limit account creation
+   - Ensure proper error handling
 
 --------------------------------------------------
 TECHNICAL TASKS
 --------------------------------------------------
-
-1. Trial Balance
-   - Create `TrialBalanceTable.tsx`
-   - Columns:
-     • Account Code
-     • Account Name
-     • Debit
-     • Credit
-     • Balance
-   - Integrate with `useTrialBalance(companyId, periodId)`
-   - Debit and Credit must be mutually exclusive per row
-   - Validate that total debits === total credits
-   - If mismatch exists, display a visible warning banner
-   - Currency formatting, responsive layout, and sticky headers required
-
-2. Financial Statements
-   - Create:
-     • `BalanceSheet.tsx`
-     • `IncomeStatement.tsx`
-     • `CashFlowStatement.tsx`
-   - Integrate with:
-     • `useBalanceSheet`
-     • `useIncomeStatement`
-     • `useCashFlowStatement`
-   - Render hierarchical sections with subtotals
-   - Display correct company and fiscal period context
-   - Do NOT recompute backend totals
-
-3. Daily Ledger
-   - Create `DailyLedgerPage.tsx`
-   - Features:
-     • Account selector (company accounts only)
-     • Date range filter
-     • Ledger table with:
-       - Date
-       - Journal entry reference
-       - Description
-       - Debit
-       - Credit
-       - Running balance
-   - Integrate with `useAccountLedger(accountId, startDate, endDate)`
-   - Running balance must be sequential and visually clear
-
-4. Fiscal Period Management
-   - Create `FiscalPeriodManagementPage.tsx`
-   - Display:
-     • Period name
-     • Start date
-     • End date
-     • Status (Open / Closed / Locked)
-   - Actions:
-     • Create period
-     • Close period
-     • Reopen period (unless locked)
-     • Lock period (irreversible)
-   - Integrate with existing fiscal period API hooks
-   - Show confirmation dialogs for irreversible actions
-   - Disable actions based on period status
-
---------------------------------------------------
-UI & UX REQUIREMENTS
---------------------------------------------------
-For ALL pages:
-- Loading states (skeletons or spinners)
-- Error handling with user-friendly messages
-- Empty states
-- Responsive design (desktop + tablet)
-- Consistent currency formatting
-- Match Tailwind + shadcn/ui design system
-- Zero console errors or warnings
+- Update or create user and role models if needed
+- Add secure API endpoint(s) for Super User creation
+- Implement forced password reset mechanism
+- Add audit fields where appropriate
+- Ensure integration with existing auth system
 
 --------------------------------------------------
 SUCCESS CRITERIA
 --------------------------------------------------
-Before stopping, confirm:
-[ ] All pages render without runtime errors
-[ ] All data comes from real backend APIs
-[ ] No mock or hardcoded data exists
-[ ] Trial Balance validates correctly
-[ ] Financial statements display accurate totals
-[ ] Ledger running balances are correct
-[ ] UI is responsive and consistent
+Before stopping, verify:
+[ ] Only authorized users can create Super Users
+[ ] Credentials are shown ONLY at creation time
+[ ] Passwords are never stored or returned in plain text
+[ ] Forced password reset is enforced
+[ ] Database population actions are permission-checked
+[ ] No security regressions introduced
 
 --------------------------------------------------
 OUTPUT FORMAT
 --------------------------------------------------
-For each file created or updated:
-- FILE CREATED / UPDATED: <path>
-- Brief description of changes
-- API hooks used
+For each file modified or created:
+- FILE UPDATED / CREATED: <path>
+- Description of changes
+- Security considerations
 
-Stop once Milestone 4.1 is fully implemented.
+Stop once the Super User onboarding flow is complete and secure.
