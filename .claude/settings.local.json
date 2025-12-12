@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(python -m alembic:*)",
+      "Bash(docker compose:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(python test_initialization.py:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(systemctl status:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
