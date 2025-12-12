@@ -1,59 +1,195 @@
-You are operating inside the Aequitas repository. Perform a full-scale code cleanup focusing on correctness, consistency, and elimination of technical debt. Use the following directives:
+You are working inside the Aequitas frontend (React + TypeScript + Tailwind + shadcn/ui).
 
-1. **Remove duplication and consolidate services:**
-   - Merge master_chart_service.py and masterchart_service.py into a single consistent service.
-   - Merge/replace Mapping model vs AccountMapping model.
-   - Remove unused or obsolete modules.
+Your task is to complete **Phase 4.1 – Accounting UI**, strictly limited to UI components and real backend integration.
+DO NOT introduce mock data.
+DO NOT change backend logic.
+DO NOT redesign the system architecture.
 
-2. **Normalize naming conventions and fix structural issues:**
-   - Enforce consistent naming for account fields:
-     - company_account.code
-     - company_account.description
-     - company_account.type
-   - Fix incorrect references in Dexter (learning_engine.py).
+--------------------------------------------------
+OBJECTIVE
+--------------------------------------------------
+Deliver fully functional accounting pages wired to real backend data:
 
-3. **Run static corrections across backend:**
-   - Ensure all new accounting models are imported correctly in app/main.py.
-   - Verify that all relationships use correct back_populates.
-   - Confirm that database models declare indexes and constraints properly.
-   - Remove commented code blocks, dead imports, unused functions, and TODO placeholders that no longer apply.
+1. Trial Balance
+2. Financial Statements:
+   - Balance Sheet
+   - Income Statement (P&L)
+   - Cash Flow Statement
+3. Daily Ledger (account-level)
+4. Fiscal Period Management
 
-4. **Ensure Pydantic schema alignment:**
-   - Confirm every schema matches its corresponding DB model.
-   - Add missing validators.
-   - Ensure journal entry validation is strict (debits = credits, at least 2 lines).
+All pages must render correctly, calculate accurately, and follow the existing design system.
 
-5. **Check for architectural consistency:**
-   - Ensure services follow the same pattern (CRUD, helpers, exceptions).
-   - Ensure API routes are grouped correctly and import services consistently.
-   - Make accounting services follow the same return structure as existing modules.
+--------------------------------------------------
+GENERAL RULES
+--------------------------------------------------
+• Use existing API hooks (TanStack Query / axios hooks)
+• No hardcoded data
+• No placeholder components
+• No duplicated logic
+• Respect existing route structure
+• Match Tailwind + shadcn/ui styling
+• All numbers must come from backend responses
+• Handle loading, error, and empty states explicitly
 
-6. **Fix any formatting, typing, or style inconsistencies:**
-   - Apply uniform TypeHints across all services.
-   - Ensure datetime/date usage is consistent.
-   - Normalize all Enum classes.
-   - Enforce alphabetical imports and remove unused imports.
+--------------------------------------------------
+STEP 1 — Trial Balance Page
+--------------------------------------------------
 
-7. **Stabilize integrations:**
-   - Ensure QBO token model is used instead of in-memory store.
-   - Remove any leftover mock data across frontend and backend.
-   - Normalize OrganizerMemory integration points.
+1. Create `TrialBalanceTable.tsx`
+   - Columns:
+     • Account Code
+     • Account Name
+     • Debit
+     • Credit
+     • Balance
+   - Debit and Credit must be mutually exclusive per row
+   - Balance = Debit - Credit (display only, do NOT recompute backend totals)
 
-8. **Frontend cleanup:**
-   - Remove unused placeholder components.
-   - Ensure all accounting pages import correct API endpoints.
-   - Normalize naming in React components (PascalCase for components, camelCase for functions).
-   - Remove any leftover mock dashboard lists.
+2. Integrate with:
+   - `useTrialBalance(companyId, periodId)`
+   - Validate:
+     • Sum of debits === sum of credits
+     • If mismatch exists, display a visible warning banner
 
-9. **Report your changes clearly:**
-   - For each file modified:
-     - Output: “FILE UPDATED: <path>”
-     - Summarize the fixes.
-   - For each removed file:
-     - Output: “FILE REMOVED: <path>”
-     - Explain why.
-   - For each new helper, validator, or service:
-     - Output: “FILE ADDED: <path>”
-     - Describe purpose.
+3. Page requirements:
+   - Responsive table
+   - Sticky header
+   - Currency formatting
+   - Zero-value rows hidden by default (toggleable)
 
-Clean, correct, and prepare the entire codebase so development can continue immediately with Phase 4 and Phase 2 tasks.
+--------------------------------------------------
+STEP 2 — Financial Statements Pages
+--------------------------------------------------
+
+Create the following components:
+
+• `BalanceSheet.tsx`
+• `IncomeStatement.tsx`
+• `CashFlowStatement.tsx`
+
+Each must:
+
+1. Use real API hooks:
+   - useBalanceSheet(companyId, asOfDate)
+   - useIncomeStatement(companyId, startDate, endDate)
+   - useCashFlowStatement(companyId, startDate, endDate)
+
+2. Render hierarchical sections:
+   - Balance Sheet:
+     • Assets
+     • Liabilities
+     • Equity
+     • Validate: Assets = Liabilities + Equity
+
+   - Income Statement:
+     • Revenue
+     • COGS
+     • Gross Profit
+     • Expenses
+     • Net Income
+
+   - Cash Flow:
+     • Operating Activities
+     • Investing Activities
+     • Financing Activities
+     • Net Change in Cash
+
+3. Display:
+   - Subtotals per section
+   - Clear typography hierarchy
+   - Period label and company context
+
+--------------------------------------------------
+STEP 3 — Daily Ledger Page
+--------------------------------------------------
+
+Create `DailyLedgerPage.tsx`
+
+Requirements:
+1. Account selector (company accounts only)
+2. Date range filter
+3. Ledger table:
+   - Date
+   - Journal Entry #
+   - Description
+   - Debit
+   - Credit
+   - Running Balance
+
+4. Running balance must:
+   - Be sequential
+   - Respect normal balance (debit/credit)
+   - Match backend-calculated balances
+
+5. Integrate with:
+   - `useAccountLedger(accountId, startDate, endDate)`
+
+--------------------------------------------------
+STEP 4 — Fiscal Period Management Page
+--------------------------------------------------
+
+Create `FiscalPeriodManagementPage.tsx`
+
+Features:
+1. List all fiscal periods:
+   - Period name
+   - Start date
+   - End date
+   - Status (Open / Closed / Locked)
+
+2. Actions:
+   - Create period
+   - Close period
+   - Reopen period (unless locked)
+   - Lock period (irreversible)
+
+3. Integrate with:
+   - `useFiscalPeriods(companyId)`
+   - `createFiscalPeriod`
+   - `closeFiscalPeriod`
+   - `reopenFiscalPeriod`
+   - `lockFiscalPeriod`
+
+4. Display:
+   - Clear warnings for irreversible actions
+   - Disabled actions based on period status
+
+--------------------------------------------------
+STEP 5 — UX & Validation
+--------------------------------------------------
+
+For ALL pages:
+
+• Loading skeletons
+• Error boundaries with user-friendly messages
+• Empty-state handling
+• Currency formatting consistency
+• Mobile responsiveness
+• No console errors or warnings
+
+--------------------------------------------------
+FINAL CHECKLIST (MUST PASS)
+--------------------------------------------------
+
+Before stopping, confirm:
+
+[ ] All pages render without errors  
+[ ] No mock data exists  
+[ ] Backend data flows correctly  
+[ ] Trial Balance balances correctly  
+[ ] Financial statements reconcile  
+[ ] Ledger running balances are accurate  
+[ ] Period locking rules enforced  
+[ ] UI matches existing design system  
+
+--------------------------------------------------
+OUTPUT FORMAT
+--------------------------------------------------
+
+For each completed file:
+- FILE CREATED / UPDATED: <path>
+- Short explanation of what was implemented
+- API hooks used
+
+Stop ONLY after Phase 4.1 is complete.
