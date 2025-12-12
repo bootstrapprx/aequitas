@@ -94,6 +94,11 @@ def load_enriched_master_chart(
 
     print(f"Found {len(accounts_data)} accounts in CSV...")
 
+    # Map description to account_name for validator compatibility
+    for account in accounts_data:
+        if 'description' in account and 'account_name' not in account:
+            account['account_name'] = account['description']
+
     # Validate entire chart structure if validation is enabled
     if validate:
         print(f"  Validating chart structure...")

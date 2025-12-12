@@ -58,6 +58,10 @@ from app.db.models import (
 
 # Create all tables in the database on startup
 # Create all tables in the database on startup
+from sqlalchemy import text
+with engine.connect() as connection:
+    connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    connection.commit()
 Base.metadata.create_all(bind=engine)
 
 # Initialize database with superuser
