@@ -17,7 +17,8 @@
       "Bash(curl:*)",
       "Bash(ping:*)",
       "Bash(systemctl status:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(npm --prefix frontend run build)"
     ],
     "deny": [],
     "ask": []

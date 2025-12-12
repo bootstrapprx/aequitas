@@ -8,8 +8,9 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { TrialBalance } from '@/types/accounting';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 
 interface TrialBalanceTableProps {
   trialBalance: TrialBalance;
@@ -59,6 +60,19 @@ export function TrialBalanceTable({ trialBalance }: TrialBalanceTableProps) {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Warning Banner for Unbalanced Trial Balance */}
+        {!trialBalance.is_balanced && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Trial Balance is Out of Balance</AlertTitle>
+            <AlertDescription>
+              Total debits ({formatCurrency(trialBalance.total_debits)}) do not equal total
+              credits ({formatCurrency(trialBalance.total_credits)}). The variance is{' '}
+              {formatCurrency(Math.abs(trialBalance.variance))}. Please review journal entries
+              for errors.
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
