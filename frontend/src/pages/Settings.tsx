@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings as SettingsIcon, User, Bell, Shield, Database, Lock } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import Sidebar from "@/components/dashboard/Sidebar";
+import AequitasSidebar from "@/components/dashboard/AequitasSidebar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 
 const SettingsPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // sidebarOpen state removed as AequitasSidebar manages its own state
   const [requestRole, setRequestRole] = useState("ACCOUNTANT");
   const [requestReason, setRequestReason] = useState("");
   const [isRequestOpen, setIsRequestOpen] = useState(false);
@@ -65,7 +65,7 @@ const SettingsPage = () => {
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
+      <AequitasSidebar />
 
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto p-6 space-y-6">

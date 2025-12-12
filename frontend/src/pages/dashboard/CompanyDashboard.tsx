@@ -34,13 +34,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGetCompanies } from '@/integrations/queries/useCompanies';
 
 // Mock data - replace with actual API calls
-const mockCompanies = [
-  { id: '1', name: 'Acme Corporation', ucid: 'ACME001' },
-  { id: '2', name: 'TechStart Inc.', ucid: 'TECH002' },
-  { id: '3', name: 'Global Enterprises', ucid: 'GLOB003' },
-];
+// const mockCompanies ... (replaced by hook)
+// Keeping mockMetrics for now as we don't have a stats hook ready yet
+
+// mockCompanies removed - using API hook
 
 const mockMetrics = {
   totalAccounts: 342,
@@ -58,24 +58,26 @@ const mockMetrics = {
 const CompanyDashboard = () => {
   const { user, currentCompanyId, switchCompany } = useAuth();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompanyId || '');
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Use real data
+  const { data: companies, isLoading: isCompaniesLoading } = useGetCompanies();
+  const isLoading = isCompaniesLoading; // Simplified loading state
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, [selectedCompanyId]);
+    if (currentCompanyId) {
+      setSelectedCompanyId(currentCompanyId);
+    }
+  }, [currentCompanyId]);
 
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
     switchCompany(companyId);
-    setIsLoading(true);
   };
 
-  const selectedCompany = mockCompanies.find((c) => c.id === selectedCompanyId);
-  const mappingPercentage = Math.round(
+  const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
+  const mappingPercentage = mockMetrics.totalAccounts > 0 ? Math.round(
     (mockMetrics.mappedAccounts / mockMetrics.totalAccounts) * 100
-  );
+  ) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,12 +93,12 @@ const CompanyDashboard = () => {
               </div>
               <div className="h-8 w-px bg-border"></div>
               <div className="min-w-[250px]">
-                <Select value={selectedCompanyId} onValueChange={handleCompanyChange}>
+                <Select value={selectedCompanyId} onValueChange={handleCompanyChange} disabled={isLoading}>
                   <SelectTrigger className="border-0 text-lg font-semibold text-foreground hover:bg-muted/50">
-                    <SelectValue placeholder="Select company..." />
+                    <SelectValue placeholder={isLoading ? "Loading..." : "Select company..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockCompanies.map((company) => (
+                    {companies?.map((company) => (
                       <SelectItem key={company.id} value={company.id}>
                         <div className="flex flex-col">
                           <span className="font-semibold">{company.name}</span>
@@ -374,12 +376,12 @@ const CompanyDashboard = () => {
                       >
                         <div
                           className={`p-2 rounded-lg ${activity.type === 'mapping'
-                              ? 'bg-primary/10'
-                              : activity.type === 'user'
-                                ? 'bg-secondary/10'
-                                : activity.type === 'export'
-                                  ? 'bg-accent/10'
-                                  : 'bg-muted'
+                            ? 'bg-primary/10'
+                            : activity.type === 'user'
+                              ? 'bg-secondary/10'
+                              : activity.type === 'export'
+                                ? 'bg-accent/10'
+                                : 'bg-muted'
                             }`}
                         >
                           {activity.type === 'mapping' && (

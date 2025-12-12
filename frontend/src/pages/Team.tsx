@@ -3,15 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Plus, Mail, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import Sidebar from "@/components/dashboard/Sidebar";
+import AequitasSidebar from "@/components/dashboard/AequitasSidebar";
 
 const Team = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // sidebarOpen state removed as AequitasSidebar manages its own state
 
   return (
     <div className="flex h-screen bg-background">
-      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
-      
+      <AequitasSidebar />
+
       <div className="flex-1 overflow-auto">
         <div className="container mx-auto p-6 space-y-6">
           <div className="flex items-center justify-between">

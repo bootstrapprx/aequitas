@@ -17,6 +17,16 @@ class MasterAccountBase(BaseModel):
     category: str
     notes: Optional[str] = None
     parent_code: Optional[str] = None
+    
+    # Enhanced fields
+    long_description: Optional[str] = None
+    fs_mapping: Optional[str] = None
+    tags: Optional[List[str]] = None
+    default_vendors: Optional[List[str]] = None
+    regulatory_mapping: Optional[dict] = None
+    normal_balance: Optional[str] = None
+    cash_flow_classification: Optional[str] = None
+    cost_center: Optional[str] = None
 
     @field_validator('type')
     def validate_type(cls, v: str) -> str:
@@ -36,6 +46,14 @@ class MasterAccountUpdate(BaseModel):
     type: Optional[str] = None
     category: Optional[str] = None
     notes: Optional[str] = None
+    long_description: Optional[str] = None
+    fs_mapping: Optional[str] = None
+    tags: Optional[List[str]] = None
+    default_vendors: Optional[List[str]] = None
+    regulatory_mapping: Optional[dict] = None
+    normal_balance: Optional[str] = None
+    cash_flow_classification: Optional[str] = None
+    cost_center: Optional[str] = None
 
     @field_validator('type')
     def validate_type(cls, v: Optional[str]) -> Optional[str]:

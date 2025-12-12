@@ -9,6 +9,7 @@ class AccountMappingBase(BaseModel):
     confidence: float
     status: str
     notes: Optional[str] = None
+    propagated_from: Optional[uuid.UUID] = None
 
 class AccountMappingCreate(AccountMappingBase):
     company_account_id: uuid.UUID

@@ -1,17 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Activity, Users, Database } from "lucide-react";
 
+import { useMasterChartStats } from '@/hooks/api/useMasterChart';
+import { Skeleton } from '@/components/ui/skeleton';
+
 const Dashboard = () => {
+  const { data: coaStats, isLoading: isStatsLoading } = useMasterChartStats();
+
   const stats = [
     {
       title: "Total Companies",
-      value: "12",
+      value: "1", // TODO: Fetch real count
       icon: Users,
       color: "text-blue-600"
     },
     {
       title: "Active Mappings",
-      value: "1,847",
+      value: coaStats?.total_accounts ? coaStats.total_accounts.toString() : "0",
+      // Using Total Accounts as a proxy for activity for now
       icon: Database,
       color: "text-green-600"
     },
@@ -22,8 +28,8 @@ const Dashboard = () => {
       color: "text-purple-600"
     },
     {
-      title: "Growth",
-      value: "+23%",
+      title: "Category Count",
+      value: coaStats?.categories_count ? coaStats.categories_count.toString() : "0",
       icon: TrendingUp,
       color: "text-orange-600"
     }

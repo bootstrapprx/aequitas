@@ -47,14 +47,14 @@ class LearningEngine:
         accounts = company.accounts
         
         for account in accounts:
-            text = f"Account Code: {account.account_code}, Name: {account.account_name}, Type: {account.account_type}, Description: {account.description or ''}"
+            text = f"Account Code: {account.code}, Name: {account.name}, Type: {account.type}, Description: {account.description or ''}"
             vector = await self.get_embedding(text)
             self.vector_store.add_embedding(
                 company_ucid=ucid,
                 entity_type="account",
                 content=text,
                 vector=vector,
-                metadata={"code": account.account_code, "name": account.account_name, "id": str(account.id)}
+                metadata={"code": account.code, "name": account.name, "id": str(account.id)}
             )
         logger.info(f"Ingested {len(accounts)} accounts for {ucid}.")
 
@@ -64,24 +64,37 @@ class LearningEngine:
         """
         logger.info(f"Ingesting Mappings for {ucid}...")
         from app.services.mapping_service import MappingService
-        mappings = MappingService.get_mappings(self.db, ucid)
+        # Initialize service with db session
+        mapping_service = MappingService(self.db)
+        # Assuming ucid needs to be converted to company_id UUID or is used to lookup company
+        # But get_mappings_for_company requires UUID.
+        # We first need the company object to get the ID.
+        from app.services.company_service import CompanyService
+        company = CompanyService.get_company_by_ucid(self.db, ucid)
+        if not company:
+            logger.warning(f"Company {ucid} not found for ingestion.")
+            return
+
+        mappings = mapping_service.get_mappings_for_company(company.id)
         
         for mapping in mappings:
-            # Assuming mapping has source_description or we get it from company_account
-            # Mapping model usually links CompanyAccount and MasterAccount
-            # We need to fetch related data if not eager loaded
+            # AccountMapping links CompanyAccount. Master code is stored directly in mapping.master_code
             source_acc = mapping.company_account
-            target_acc = mapping.master_account
             
-            if source_acc and target_acc:
-                text = f"Mapping: '{source_acc.account_name}' ({source_acc.account_code}) maps to Master Account {target_acc.code} ({target_acc.name})"
+            # Master account might need to be fetched if we want the name
+            # mapping.master_code is available
+            
+            if source_acc and mapping.master_code:
+                # We use source_acc information and master_code
+                text = f"Mapping: '{source_acc.name or source_acc.description}' ({source_acc.code}) maps to Master Account {mapping.master_code}"
                 vector = await self.get_embedding(text)
                 self.vector_store.add_embedding(
                     company_ucid=ucid,
                     entity_type="mapping",
                     content=text,
                     vector=vector,
-                    metadata={"source_code": source_acc.account_code, "target_code": target_acc.code}
+                    # metadata={"source_code": source_acc.code, "target_code": mapping.master_code}
+                    metadata={"source_code": source_acc.code, "target_code": mapping.master_code}
                 )
         logger.info(f"Ingested {len(mappings)} mappings for {ucid}.")
 

@@ -8,10 +8,7 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# For this example, we'll use a simple in-memory store for the QBO token.
-# In a real application, this should be stored securely in the database
-# and associated with a user or company.
-qbo_token_storage = {}
+# qbo_token_storage removed - using QboToken model in DB
 
 # Hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
