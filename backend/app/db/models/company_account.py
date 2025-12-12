@@ -1,8 +1,16 @@
 import uuid
 from sqlalchemy import Column, String, DateTime, func, ForeignKey, Boolean
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, ARRAY
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+
+# pgvector support
+try:
+    from pgvector.sqlalchemy import Vector
+    VECTOR_AVAILABLE = True
+except ImportError:
+    VECTOR_AVAILABLE = False
+    Vector = None
 
 class CompanyAccount(Base):
     """
@@ -26,7 +34,12 @@ class CompanyAccount(Base):
 
     master_account_code = Column(String, ForeignKey("master_accounts.code"), nullable=True, index=True)
     json_data = Column(JSONB, nullable=True)
-    
+
+    # Semantic search support (pgvector)
+    # 384 dimensions for all-MiniLM-L6-v2 model
+    # Stores embedding for semantic similarity search
+    embedding = Column(Vector(384), nullable=True) if VECTOR_AVAILABLE else Column(ARRAY(float), nullable=True)
+
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 

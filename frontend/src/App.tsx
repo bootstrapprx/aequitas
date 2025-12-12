@@ -40,6 +40,7 @@ import OrganizerReviewPage from "./pages/organizer/OrganizerReviewPage";
 import DailyLedgerPage from "./pages/accountancy/ledger/DailyLedgerPage";
 import JournalEntriesPage from "./pages/accountancy/journal/JournalEntriesPage";
 import TrialBalancePage from "./pages/accountancy/trial-balance/TrialBalancePage";
+import FiscalPeriodsPage from "./pages/accountancy/fiscal-periods/FiscalPeriodsPage";
 
 // Reports Module
 import FinancialStatementsPage from "./pages/reports/statements/FinancialStatementsPage";
@@ -143,6 +144,7 @@ const App = () => (
                 <Route path="accountancy/ledger" element={<DailyLedgerPage />} />
                 <Route path="accountancy/journal" element={<JournalEntriesPage />} />
                 <Route path="accountancy/trial-balance" element={<TrialBalancePage />} />
+                <Route path="accountancy/fiscal-periods" element={<FiscalPeriodsPage />} />
 
                 {/* Reports Module */}
                 <Route path="reports/statements" element={<FinancialStatementsPage />} />

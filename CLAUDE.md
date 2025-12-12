@@ -269,6 +269,295 @@ npm run dev  # or pnpm dev
 - **AI providers:** The system supports both Ollama (local, private) and Cloudflare Workers AI (edge-based) for account classification.
 - **Session logging:** The system includes comprehensive development session logging via `make session` and the `SessionLogger` component in the frontend.
 
+## Athenaeum Theme & Recent Transformations
+
+### Overview
+
+Aequitas features a "Digital Athenaeum of Finance" theme throughout its frontend, combining classical architecture metaphors with modern accounting functionality. The interface uses marble textures, gold accents, ancient manuscript aesthetics, and micro-interactions to create an immersive experience.
+
+### Five-Phase Transformation (Completed)
+
+The project underwent a comprehensive 5-phase transformation to consolidate architecture and apply the Athenaeum theme:
+
+#### Phase 1: Foundation Fixes
+- Removed duplicate and conflicting service implementations
+- Consolidated mapping services into single source of truth
+- Fixed broken imports and circular dependencies
+- Cleaned up unused code and legacy references
+
+#### Phase 2: Master Chart Normalization and Validation
+- Standardized master chart data structure across all sources
+- Implemented comprehensive validation for chart of accounts data
+- Enhanced US-GAAP master chart with proper hierarchical codes
+- Added data integrity checks and seeding scripts
+
+#### Phase 3: Mapping Engine Consolidation
+- Unified account mapping logic into `backend/app/services/mapping_service.py`
+- Integrated AI-powered mapping suggestions (Ollama/Cloudflare)
+- Added semantic search support with pgvector
+- Implemented blended AI + vector similarity recommendations
+- Removed duplicate chart/mapping services from frontend
+
+#### Phase 4: Accounting Engine Integration
+- Connected all accounting APIs to frontend pages
+- Created fiscal period management UI (`/accountancy/fiscal-periods`)
+- Completed accounting cycle: journal entries → ledger → trial balance → financial statements
+- Added fiscal period CRUD operations with open/closed/locked states
+- Ensured GAAP-compliant double-entry validation throughout
+
+#### Phase 5: Athenaeum Theme Application
+- Created reusable Athenaeum component library
+- Applied classical theme to all core accounting pages
+- Implemented micro-interactions and animations
+- Transformed page headers with themed titles
+
+### Athenaeum Component Library
+
+Located in `frontend/src/components/athenaeum/`:
+
+**1. PageHeader** (`PageHeader.tsx`)
+```typescript
+<PageHeader
+  title="Scribe's Chamber"
+  subtitle="Record transactions in the ledger with ancient precision"
+  icon={Feather}
+  actions={<Button>New Entry</Button>}
+/>
+```
+- Classical page headers with embossed gold text
+- Animated icon rotation on mount
+- Decorative manuscript line separator
+- Support for action buttons
+
+**2. AtheneumCard** (`AtheneumCard.tsx`)
+```typescript
+<AtheneumCard hover glow>
+  <AtheneumCardHeader icon={<Icon />} embossed>Title</AtheneumCardHeader>
+  <AtheneumCardContent>Content here</AtheneumCardContent>
+</AtheneumCard>
+```
+- Marble-textured cards with classical styling
+- Props: `hover`, `glow`, `ornate`, `parchment`, `animate`
+- Replaces standard shadcn Card component
+- Column pattern overlays for architectural aesthetic
+
+**3. WaxSealBadge** (`WaxSealBadge.tsx`)
+```typescript
+<WaxSealBadge type="approved" size="sm" />
+```
+- Animated wax seal status indicators
+- Types: `approved`, `rejected`, `pending`, `locked`, `unlocked`
+- Stamp animation on mount
+- Sizes: `sm`, `md`, `lg`
+
+**4. ScrollUnfurl** (`ScrollUnfurl.tsx`)
+```typescript
+<ScrollUnfurl title="Balance Sheet" subtitle="As of Dec 31, 2024">
+  <FinancialStatement data={data} />
+</ScrollUnfurl>
+```
+- Ancient scroll unfurling animation
+- Perfect for financial reports and documents
+- Parchment styling with scroll rods
+- Staggered delays for multiple scrolls
+
+**5. QuillIcon** (`QuillIcon.tsx`)
+```typescript
+<QuillIcon isWriting={isPending} size="md" />
+<QuillWritingEffect text="Record saved" delay={0.2} />
+```
+- Animated quill icon for writing operations
+- Moves when `isWriting={true}`
+- Includes text writing effect component
+
+### Themed Page Names
+
+Core accounting pages now have classical, theme-appropriate names:
+
+| Route | Theme Name | Icon | Description |
+|-------|------------|------|-------------|
+| `/accountancy/journal` | Scribe's Chamber | Feather | Journal entry creation and management |
+| `/accountancy/ledger` | Ledger of Days | Scroll | Daily journal entry ledger |
+| `/accountancy/trial-balance` | Hall of Balance | Scale | Trial balance report generation |
+| `/accountancy/fiscal-periods` | Chronicle of Time | Hourglass | Fiscal period lifecycle management |
+| `/reports/statements` | Auditor's Tower | Scroll | Financial statements (BS, IS, CF) |
+
+### CSS Animations & Utilities
+
+Located in `frontend/src/index.css`:
+
+**Custom Animations:**
+- `quill-write` - Quill pen writing motion
+- `scroll-unfurl` - Ancient scroll unfurling
+- `wax-seal` - Wax seal stamping
+- `parchment-reveal` - Parchment paper reveal
+- `ink-fade` - Ink fading in
+- `shimmer` - Gold shimmer effect
+- `pulse-glow` - Pulsing glow for important elements
+- `float` - Gentle floating animation
+
+**Utility Classes:**
+- `.parchment` - Parchment paper texture
+- `.wax-seal` - Wax seal styling
+- `.embossed-gold` - Embossed gold text effect
+- `.ornate-border` - Classical ornate borders
+- `.scrollwork` - Decorative scrollwork patterns
+- `.manuscript-line` - Decorative manuscript separator
+- `.ink-splash` - Ink splash decoration
+- `.marble-texture` - Marble background texture
+- `.shadow-gold` - Gold-tinted shadow
+
+**Color Palette:**
+- Primary: Emerald (`hsl(142 76% 36%)`)
+- Accent: Gold/Bronze (`hsl(38 72% 52%)`)
+- Marble: Various beige/cream tones
+- Text: Dark gray on light, white on dark
+
+**Fonts:**
+- Headings: Playfair Display (classical serif)
+- Body: DM Sans (modern sans-serif)
+
+### Using Athenaeum Components
+
+**Best Practices:**
+
+1. **Import from barrel export:**
+```typescript
+import {
+  PageHeader,
+  AtheneumCard,
+  WaxSealBadge
+} from '@/components/athenaeum';
+```
+
+2. **Replace standard cards:**
+```typescript
+// OLD
+<Card>
+  <CardHeader><CardTitle>Title</CardTitle></CardHeader>
+  <CardContent>Content</CardContent>
+</Card>
+
+// NEW
+<AtheneumCard hover>
+  <AtheneumCardHeader icon={<Icon />}>Title</AtheneumCardHeader>
+  <AtheneumCardContent>Content</AtheneumCardContent>
+</AtheneumCard>
+```
+
+3. **Use themed status badges:**
+```typescript
+// Replace Badge with WaxSealBadge for status indicators
+{status === 'posted' && <WaxSealBadge type="approved" size="sm" />}
+{status === 'draft' && <WaxSealBadge type="pending" size="sm" />}
+{status === 'void' && <WaxSealBadge type="rejected" size="sm" />}
+```
+
+4. **Wrap reports in ScrollUnfurl:**
+```typescript
+<ScrollUnfurl title="Financial Report" subtitle="Q4 2024">
+  <ReportContent data={data} />
+</ScrollUnfurl>
+```
+
+5. **Add QuillIcon to create/edit buttons:**
+```typescript
+<Button onClick={handleCreate} className="shadow-gold">
+  <QuillIcon isWriting={isCreating} className="mr-2" />
+  New Entry
+</Button>
+```
+
+### Route Structure Updates
+
+**Accountancy Module** (`/accountancy/*`):
+- `/accountancy/ledger` - Daily ledger (Ledger of Days)
+- `/accountancy/journal` - Journal entries (Scribe's Chamber)
+- `/accountancy/trial-balance` - Trial balance (Hall of Balance)
+- `/accountancy/fiscal-periods` - Fiscal period management (Chronicle of Time) **[NEW in Phase 4]**
+
+**Reports Module** (`/reports/*`):
+- `/reports/statements` - Financial statements (Auditor's Tower)
+  - Balance Sheet (wrapped in ScrollUnfurl)
+  - Income Statement (wrapped in ScrollUnfurl)
+  - Cash Flow Statement (wrapped in ScrollUnfurl)
+
+### Backend Services Structure
+
+**Consolidated Services:**
+
+1. **MappingService** (`backend/app/services/mapping_service.py`)
+   - Single source of truth for account mapping logic
+   - AI-powered suggestions via Ollama/Cloudflare
+   - Semantic search with pgvector
+   - Blended recommendations (AI + similarity)
+
+2. **ChartService** (`backend/app/services/chart_service.py`)
+   - Master chart operations
+   - Template management
+   - Account normalization
+
+3. **AccountingService** (various in `backend/app/services/`)
+   - Journal entry processing
+   - Ledger balance calculations
+   - Trial balance generation
+   - Financial statement compilation
+
+4. **PermissionService** (`backend/app/services/permission_service.py`)
+   - User permission checks
+   - Company access control
+   - Role-based authorization
+
+**Removed/Consolidated:**
+- Duplicate mapping services from frontend
+- Conflicting chart normalization logic
+- Redundant AI classification services
+
+### Development Guidelines for Themed Pages
+
+When creating or updating pages in the Athenaeum theme:
+
+1. **Use PageHeader instead of custom headers**
+   - Choose an appropriate classical name (e.g., "Archive of Records", "Temple of Numbers")
+   - Select a relevant Lucide icon
+   - Include a subtitle that explains the page's purpose
+
+2. **Replace all Card components with AtheneumCard**
+   - Add `hover` prop for interactive cards
+   - Add `glow` prop for important content
+   - Use `embossed` prop on headers for emphasis
+
+3. **Use WaxSealBadge for status indicators**
+   - Map application states to seal types
+   - Consistent sizing across the page
+
+4. **Add QuillIcon to writing/saving operations**
+   - Set `isWriting` based on mutation state
+   - Creates visual feedback for user actions
+
+5. **Wrap reports and documents in ScrollUnfurl**
+   - Use staggered delays for multiple items
+   - Include meaningful titles and subtitles
+
+6. **Apply shadow-gold class to primary buttons**
+   - Maintains consistency with gold accent theme
+
+### Architectural Improvements
+
+**Phase 1-3 Fixes:**
+- Eliminated circular dependencies between services
+- Single source of truth for mapping logic
+- Consolidated AI integration points
+- Removed duplicate API calls
+- Standardized data validation
+
+**Phase 4-5 Enhancements:**
+- Complete accounting cycle implementation
+- Fiscal period lifecycle management
+- Consistent theme across all pages
+- Reusable component library
+- Performance-optimized animations
+
 THE NEXT SECTIONS ARE THE USER NOTES - DO NOT DELETE
 
 ## Team Roles & Authority Structure

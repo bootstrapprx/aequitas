@@ -8,9 +8,15 @@
 - **Dashboard:** Overview of companies, users, and recent activity
 - **Registration Module:** Centralized management of companies, users, and charts of accounts
 - **GroupCompany (Umbrella View):** Manage multiple companies under a single group with shared mappings
-- **Accountancy Module:** Daily ledger, journal entries, and trial balance
-- **Reports Module:** Financial statements, custom reports, and export center
+- **Accountancy Module:** Complete accounting cycle with journal entries, daily ledger, trial balance, and fiscal periods
+- **Reports Module:** Financial statements (Balance Sheet, Income Statement, Cash Flow) with export capabilities
 - **Administration:** System settings, integrations, and audit logs
+
+### Digital Athenaeum Theme
+- **Classical Interface:** Marble textures, gold accents, and ancient manuscript aesthetics
+- **Micro-interactions:** Animated quills, unfurling scrolls, and wax seal badges
+- **Themed Pages:** "Scribe's Chamber" (Journal), "Hall of Balance" (Trial Balance), "Auditor's Tower" (Statements)
+- **Immersive Experience:** Combines modern functionality with classical architecture metaphors
 
 ### Chart of Accounts - Intelligent Management
 - **Master Chart Management:** Create and maintain standardized chart of accounts
@@ -215,15 +221,18 @@ Main landing page with company overview, user stats, and recent activity feed.
 - **Import/Export:** Excel-based data exchange
 - **AI Organizer (Dexter):** AI-powered account classification
 
-### Accountancy (Coming Soon)
-- **Daily Ledger:** Journal entry management
-- **Ledger Accounts:** Account-level transaction history
-- **Trial Balance:** Debit/credit verification
+### Accountancy ✅
+- **Scribe's Chamber (Journal Entries):** Create, post, void, and delete journal entries
+- **Ledger of Days (Daily Ledger):** Daily journal entry management with search and filters
+- **Hall of Balance (Trial Balance):** Generate trial balance by period or date
+- **Chronicle of Time (Fiscal Periods):** Manage accounting periods with open/closed/locked states
+- **Complete Accounting Cycle:** Full double-entry bookkeeping with GAAP compliance
 
-### Reports (Coming Soon)
-- **Financial Statements:** Balance Sheet, Income Statement, Cash Flow
-- **Custom Reports:** Build and save custom reports
-- **Export Center:** Export to Excel, PDF, CSV
+### Reports ✅
+- **Auditor's Tower (Financial Statements):** Balance Sheet, Income Statement, Cash Flow
+- **Ancient Scroll Presentation:** Reports displayed with unfurling scroll animations
+- **Export Center:** Export statements to CSV format
+- **Period-Based Reporting:** Generate reports by fiscal period or date range
 
 ### Administration
 - **System Settings:** Application configuration
@@ -323,36 +332,88 @@ See [MASTER_CHART.md](MASTER_CHART.md) for complete details.
 - **GitHub Actions** for CI/CD
 - **PostgreSQL** containerized database
 
+## 🏛️ Digital Athenaeum Theme
+
+Aequitas features a unique "Digital Athenaeum of Finance" interface that combines classical architecture metaphors with modern accounting functionality.
+
+### Theme Components
+
+The Athenaeum component library (`frontend/src/components/athenaeum/`) includes:
+
+- **PageHeader:** Classical page headers with embossed gold text and animated icons
+- **AtheneumCard:** Marble-textured cards with hover effects and glow
+- **WaxSealBadge:** Animated wax seal status indicators (approved, rejected, pending, locked, unlocked)
+- **ScrollUnfurl:** Ancient scroll unfurling animations for financial reports
+- **QuillIcon:** Animated quill icon for writing operations
+
+### Visual Design
+
+- **Color Palette:** Emerald primary, gold/bronze accents, marble textures
+- **Typography:** Playfair Display (headings) + DM Sans (body)
+- **Animations:** Quill writing, scroll unfurling, wax seal stamping, ink fading
+- **Utilities:** Parchment paper, embossed gold text, ornate borders, manuscript lines
+
+### Themed Page Names
+
+Core accounting pages feature classical, immersive names:
+
+| Page | Classical Name | Theme |
+|------|---------------|-------|
+| Journal Entries | Scribe's Chamber | Ancient scribes recording in ledgers |
+| Daily Ledger | Ledger of Days | Chronicle of daily financial records |
+| Trial Balance | Hall of Balance | Weighing debits and credits on scales |
+| Fiscal Periods | Chronicle of Time | Guardians of accounting cycles |
+| Financial Statements | Auditor's Tower | Ancient scrolls of financial wisdom |
+
+### Implementation
+
+The theme is built with:
+- **Framer Motion** for smooth animations
+- **Custom CSS utilities** in Tailwind
+- **Reusable components** following shadcn/ui patterns
+- **Performance-optimized** animations with optional disable
+
+For complete documentation on using the Athenaeum theme, see [CLAUDE.md - Athenaeum Theme section](CLAUDE.md#athenaeum-theme--recent-transformations).
+
 ## 📈 Roadmap
 
-### Phase 1: Core Accounting (Current)
+### Phase 1-3: Foundation & Core Features ✅ (Completed)
 - [x] Dashboard and navigation
 - [x] Company management
-- [x] Chart of Accounts module (complete)
-- [x] User authentication
-- [ ] User management UI
-- [ ] Simple CoA registration
+- [x] Chart of Accounts module with AI-powered mapping
+- [x] User authentication and management
+- [x] Master chart normalization and validation
+- [x] Mapping engine consolidation
+- [x] Daily ledger / journal entries
+- [x] Trial balance generation
+- [x] Fiscal period management
+- [x] Financial statements (Balance Sheet, Income Statement, Cash Flow)
+- [x] Export capabilities
 
-### Phase 2: Accountancy Module
-- [ ] Daily ledger / journal entries
-- [ ] Ledger accounts view
-- [ ] Trial balance
-- [ ] General ledger
-- [ ] Transaction management
+### Phase 4-5: Transformation & Theme ✅ (Completed)
+- [x] Accounting engine integration
+- [x] Complete accounting cycle implementation
+- [x] Fiscal period CRUD operations
+- [x] Digital Athenaeum theme
+- [x] Athenaeum component library
+- [x] Classical page designs
+- [x] Micro-interactions and animations
+- [x] Ancient manuscript aesthetics
 
-### Phase 3: Financial Reporting
-- [ ] Balance Sheet
-- [ ] Income Statement (P&L)
-- [ ] Cash Flow Statement
+### Phase 6: Enhancement & Scale (Current)
 - [ ] Custom report builder
-- [ ] Export center
-
-### Phase 4: Advanced Features
-- [ ] Multi-currency support
+- [ ] Advanced analytics dashboard
 - [ ] Budget management
-- [ ] Forecasting
-- [ ] Analytics dashboard
-- [ ] Mobile app
+- [ ] Forecasting tools
+- [ ] Multi-currency support
+- [ ] Additional integrations (Xero, Sage)
+
+### Phase 7: Advanced Features (Future)
+- [ ] Mobile application
+- [ ] Advanced AI features
+- [ ] Automated reconciliation
+- [ ] Predictive analytics
+- [ ] Multi-entity consolidation
 
 ## 🤝 Contributing
 

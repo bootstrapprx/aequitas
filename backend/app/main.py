@@ -23,6 +23,7 @@ from app.api.v1 import (
     client_logs, # Session Logging
     groups, # New - GroupCompany feature
     companies_su, # New - SU manual company creation
+    mappings, # New - Account Mappings
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -136,6 +137,9 @@ app.include_router(client_logs.router, prefix="/api/v1", tags=["Client Logs"])
 # Groups and SU routers
 app.include_router(groups.router, prefix="/api/v1/groups", tags=["Groups"])
 app.include_router(companies_su.router, prefix="/api/v1/companies", tags=["Companies - Superuser"])
+
+# Mappings router
+app.include_router(mappings.router, prefix="/api/v1/mappings", tags=["Mappings"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

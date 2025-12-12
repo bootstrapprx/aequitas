@@ -1,4 +1,10 @@
-"""Service for managing company-specific charts of accounts."""
+"""
+Service for managing company-specific charts of accounts.
+
+UPDATED: 2025-12-11
+- Added validation support for account creation and updates
+- Added normalization support for account names and descriptions
+"""
 
 from typing import List, Dict, Optional, Any
 from sqlalchemy.orm import Session
@@ -7,13 +13,17 @@ from uuid import UUID
 from app.db.models.company_account import CompanyAccount
 from app.db.models.master_account import MasterAccount
 from app.schemas.company_account import CompanyAccountCreate, CompanyAccountUpdate
+from app.core.validators.master_chart_validator import MasterChartValidator
+from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 
 
 class CompanyChartService:
-    """Service for managing company-specific charts of accounts."""
+    """Service for managing company-specific charts of accounts with validation."""
 
     def __init__(self, db: Session):
         self.db = db
+        self.validator = MasterChartValidator()
+        self.normalizer = MasterChartNormalizer()
 
     def get_company_chart(self, company_id: UUID, active_only: bool = True) -> List[CompanyAccount]:
         """Get all accounts for a company."""
@@ -33,8 +43,44 @@ class CompanyChartService:
         """Get account by ID."""
         return self.db.query(CompanyAccount).filter(CompanyAccount.id == account_id).first()
 
-    def create_account(self, company_id: UUID, account_data: CompanyAccountCreate) -> CompanyAccount:
-        """Create a new account for a company."""
+    def create_account(
+        self,
+        company_id: UUID,
+        account_data: CompanyAccountCreate,
+        validate: bool = True,
+        normalize: bool = True
+    ) -> CompanyAccount:
+        """
+        Create a new account for a company with optional validation and normalization.
+
+        Args:
+            company_id: Company UUID
+            account_data: Account creation schema
+            validate: If True, validate account data before creation (default: True)
+            normalize: If True, normalize account names and descriptions (default: True)
+
+        Returns:
+            Created CompanyAccount
+
+        Raises:
+            ValueError: If validation fails or account already exists
+        """
+        # Normalize data if requested
+        if normalize:
+            account_dict = account_data.model_dump()
+            normalized_dict = self.normalizer.normalize_account_data(account_dict)
+            # Reconstruct account_data with normalized values
+            for key, value in normalized_dict.items():
+                if hasattr(account_data, key):
+                    setattr(account_data, key, value)
+
+        # Validate data if requested
+        if validate:
+            account_dict = account_data.model_dump()
+            validation_result = self.validator.validate_account(account_dict)
+            if not validation_result.is_valid:
+                raise ValueError(f"Validation failed: {', '.join(validation_result.errors)}")
+
         # Check if account code already exists for this company
         existing = self.get_account_by_code(company_id, account_data.code)
         if existing:
@@ -57,8 +103,28 @@ class CompanyChartService:
         self.db.refresh(db_account)
         return db_account
 
-    def update_account(self, company_id: UUID, code: str, account_data: CompanyAccountUpdate) -> Optional[CompanyAccount]:
-        """Update an existing account."""
+    def update_account(
+        self,
+        company_id: UUID,
+        code: str,
+        account_data: CompanyAccountUpdate,
+        normalize: bool = True
+    ) -> Optional[CompanyAccount]:
+        """
+        Update an existing account with optional normalization.
+
+        Args:
+            company_id: Company UUID
+            code: Account code to update
+            account_data: Update schema
+            normalize: If True, normalize account names and descriptions (default: True)
+
+        Returns:
+            Updated CompanyAccount or None if not found
+
+        Raises:
+            ValueError: If update would violate business rules
+        """
         db_account = self.get_account_by_code(company_id, code)
         if not db_account:
             return None
@@ -72,7 +138,12 @@ class CompanyChartService:
             if has_children:
                 raise ValueError("Cannot change type to 'Detail' because this account has children.")
 
+        # Normalize data if requested
         update_data = account_data.model_dump(exclude_unset=True)
+        if normalize:
+            update_data = self.normalizer.normalize_account_data(update_data)
+
+        # Apply updates
         for key, value in update_data.items():
             setattr(db_account, key, value)
 

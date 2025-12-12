@@ -1,5 +1,5 @@
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional, Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.orm import Session
 from uuid import UUID
 
@@ -16,6 +16,8 @@ from app.schemas.master_account import (
 from app.services.master_chart_service import MasterChartService
 from app.services.code_generator.service import CodeGeneratorService
 from app.services.code_generator.exceptions import CodeGenerationException
+from app.core.validators.master_chart_validator import MasterChartValidator
+from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 
 router = APIRouter()
 
@@ -168,3 +170,173 @@ def delete_master_account(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+# --- Validation & Normalization Endpoints ---
+
+@router.post("/validate", summary="Validate Account Data", tags=["Master Chart - Validation"])
+def validate_account(
+    account_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Validate a single account's data structure and business rules.
+
+    Returns validation result with any errors or warnings.
+
+    **Example request body:**
+    ```json
+    {
+        "code": "1.10.10",
+        "account_name": "Cash",
+        "type": "D",
+        "category": "Asset",
+        "normal_balance": "Debit",
+        "fs_mapping": "Balance Sheet"
+    }
+    ```
+    """
+    validator = MasterChartValidator()
+    result = validator.validate_account(account_data)
+
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "status": str(result)
+    }
+
+
+@router.post("/validate-chart", summary="Validate Entire Chart", tags=["Master Chart - Validation"])
+def validate_chart(
+    accounts: List[Dict[str, Any]] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Validate an entire chart of accounts for consistency and integrity.
+
+    Checks for:
+    - Duplicate codes
+    - Orphaned accounts (missing parents)
+    - Circular dependencies
+    - Invalid account data
+
+    **Example request body:**
+    ```json
+    [
+        {"code": "1", "account_name": "Assets", "type": "H", ...},
+        {"code": "1.10", "account_name": "Current Assets", "type": "H", "parent_code": "1", ...}
+    ]
+    ```
+    """
+    validator = MasterChartValidator()
+    result = validator.validate_chart(accounts)
+
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "total_accounts": len(accounts),
+        "status": str(result)
+    }
+
+
+@router.get("/validate-integrity", summary="Validate Master Chart Integrity", tags=["Master Chart - Validation"])
+def validate_master_chart_integrity(db: Session = Depends(get_db)):
+    """
+    Validate the integrity of the current master chart in the database.
+
+    Returns:
+    - Validation status
+    - List of errors (if any)
+    - List of warnings
+    - Statistics about the chart
+    """
+    service = MasterChartService(db)
+    validator = MasterChartValidator()
+
+    # Get all accounts as dictionaries
+    accounts = service.get_all_accounts()
+    accounts_data = []
+    for acc in accounts:
+        accounts_data.append({
+            "code": acc.code,
+            "account_name": acc.description,
+            "type": acc.type,
+            "category": acc.category,
+            "normal_balance": acc.normal_balance,
+            "fs_mapping": acc.fs_mapping,
+            "parent_code": acc.parent_code
+        })
+
+    # Validate
+    result = validator.validate_chart(accounts_data)
+
+    # Get stats
+    stats = service.get_coa_stats()
+
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "statistics": stats,
+        "status": str(result)
+    }
+
+
+@router.post("/normalize", summary="Normalize Account Data", tags=["Master Chart - Normalization"])
+def normalize_account_data(
+    account_data: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Normalize account data according to Bob's OCD-level capitalization rules.
+
+    Returns the normalized account data.
+
+    **Example request body:**
+    ```json
+    {
+        "account_name": "accounts payable",
+        "category": "liability",
+        "fs_mapping": "balance sheet",
+        "normal_balance": "cr"
+    }
+    ```
+
+    **Example response:**
+    ```json
+    {
+        "account_name": "Accounts Payable",
+        "category": "Liability",
+        "fs_mapping": "Balance Sheet",
+        "normal_balance": "Credit"
+    }
+    ```
+    """
+    normalizer = MasterChartNormalizer()
+    normalized = normalizer.normalize_account_data(account_data)
+
+    return {
+        "original": account_data,
+        "normalized": normalized
+    }
+
+
+@router.post("/normalize-batch", summary="Normalize Multiple Accounts", tags=["Master Chart - Normalization"])
+def normalize_accounts_batch(
+    accounts: List[Dict[str, Any]] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Normalize multiple accounts in a batch operation.
+
+    Returns list of normalized accounts.
+    """
+    normalizer = MasterChartNormalizer()
+    normalized_accounts = [normalizer.normalize_account_data(acc) for acc in accounts]
+
+    return {
+        "total_accounts": len(accounts),
+        "normalized": normalized_accounts
+    }

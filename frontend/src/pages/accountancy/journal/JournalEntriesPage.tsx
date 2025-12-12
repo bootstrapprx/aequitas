@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Filter, Download, BookOpen } from 'lucide-react';
+import { Plus, Filter, Download, Feather } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { PageHeader, AtheneumCard, AtheneumCardHeader, AtheneumCardContent, QuillIcon } from '@/components/athenaeum';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -108,123 +109,98 @@ const JournalEntriesPage = () => {
 
   return (
     <div className="p-10 space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-4 mb-2">
-              <BookOpen className="h-8 w-8 text-green-600 dark:text-green-400" />
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                Journal Entries
-              </h1>
-            </div>
-            <p className="text-lg text-gray-600 dark:text-gray-400">
-              Create and manage journal entries with double-entry accounting
-            </p>
-          </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+      {/* Header - Using Athenaeum PageHeader */}
+      <PageHeader
+        title="Scribe's Chamber"
+        subtitle="Record transactions in the ledger with ancient precision"
+        icon={Feather}
+        actions={
+          <Button onClick={() => setCreateDialogOpen(true)} className="shadow-gold">
+            <QuillIcon isWriting={createMutation.isPending} className="mr-2" />
             New Journal Entry
           </Button>
-        </div>
-      </motion.div>
+        }
+      />
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.5 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center text-lg">
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="filter-status">Status</Label>
-                <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
-                  <SelectTrigger id="filter-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="posted">Posted</SelectItem>
-                    <SelectItem value="void">Void</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="filter-period">Fiscal Period</Label>
-                <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-                  <SelectTrigger id="filter-period">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Periods</SelectItem>
-                    {fiscalPeriods.map((period: any) => (
-                      <SelectItem key={period.id} value={period.id}>
-                        {period.period_number}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-end">
-                <Button variant="outline" className="w-full">
-                  <Download className="mr-2 h-4 w-4" />
-                  Export to Excel
-                </Button>
-              </div>
+      {/* Filters - Using Athenaeum Card */}
+      <AtheneumCard hover>
+        <AtheneumCardHeader icon={<Filter className="w-5 h-5" />}>
+          Filters
+        </AtheneumCardHeader>
+        <AtheneumCardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="filter-status">Status</Label>
+              <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+                <SelectTrigger id="filter-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="posted">Posted</SelectItem>
+                  <SelectItem value="void">Void</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
-      {/* Entries List */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>All Journal Entries</span>
-              <span className="text-sm font-normal text-muted-foreground">
-                {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading journal entries...
-              </div>
-            ) : (
-              <JournalEntryList
-                entries={entries}
-                onPost={handlePost}
-                onVoid={handleVoid}
-                onDelete={handleDelete}
-                isLoading={
-                  postMutation.isPending || voidMutation.isPending || deleteMutation.isPending
-                }
-              />
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+            <div>
+              <Label htmlFor="filter-period">Fiscal Period</Label>
+              <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                <SelectTrigger id="filter-period">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Periods</SelectItem>
+                  {fiscalPeriods.map((period: any) => (
+                    <SelectItem key={period.id} value={period.id}>
+                      {period.period_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button variant="outline" className="w-full">
+                <Download className="mr-2 h-4 w-4" />
+                Export to Excel
+              </Button>
+            </div>
+          </div>
+        </AtheneumCardContent>
+      </AtheneumCard>
+
+      {/* Entries List - Using Athenaeum Card */}
+      <AtheneumCard glow>
+        <AtheneumCardHeader
+          icon={<Feather className="w-5 h-5" />}
+          embossed
+        >
+          All Journal Entries
+          <span className="text-sm font-normal text-muted-foreground ml-3">
+            {entries.length} {entries.length === 1 ? 'entry' : 'entries'}
+          </span>
+        </AtheneumCardHeader>
+        <AtheneumCardContent>
+          {isLoading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <QuillIcon isWriting className="mx-auto mb-2" size="lg" />
+              <p>Loading journal entries...</p>
+            </div>
+          ) : (
+            <JournalEntryList
+              entries={entries}
+              onPost={handlePost}
+              onVoid={handleVoid}
+              onDelete={handleDelete}
+              isLoading={
+                postMutation.isPending || voidMutation.isPending || deleteMutation.isPending
+              }
+            />
+          )}
+        </AtheneumCardContent>
+      </AtheneumCard>
 
       {/* Create Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

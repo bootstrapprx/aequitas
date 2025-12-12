@@ -4,6 +4,14 @@ from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import relationship
 from app.db.base import Base
 
+# pgvector support
+try:
+    from pgvector.sqlalchemy import Vector
+    VECTOR_AVAILABLE = True
+except ImportError:
+    VECTOR_AVAILABLE = False
+    Vector = None
+
 class MasterAccount(Base):
     """
     SQLAlchemy model for the Master Chart of Accounts.
@@ -34,6 +42,11 @@ class MasterAccount(Base):
     normal_balance = Column(String, nullable=True)  # "Debit" or "Credit"
     cash_flow_classification = Column(String, nullable=True)  # "Operating", "Investing", "Financing"
     cost_center = Column(String, nullable=True)  # Default cost center assignment
+
+    # Semantic search support (pgvector)
+    # 384 dimensions for all-MiniLM-L6-v2 model
+    # Stores embedding for semantic similarity search
+    embedding = Column(Vector(384), nullable=True) if VECTOR_AVAILABLE else Column(ARRAY(float), nullable=True)
 
     # Hierarchy relationships
     parent_id = Column(UUID(as_uuid=True), ForeignKey("master_accounts.id"), nullable=True)

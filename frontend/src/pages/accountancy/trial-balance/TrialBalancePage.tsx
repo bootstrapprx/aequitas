@@ -5,12 +5,12 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+  PageHeader,
+  AtheneumCard,
+  AtheneumCardHeader,
+  AtheneumCardContent,
+  ScrollUnfurl,
+} from '@/components/athenaeum';
 import {
   Select,
   SelectContent,
@@ -101,45 +101,31 @@ const TrialBalancePage = () => {
 
   return (
     <div className="p-10 space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Scale className="h-8 w-8 text-green-600 dark:text-green-400" />
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                Trial Balance
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
-                Generate and review trial balance reports
-              </p>
-            </div>
-          </div>
-          {showTrialBalance && (
-            <Button onClick={handleExport} variant="outline">
+      {/* Header - Using Athenaeum PageHeader */}
+      <PageHeader
+        title="Hall of Balance"
+        subtitle="Weigh the ancient scales of debits and credits"
+        icon={Scale}
+        actions={
+          showTrialBalance && (
+            <Button onClick={handleExport} variant="outline" className="shadow-gold">
               <Download className="w-4 h-4 mr-2" />
               Export to CSV
             </Button>
-          )}
-        </div>
-      </motion.div>
+          )
+        }
+      />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>Report Parameters</CardTitle>
-            <CardDescription>
-              Select a fiscal period or specify a date to generate the trial balance
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Report Parameters - Using Athenaeum Card */}
+      <AtheneumCard hover>
+        <AtheneumCardHeader icon={<Calendar className="w-5 h-5" />}>
+          Report Parameters
+        </AtheneumCardHeader>
+        <AtheneumCardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Select a fiscal period or specify a date to generate the trial balance
+          </p>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>View Mode</Label>
@@ -220,9 +206,9 @@ const TrialBalancePage = () => {
                 </AlertDescription>
               </Alert>
             )}
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+        </AtheneumCardContent>
+      </AtheneumCard>
 
       {trialBalanceError && (
         <motion.div
@@ -241,52 +227,39 @@ const TrialBalancePage = () => {
       )}
 
       {isLoading && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <Card>
-            <CardContent className="py-16">
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                <p className="text-muted-foreground">Loading trial balance...</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 py-16">
+              <Scale className="h-12 w-12 animate-pulse-glow text-primary" />
+              <p className="text-muted-foreground">Loading trial balance...</p>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
       )}
 
       {showTrialBalance && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
+        <ScrollUnfurl
+          title="Trial Balance"
+          subtitle={`Period: ${trialBalance.period_start} to ${trialBalance.period_end}`}
         >
           <TrialBalanceTable trialBalance={trialBalance} />
-        </motion.div>
+        </ScrollUnfurl>
       )}
 
       {!isLoading && !trialBalance && !trialBalanceError && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-        >
-          <Card>
-            <CardContent className="py-16">
-              <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                <Scale className="h-16 w-16 text-muted-foreground" />
-                <div>
-                  <h3 className="font-semibold text-lg mb-2">No Trial Balance Selected</h3>
-                  <p className="text-muted-foreground">
-                    Select a fiscal period or date above to generate the trial balance report
-                  </p>
-                </div>
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <Scale className="h-16 w-16 text-muted-foreground" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Trial Balance Selected</h3>
+                <p className="text-muted-foreground">
+                  Select a fiscal period or date above to generate the trial balance report
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
       )}
     </div>
   );

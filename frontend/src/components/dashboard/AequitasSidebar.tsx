@@ -18,6 +18,7 @@ import {
   Shield,
   Settings,
   Scale,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -109,6 +110,7 @@ const AequitasSidebar = () => {
         { label: "Daily Ledger", path: "/accountancy/ledger", icon: Scroll },
         { label: "Journal Entries", path: "/accountancy/journal", icon: Feather },
         { label: "Trial Balance", path: "/accountancy/trial-balance", icon: Scale },
+        { label: "Fiscal Periods", path: "/accountancy/fiscal-periods", icon: Calendar },
       ],
     },
     auditor: {

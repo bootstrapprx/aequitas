@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { FileSpreadsheet, Download, Calendar, AlertCircle } from 'lucide-react';
+import { FileSpreadsheet, Download, Calendar, AlertCircle, Scroll } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { PageHeader, ScrollUnfurl, AtheneumCard, AtheneumCardHeader, AtheneumCardContent } from '@/components/athenaeum';
 import {
   Card,
   CardContent,
@@ -261,31 +262,19 @@ const FinancialStatementsPage = () => {
 
   return (
     <div className="p-10 space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <FileSpreadsheet className="h-8 w-8 text-green-600 dark:text-green-400" />
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                Financial Statements
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400">
-                View Balance Sheet, Income Statement, and Cash Flow Statement
-              </p>
-            </div>
-          </div>
-          {canExport && (
-            <Button onClick={handleExport} variant="outline">
+      <PageHeader
+        title="Auditor's Tower"
+        subtitle="Review ancient scrolls of financial wisdom"
+        icon={Scroll}
+        actions={
+          canExport && (
+            <Button onClick={handleExport} variant="outline" className="shadow-gold">
               <Download className="w-4 h-4 mr-2" />
               Export to CSV
             </Button>
-          )}
-        </div>
-      </motion.div>
+          )
+        }
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -346,7 +335,14 @@ const FinancialStatementsPage = () => {
               </Card>
             )}
 
-            {balanceSheet && !balanceSheetLoading && <BalanceSheet balanceSheet={balanceSheet} />}
+            {balanceSheet && !balanceSheetLoading && (
+              <ScrollUnfurl
+                title="Balance Sheet"
+                subtitle={`As of ${balanceSheet.as_of_date}`}
+              >
+                <BalanceSheet balanceSheet={balanceSheet} />
+              </ScrollUnfurl>
+            )}
 
             {!balanceSheet && !balanceSheetLoading && !balanceSheetError && (
               <Card>
@@ -417,7 +413,13 @@ const FinancialStatementsPage = () => {
             )}
 
             {incomeStatement && !incomeStatementLoading && (
-              <IncomeStatement incomeStatement={incomeStatement} />
+              <ScrollUnfurl
+                title="Income Statement"
+                subtitle={`For the period ${incomeStatement.period_start} to ${incomeStatement.period_end}`}
+                delay={0.1}
+              >
+                <IncomeStatement incomeStatement={incomeStatement} />
+              </ScrollUnfurl>
             )}
 
             {!incomeStatement && !incomeStatementLoading && !incomeStatementError && (
@@ -491,7 +493,13 @@ const FinancialStatementsPage = () => {
             )}
 
             {cashFlowStatement && !cashFlowLoading && (
-              <CashFlowStatement cashFlowStatement={cashFlowStatement} />
+              <ScrollUnfurl
+                title="Cash Flow Statement"
+                subtitle={`For the period ${cashFlowStatement.period_start} to ${cashFlowStatement.period_end}`}
+                delay={0.2}
+              >
+                <CashFlowStatement cashFlowStatement={cashFlowStatement} />
+              </ScrollUnfurl>
             )}
 
             {!cashFlowStatement && !cashFlowLoading && !cashFlowError && (
