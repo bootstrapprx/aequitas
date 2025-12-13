@@ -44,13 +44,15 @@ import {
   useCreateMonthlyPeriods,
 } from '@/hooks/useAccounting';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import type { FiscalPeriod } from '@/types/accounting';
 
 type PeriodType = 'month' | 'quarter' | 'year';
 type PeriodStatus = 'open' | 'closed' | 'locked';
 
 const FiscalPeriodsPage = () => {
-  const { user, currentCompanyId } = useAuth();
+  const { user } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkCreateDialogOpen, setBulkCreateDialogOpen] = useState(false);
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -63,7 +65,7 @@ const FiscalPeriodsPage = () => {
   const [bulkYear, setBulkYear] = useState(new Date().getFullYear());
 
   // Fetch fiscal periods
-  const { data: fiscalPeriods = [], isLoading } = useFiscalPeriods(currentCompanyId || undefined, {
+  const { data: fiscalPeriods = [], isLoading } = useFiscalPeriods(selectedCompanyId || undefined, {
     year: filterYear !== 'all' ? parseInt(filterYear) : undefined,
   });
 
@@ -78,14 +80,14 @@ const FiscalPeriodsPage = () => {
   ).sort((a, b) => b - a);
 
   const handleCreate = async () => {
-    if (!currentCompanyId || !periodNumber || !startDate || !endDate) {
+    if (!selectedCompanyId || !periodNumber || !startDate || !endDate) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       await createMutation.mutateAsync({
-        company_id: currentCompanyId,
+        company_id: selectedCompanyId,
         period_number: periodNumber,
         period_type: periodType,
         start_date: startDate,
@@ -101,11 +103,11 @@ const FiscalPeriodsPage = () => {
   };
 
   const handleBulkCreate = async () => {
-    if (!currentCompanyId) return;
+    if (!selectedCompanyId) return;
 
     try {
       await bulkCreateMutation.mutateAsync({
-        companyId: currentCompanyId,
+        companyId: selectedCompanyId,
         year: bulkYear,
       });
       toast.success(`Created 12 monthly periods for ${bulkYear}`);
@@ -152,6 +154,32 @@ const FiscalPeriodsPage = () => {
   const getTypeDisplay = (type: PeriodType) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
+
+  // Empty state when no company is selected
+  if (!selectedCompanyId) {
+    return (
+      <div className="p-10 space-y-8">
+        <PageHeader
+          title="Chronicle of Time"
+          subtitle="Guard the sacred boundaries of accounting cycles"
+          icon={Hourglass}
+        />
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <Hourglass className="h-16 w-16 text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Company Selected</h3>
+                <p className="text-muted-foreground">
+                  Please select a company from the dropdown above to manage fiscal periods.
+                </p>
+              </div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 space-y-8">

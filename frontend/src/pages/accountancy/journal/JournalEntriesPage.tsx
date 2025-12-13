@@ -33,18 +33,20 @@ import {
   useCompanyAccounts,
 } from '@/hooks/useAccounting';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import type { JournalEntry, EntryStatus } from '@/types/accounting';
 
 const JournalEntriesPage = () => {
-  const { user, currentCompanyId } = useAuth();
+  const { user } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<EntryStatus | 'all'>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
 
   // Fetch data
-  const { data: fiscalPeriods = [] } = useFiscalPeriods(currentCompanyId || undefined);
-  const { data: companyAccounts = [] } = useCompanyAccounts(currentCompanyId || undefined);
-  const { data: entriesData, isLoading } = useJournalEntries(currentCompanyId || '', {
+  const { data: fiscalPeriods = [] } = useFiscalPeriods(selectedCompanyId || undefined);
+  const { data: companyAccounts = [] } = useCompanyAccounts(selectedCompanyId || undefined);
+  const { data: entriesData, isLoading } = useJournalEntries(selectedCompanyId || '', {
     status: filterStatus !== 'all' ? filterStatus : undefined,
     fiscal_period_id: filterPeriod !== 'all' ? filterPeriod : undefined,
   });
@@ -56,6 +58,32 @@ const JournalEntriesPage = () => {
   const deleteMutation = useDeleteJournalEntry();
 
   const entries = entriesData?.entries || [];
+
+  // Empty state when no company is selected
+  if (!selectedCompanyId) {
+    return (
+      <div className="p-10 space-y-8">
+        <PageHeader
+          title="Scribe's Chamber"
+          subtitle="Record transactions in the ledger with ancient precision"
+          icon={Feather}
+        />
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <Feather className="h-16 w-16 text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Company Selected</h3>
+                <p className="text-muted-foreground">
+                  Please select a company from the dropdown above to view and manage journal entries.
+                </p>
+              </div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
+      </div>
+    );
+  }
 
   const handleCreate = async (entry: JournalEntry) => {
     try {
@@ -209,7 +237,7 @@ const JournalEntriesPage = () => {
             <DialogTitle>Create Journal Entry</DialogTitle>
           </DialogHeader>
           <JournalEntryForm
-            companyId={currentCompanyId || ''}
+            companyId={selectedCompanyId || ''}
             fiscalPeriods={fiscalPeriods}
             accounts={companyAccounts}
             onSubmit={handleCreate}

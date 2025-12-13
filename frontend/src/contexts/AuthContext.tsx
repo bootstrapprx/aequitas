@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   companyIds: string[];
   currentCompanyId: string | null;
+  forcePasswordReset: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, isInitialSignup?: boolean, companyName?: string, companyIds?: string[]) => Promise<void>;
   logout: () => void;
@@ -159,6 +160,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isLoading,
     companyIds,
     currentCompanyId,
+    forcePasswordReset: user?.force_password_reset || false,
     login,
     register,
     logout,

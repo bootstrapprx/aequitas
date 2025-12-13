@@ -24,10 +24,10 @@ import {
   useIncomeStatement,
   useCashFlowStatement,
 } from '@/hooks/useAccounting';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 
 const FinancialStatementsPage = () => {
-  const { currentCompanyId } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [activeTab, setActiveTab] = useState<'balance-sheet' | 'income-statement' | 'cash-flow'>(
     'balance-sheet'
   );
@@ -44,19 +44,19 @@ const FinancialStatementsPage = () => {
     data: balanceSheet,
     isLoading: balanceSheetLoading,
     error: balanceSheetError,
-  } = useBalanceSheet(currentCompanyId || undefined, balanceSheetDate);
+  } = useBalanceSheet(selectedCompanyId || undefined, balanceSheetDate);
 
   const {
     data: incomeStatement,
     isLoading: incomeStatementLoading,
     error: incomeStatementError,
-  } = useIncomeStatement(currentCompanyId || undefined, startDate, endDate);
+  } = useIncomeStatement(selectedCompanyId || undefined, startDate, endDate);
 
   const {
     data: cashFlowStatement,
     isLoading: cashFlowLoading,
     error: cashFlowError,
-  } = useCashFlowStatement(currentCompanyId || undefined, startDate, endDate);
+  } = useCashFlowStatement(selectedCompanyId || undefined, startDate, endDate);
 
   const handleExportBalanceSheet = () => {
     if (!balanceSheet) {
@@ -259,6 +259,32 @@ const FinancialStatementsPage = () => {
         break;
     }
   };
+
+  // Empty state when no company is selected
+  if (!selectedCompanyId) {
+    return (
+      <div className="p-10 space-y-8">
+        <PageHeader
+          title="Auditor's Tower"
+          subtitle="Survey the financial landscape from the heights of precision"
+          icon={Scroll}
+        />
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <FileSpreadsheet className="h-16 w-16 text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Company Selected</h3>
+                <p className="text-muted-foreground">
+                  Please select a company from the dropdown above to view financial statements.
+                </p>
+              </div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 space-y-8">

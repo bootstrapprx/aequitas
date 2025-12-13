@@ -1,6 +1,7 @@
 // frontend/src/components/dashboard/DashboardLayout.tsx
 import { Outlet } from "react-router-dom";
 import AequitasSidebar from "./AequitasSidebar";
+import CompanySelector from "@/components/company/CompanySelector";
 import { ManualModeProvider } from "@/contexts/ManualModeContext";
 
 const DashboardLayout = () => {
@@ -9,6 +10,14 @@ const DashboardLayout = () => {
       <div className="flex min-h-screen bg-background">
         <AequitasSidebar />
         <main className="flex-1 overflow-y-auto">
+          {/* Company Selector Header Bar */}
+          <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border px-8 py-4">
+            <div className="max-w-xs">
+              <CompanySelector />
+            </div>
+          </div>
+
+          {/* Page Content */}
           <Outlet />
         </main>
       </div>

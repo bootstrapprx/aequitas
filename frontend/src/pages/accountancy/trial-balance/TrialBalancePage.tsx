@@ -23,17 +23,17 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { TrialBalanceTable } from '@/components/accounting/TrialBalanceTable';
 import { useTrialBalance, useFiscalPeriods } from '@/hooks/useAccounting';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 
 const TrialBalancePage = () => {
-  const { currentCompanyId } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [selectedPeriodId, setSelectedPeriodId] = useState<string>('');
   const [asOfDate, setAsOfDate] = useState<string>('');
   const [viewMode, setViewMode] = useState<'period' | 'date'>('period');
 
   // Fetch fiscal periods
   const { data: fiscalPeriods = [], isLoading: periodsLoading } =
-    useFiscalPeriods(currentCompanyId || undefined);
+    useFiscalPeriods(selectedCompanyId || undefined);
 
   // Determine query options based on view mode
   const trialBalanceOptions = useMemo(() => {
@@ -50,7 +50,7 @@ const TrialBalancePage = () => {
     data: trialBalance,
     isLoading: trialBalanceLoading,
     error: trialBalanceError,
-  } = useTrialBalance(currentCompanyId || undefined, trialBalanceOptions);
+  } = useTrialBalance(selectedCompanyId || undefined, trialBalanceOptions);
 
   const handleExport = () => {
     if (!trialBalance) {
@@ -98,6 +98,32 @@ const TrialBalancePage = () => {
 
   const isLoading = periodsLoading || trialBalanceLoading;
   const showTrialBalance = trialBalance && !isLoading;
+
+  // Empty state when no company is selected
+  if (!selectedCompanyId) {
+    return (
+      <div className="p-10 space-y-8">
+        <PageHeader
+          title="Hall of Balance"
+          subtitle="Where debits and credits meet in perfect equilibrium"
+          icon={Scale}
+        />
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <Scale className="h-16 w-16 text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Company Selected</h3>
+                <p className="text-muted-foreground">
+                  Please select a company from the dropdown above to view the trial balance.
+                </p>
+              </div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 space-y-8">

@@ -5,6 +5,7 @@ export interface User {
   is_active: boolean;
   is_superuser: boolean;
   preferred_company_id?: string;
+  force_password_reset?: boolean;
   created_at: string;
   updated_at: string;
 }

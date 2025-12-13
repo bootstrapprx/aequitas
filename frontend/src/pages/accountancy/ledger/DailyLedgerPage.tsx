@@ -30,18 +30,18 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAccountLedger, useCompanyAccounts } from '@/hooks/useAccounting';
-import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import type { AccountLedger, LedgerEntry } from '@/types/accounting';
 
 const DailyLedgerPage = () => {
-  const { currentCompanyId } = useAuth();
+  const { selectedCompanyId } = useCompany();
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
   // Fetch company accounts for the selector
   const { data: companyAccounts = [], isLoading: accountsLoading } = useCompanyAccounts(
-    currentCompanyId || undefined
+    selectedCompanyId || undefined
   );
 
   // Fetch account ledger
@@ -49,7 +49,7 @@ const DailyLedgerPage = () => {
     data: ledger,
     isLoading: ledgerLoading,
     error: ledgerError,
-  } = useAccountLedger(currentCompanyId || undefined, selectedAccountId, {
+  } = useAccountLedger(selectedCompanyId || undefined, selectedAccountId, {
     start_date: startDate,
     end_date: endDate,
   });
@@ -118,6 +118,32 @@ const DailyLedgerPage = () => {
 
   const isLoading = accountsLoading || ledgerLoading;
   const showLedger = ledger && !isLoading;
+
+  // Empty state when no company is selected
+  if (!selectedCompanyId) {
+    return (
+      <div className="p-10 space-y-8">
+        <PageHeader
+          title="Ledger of Days"
+          subtitle="Chronicle the daily transactions in the grand book of accounts"
+          icon={Scroll}
+        />
+        <AtheneumCard>
+          <AtheneumCardContent>
+            <div className="flex flex-col items-center justify-center space-y-4 text-center py-16">
+              <Scroll className="h-16 w-16 text-muted-foreground opacity-50" />
+              <div>
+                <h3 className="font-semibold text-lg mb-2">No Company Selected</h3>
+                <p className="text-muted-foreground">
+                  Please select a company from the dropdown above to view account ledgers.
+                </p>
+              </div>
+            </div>
+          </AtheneumCardContent>
+        </AtheneumCard>
+      </div>
+    );
+  }
 
   return (
     <div className="p-10 space-y-8">

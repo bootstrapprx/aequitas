@@ -5,7 +5,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { CompanyProvider } from "@/contexts/CompanyContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import PasswordResetGuard from "@/components/auth/PasswordResetGuard";
 
 // Layouts
 import DashboardLayout from "./components/dashboard/DashboardLayout";
@@ -66,6 +68,7 @@ import DocumentationPage from "./pages/DocumentationPage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
+import ChangePasswordPage from "./pages/auth/ChangePasswordPage";
 
 // User Management Pages (legacy)
 import UsersPage from "./pages/users/UsersPage";
@@ -80,30 +83,43 @@ const App = () => (
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <TooltipProvider>
         <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <SessionLogger />
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/landing-old" element={<Landing />} />
+          <CompanyProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <SessionLogger />
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/landing-old" element={<Landing />} />
 
-              {/* Auth Routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
+                {/* Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
+
+                {/* Change Password Route - Protected but accessible even with force_password_reset */}
+                <Route
+                  path="/change-password"
+                  element={
+                    <ProtectedRoute>
+                      <ChangePasswordPage />
+                    </ProtectedRoute>
+                  }
+                />
 
               {/* Protected Dashboard Routes */}
               <Route
                 path="/"
                 element={
                   <ProtectedRoute>
-                    <DashboardLayout />
+                    <PasswordResetGuard>
+                      <DashboardLayout />
+                    </PasswordResetGuard>
                   </ProtectedRoute>
                 }
               >
@@ -189,6 +205,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>
