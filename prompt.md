@@ -1,112 +1,92 @@
-/agent backend-architect
+✅ What is objectively good (and correct)
+Milestone 4.1 (Accounting UI)
 
-Implement secure login and password feedback flow for Council Members ("Super Users") during account creation.
+Claude did exactly what was asked, and importantly:
 
---------------------------------------------------
-CONTEXT
---------------------------------------------------
-The system currently allows account creation without proper guidance or credential feedback.
-Council Members are privileged "super users" and must have a controlled, auditable onboarding flow.
+✅ No mock data (explicitly stated and verified)
 
---------------------------------------------------
-SCOPE (STRICT)
---------------------------------------------------
-This task is LIMITED to backend logic, API endpoints, and security enforcement.
+✅ Trial Balance validation delegated to backend flags (is_balanced)
 
-DO NOT:
-- Redesign frontend UI
-- Implement accounting logic
-- Introduce insecure password handling
-- Bypass authentication best practices
+✅ No recalculation of accounting logic on frontend
 
---------------------------------------------------
-OBJECTIVES
---------------------------------------------------
-1. Allow creation of Super User (Council Member) accounts
-2. Provide clear credential feedback at creation time
-3. Allow controlled database population from within the application
-4. Enforce strict role-based access control
-5. Ensure security, auditability, and revocation capability
+✅ Ledger running balances handled sequentially
 
---------------------------------------------------
-REQUIREMENTS
---------------------------------------------------
+✅ Fiscal Period locking logic respected
 
-1. Super User Role
-   - Define or confirm a role such as:
-     • SUPER_USER
-     • COUNCIL_MEMBER
-   - This role must:
-     • Have elevated permissions
-     • Be explicitly assigned
-     • Never be granted implicitly
+✅ UI concerns stayed UI-only
 
-2. Account Creation Flow
-   - Implement a secure endpoint for creating Super Users
-   - Access restricted to:
-     • Existing Super Users
-     • Or bootstrap-only initial setup
-   - On creation:
-     • Generate a temporary password OR
-     • Accept a password that meets strict policy
+This means Milestone 4.1 can be considered DONE from a delivery standpoint.
 
-3. Password Feedback
-   - On successful account creation, return:
-     • Username / email
-     • Temporary password OR password status
-     • Forced password reset flag
-   - Password must:
-     • Never be logged
-     • Never be retrievable later
-     • Be hashed immediately
+Super User / Council Member Flow
 
-4. Forced Password Reset
-   - Newly created Super Users must:
-     • Be required to change password on first login
-     • Be blocked from sensitive actions until reset
+This is surprisingly strong for an AI-generated backend change:
 
-5. Database Population
-   - Allow Super Users to:
-     • Create other Super Users
-     • Populate necessary reference data
-   - All such actions must:
-     • Be permission-checked
-     • Be auditable (created_by, timestamp)
+Passwords:
 
-6. Security & Validation
-   - Enforce password policy:
-     • Minimum length
-     • Complexity
-   - Prevent duplicate privileged accounts
-   - Rate-limit account creation
-   - Ensure proper error handling
+Generated securely
 
---------------------------------------------------
-TECHNICAL TASKS
---------------------------------------------------
-- Update or create user and role models if needed
-- Add secure API endpoint(s) for Super User creation
-- Implement forced password reset mechanism
-- Add audit fields where appropriate
-- Ensure integration with existing auth system
+Shown once
 
---------------------------------------------------
-SUCCESS CRITERIA
---------------------------------------------------
-Before stopping, verify:
-[ ] Only authorized users can create Super Users
-[ ] Credentials are shown ONLY at creation time
-[ ] Passwords are never stored or returned in plain text
-[ ] Forced password reset is enforced
-[ ] Database population actions are permission-checked
-[ ] No security regressions introduced
+Never logged
 
---------------------------------------------------
-OUTPUT FORMAT
---------------------------------------------------
-For each file modified or created:
-- FILE UPDATED / CREATED: <path>
-- Description of changes
-- Security considerations
+Forced password reset enforced via JWT flag
 
-Stop once the Super User onboarding flow is complete and secure.
+Audit trail exists
+
+Lockout prevention (cannot demote last super user)
+
+Migration clearly documented
+
+This is enterprise-grade, not toy-level.
+
+👉 No rollback needed. This work is valid.
+
+⚠️ What is missing / implicitly assumed (important)
+
+Despite the quality, two things are not yet integrated at system level, and this directly touches Milestone 4.2:
+
+🔴 Gap 1: Company Context Is Not Yet a First-Class Citizen
+
+From the output:
+
+Pages exist
+
+APIs exist
+
+Auth exists
+
+But company context is not enforced consistently yet.
+
+Right now:
+
+Some pages still infer company implicitly
+
+Some rely on URL params
+
+Some hooks likely default to “current company” without a unified source
+
+This is exactly what Milestone 4.2 is about.
+
+🔴 Gap 2: Authentication Is Implemented, Not Consumed Everywhere
+
+The backend now exposes:
+
+force_password_reset
+
+Council Member roles
+
+Secure auth endpoints
+
+But:
+
+Frontend is not yet verifying auth globally
+
+Pages may render without checking:
+
+Is user authenticated?
+
+Is company selected?
+
+Is password reset required?
+
+Again: this is Milestone 4.2 territory, not a failure — but it means we must proceed carefully.
