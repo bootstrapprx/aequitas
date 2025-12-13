@@ -1,92 +1,101 @@
-✅ What is objectively good (and correct)
-Milestone 4.1 (Accounting UI)
+/agent frontend-architect
 
-Claude did exactly what was asked, and importantly:
+Implement Milestone 4.2: Data Integration & Context for the Aequitas project.
 
-✅ No mock data (explicitly stated and verified)
+--------------------------------------------------
+SCOPE (STRICT)
+--------------------------------------------------
+This task focuses on frontend data integration, company context propagation,
+and authentication verification.
 
-✅ Trial Balance validation delegated to backend flags (is_balanced)
+DO NOT:
+- Modify backend logic or database schemas
+- Introduce mock or hardcoded data
+- Alter accounting calculations
+- Redesign UI layouts unnecessarily
 
-✅ No recalculation of accounting logic on frontend
+--------------------------------------------------
+OBJECTIVE
+--------------------------------------------------
+Ensure all pages:
+- Use real API data
+- Respect selected company context
+- Verify authenticated user state
+- Behave correctly when context is missing or invalid
 
-✅ Ledger running balances handled sequentially
+--------------------------------------------------
+DELIVERABLES
+--------------------------------------------------
 
-✅ Fiscal Period locking logic respected
+1. Company Context
+   - Implement a unified company context provider (if not already present)
+   - Company selection must:
+     • Persist across navigation
+     • Update all accounting pages automatically
+     • Drive API calls consistently
 
-✅ UI concerns stayed UI-only
+2. Replace Residual Mock or Implicit Data
+   - Audit all accounting-related pages
+   - Remove any remaining mock values or defaults
+   - Ensure companyId always comes from:
+     • Company context OR
+     • URL params (never hardcoded)
 
-This means Milestone 4.1 can be considered DONE from a delivery standpoint.
+3. Journal Entries Page
+   - Update JournalEntriesPage to:
+     • Read companyId from URL params or context
+     • Fail gracefully if no company is selected
+     • Reload data when company changes
 
-Super User / Council Member Flow
+4. Authentication Verification
+   - Implement `useAuth` hook consumption
+   - Verify on protected pages:
+     • User is authenticated
+     • Token is valid
+   - Handle:
+     • Unauthorized access
+     • Expired sessions
 
-This is surprisingly strong for an AI-generated backend change:
+5. Password Reset Enforcement (Frontend)
+   - If auth state indicates `force_password_reset = true`:
+     • Block access to all other pages
+     • Redirect user to password change flow
+     • Display clear instructions
 
-Passwords:
+6. Company Selector UI
+   - Add company selector to:
+     • Navigation bar or dashboard header
+   - Selector must:
+     • List only authorized companies
+     • Trigger context update
+     • Refresh dependent queries automatically
 
-Generated securely
+--------------------------------------------------
+VALIDATION & UX REQUIREMENTS
+--------------------------------------------------
+- All pages must re-render correctly when company changes
+- No stale data after switching companies
+- Clear empty states when no company is selected
+- Graceful handling of unauthorized or missing context
+- Zero console errors or warnings
 
-Shown once
+--------------------------------------------------
+SUCCESS CRITERIA
+--------------------------------------------------
+Before stopping, confirm:
+[ ] No hardcoded or mock data remains
+[ ] Company switching works across all pages
+[ ] Auth state is enforced consistently
+[ ] Forced password reset blocks access correctly
+[ ] All accounting pages show correct company data
+[ ] Navigation remains stable during context changes
 
-Never logged
+--------------------------------------------------
+OUTPUT FORMAT
+--------------------------------------------------
+For each file updated:
+- FILE UPDATED: <path>
+- What was changed
+- How company/auth context is handled
 
-Forced password reset enforced via JWT flag
-
-Audit trail exists
-
-Lockout prevention (cannot demote last super user)
-
-Migration clearly documented
-
-This is enterprise-grade, not toy-level.
-
-👉 No rollback needed. This work is valid.
-
-⚠️ What is missing / implicitly assumed (important)
-
-Despite the quality, two things are not yet integrated at system level, and this directly touches Milestone 4.2:
-
-🔴 Gap 1: Company Context Is Not Yet a First-Class Citizen
-
-From the output:
-
-Pages exist
-
-APIs exist
-
-Auth exists
-
-But company context is not enforced consistently yet.
-
-Right now:
-
-Some pages still infer company implicitly
-
-Some rely on URL params
-
-Some hooks likely default to “current company” without a unified source
-
-This is exactly what Milestone 4.2 is about.
-
-🔴 Gap 2: Authentication Is Implemented, Not Consumed Everywhere
-
-The backend now exposes:
-
-force_password_reset
-
-Council Member roles
-
-Secure auth endpoints
-
-But:
-
-Frontend is not yet verifying auth globally
-
-Pages may render without checking:
-
-Is user authenticated?
-
-Is company selected?
-
-Is password reset required?
-
-Again: this is Milestone 4.2 territory, not a failure — but it means we must proceed carefully.
+Stop once Milestone 4.2 is fully implemented.
