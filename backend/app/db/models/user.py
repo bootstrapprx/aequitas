@@ -14,11 +14,19 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
-    role = Column(String, default="USER") # USER, ACCOUNTANT, ADMIN, SU
+    role = Column(String, default="USER") # USER, ACCOUNTANT, ADMIN, SU, COUNCIL_MEMBER
     preferred_company_id = Column(UUID(as_uuid=True), nullable=True)
+
+    # Password and security fields
+    force_password_reset = Column(Boolean, default=False, nullable=False)
+    password_reset_required_at = Column(DateTime, nullable=True)
+    last_password_change = Column(DateTime, nullable=True)
+
+    # Audit fields
+    created_by = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationship to companies (many-to-many through UserCompany)
     user_companies = relationship("UserCompany", back_populates="user", cascade="all, delete-orphan")
 

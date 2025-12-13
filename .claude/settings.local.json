@@ -18,7 +18,10 @@
       "Bash(ping:*)",
       "Bash(systemctl status:*)",
       "Bash(mkdir:*)",
-      "Bash(npm --prefix frontend run build)"
+      "Bash(npm --prefix frontend run build)",
+      "Bash(test:*)",
+      "Bash(python -c:*)",
+      "Bash(python -m ast:*)"
     ],
     "deny": [],
     "ask": []

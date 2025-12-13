@@ -12,10 +12,16 @@ from app.db.models.user import User
 from app.db.models.company import Company
 from app.api.v1.auth import get_current_user
 from app.core.security import check_superuser
-from app.schemas.user import UserResponse
+from app.schemas.user import (
+    UserResponse,
+    CouncilMemberCreate,
+    CouncilMemberCreateResponse
+)
 from app.schemas.system_settings import SystemSettingsResponse, SystemSettingsUpdate
 from app.services.admin_service import AdminService
 from app.services.companychart_service import CompanyChartService
+from app.services.council_service import CouncilService
+from app.core.password_policy import PasswordPolicy
 
 router = APIRouter()
 
@@ -229,3 +235,158 @@ def get_chart_initialization_status(
             "details": company_status
         }
     }
+
+
+# --- Council Member (Super User) Management ---
+
+@router.post("/council-members", response_model=CouncilMemberCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_council_member(
+    member_data: CouncilMemberCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new Council Member (Super User) account.
+
+    SECURITY:
+    - Only accessible to existing Council Members (superusers)
+    - Enforces strict password policy (12+ chars, complexity requirements)
+    - Auto-generates secure password if not provided
+    - Forces password reset on first login
+    - All operations are audited
+
+    CRITICAL:
+    - The temporary password is ONLY shown in this response
+    - It cannot be retrieved later
+    - Securely communicate this to the new Council Member
+
+    Args:
+        member_data: Council member creation data (email, optional password)
+        current_user: Current authenticated user (must be superuser)
+        db: Database session
+
+    Returns:
+        CouncilMemberCreateResponse with user details and temporary password
+
+    Raises:
+        403: If current user is not a Council Member
+        400: If user already exists or password policy violation
+    """
+    # Check superuser privilege
+    check_superuser(current_user)
+
+    council_service = CouncilService(db)
+
+    try:
+        # Create the Council Member
+        new_member, temporary_password = council_service.create_council_member(
+            member_data=member_data,
+            creator_id=current_user.id
+        )
+
+        # Build response with password (ONLY time it's visible)
+        response = CouncilMemberCreateResponse(
+            user=UserResponse.from_orm(new_member),
+            temporary_password=temporary_password,
+            password_policy=PasswordPolicy.get_policy_description(is_privileged=True),
+            force_password_reset=True,
+            message=(
+                "Council Member account created successfully. "
+                "IMPORTANT: Save this password securely - it will not be shown again. "
+                "The user must change this password on first login."
+            )
+        )
+
+        return response
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.get("/council-members", response_model=List[UserResponse])
+def list_council_members(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List all active Council Members.
+
+    SECURITY:
+    - Only accessible to Council Members
+    - Returns sanitized user information (no passwords)
+
+    Args:
+        current_user: Current authenticated user (must be superuser)
+        db: Database session
+
+    Returns:
+        List of UserResponse objects for all Council Members
+
+    Raises:
+        403: If current user is not a Council Member
+    """
+    check_superuser(current_user)
+
+    council_service = CouncilService(db)
+    members = council_service.list_council_members()
+
+    return [UserResponse.from_orm(member) for member in members]
+
+
+@router.delete("/council-members/{member_id}", response_model=UserResponse)
+def revoke_council_membership(
+    member_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Revoke Council Member privileges from a user.
+
+    SECURITY:
+    - Only accessible to Council Members
+    - Cannot revoke own privileges (prevents lockout)
+    - Cannot revoke last Council Member (prevents system lockout)
+    - All operations are audited
+
+    Args:
+        member_id: UUID of the Council Member to revoke
+        current_user: Current authenticated user (must be superuser)
+        db: Database session
+
+    Returns:
+        UserResponse of the demoted user
+
+    Raises:
+        403: If current user is not a Council Member or trying to revoke themselves
+        400: If user not found or invalid operation
+    """
+    check_superuser(current_user)
+
+    council_service = CouncilService(db)
+
+    try:
+        demoted_user = council_service.revoke_council_membership(
+            member_id=member_id,
+            revoker_id=current_user.id
+        )
+
+        return UserResponse.from_orm(demoted_user)
+
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )

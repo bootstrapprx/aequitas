@@ -22,12 +22,16 @@ from app.schemas.user import (
     RegistrationRequest,
     RegistrationConfirmRequest,
     CheckoutSessionResponse,
+    PasswordChangeRequest,
+    PasswordChangeResponse
 )
 from app.schemas.user_company import UserCompanyUpdate
 from app.core.security import create_access_token, verify_password, get_password_hash
 from app.core.ucid import generate_ucid
 from app.services.user_service import UserService
+from app.services.audit_service import AuditService
 from app.core.config import settings
+from app.core.password_policy import validate_council_password, validate_standard_password, PasswordValidationError
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -387,7 +391,7 @@ def _finalize_registration(db: Session, pending: PendingRegistration) -> Token:
 def _generate_user_token(user: User) -> Token:
     """Generate JWT token for user."""
     company_ids = user.get_company_ids()
-    
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={
@@ -395,11 +399,12 @@ def _generate_user_token(user: User) -> Token:
             "email": user.email,
             "company_ids": [str(cid) for cid in company_ids],
             "preferred_company_id": str(user.preferred_company_id) if user.preferred_company_id else None,
-            "is_superuser": user.is_superuser
+            "is_superuser": user.is_superuser,
+            "force_password_reset": user.force_password_reset
         },
         expires_delta=access_token_expires
     )
-    
+
     return Token(
         access_token=access_token,
         token_type="bearer",
@@ -510,16 +515,16 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 def get_auth_config():
     """
     Get public authentication configuration.
-    
+
     Returns:
         Configuration for frontend (signup enabled, Stripe key, etc.)
-    
+
     Always returns valid JSON with defaults even on error.
     """
     try:
         stripe_configured = settings.STRIPE_ENABLED
         mock_payments_allowed = not stripe_configured and settings.ALLOW_MOCK_PAYMENTS
-        
+
         return {
             "allow_public_signup": settings.ALLOW_PUBLIC_SIGNUP,
             "stripe_configured": stripe_configured,
@@ -538,4 +543,111 @@ def get_auth_config():
             "stripe_mock_mode": False,
             "warning": "Configuration unavailable"
         }
+
+
+@router.post("/change-password", response_model=PasswordChangeResponse)
+def change_password(
+    password_data: PasswordChangeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Change user password.
+
+    SECURITY:
+    - Requires current password verification
+    - Enforces password policy based on user role
+    - Council Members require stricter passwords
+    - Clears force_password_reset flag on successful change
+    - Audits all password changes
+
+    Args:
+        password_data: Current and new password
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        PasswordChangeResponse with success status
+
+    Raises:
+        400: If current password is incorrect or new password violates policy
+        401: If user authentication fails
+    """
+    # Verify current password
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        logger.warning(f"Password change failed for {current_user.email}: incorrect current password")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+
+    # Validate new password based on user role
+    try:
+        if current_user.is_superuser:
+            validate_council_password(password_data.new_password)
+        else:
+            validate_standard_password(password_data.new_password)
+    except PasswordValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"New password does not meet requirements: {'; '.join(e.details)}"
+        )
+
+    # Update password
+    try:
+        was_forced = current_user.force_password_reset
+
+        current_user.hashed_password = get_password_hash(password_data.new_password)
+        current_user.force_password_reset = False
+        current_user.password_reset_required_at = None
+        current_user.last_password_change = datetime.utcnow()
+        current_user.updated_at = datetime.utcnow()
+
+        db.commit()
+        db.refresh(current_user)
+
+        # Audit log the password change
+        audit_service = AuditService(db)
+        audit_service.log_password_change(
+            user_id=current_user.id,
+            user_email=current_user.email,
+            was_forced=was_forced
+        )
+
+        logger.info(f"Password changed successfully for {current_user.email} (forced={was_forced})")
+
+        return PasswordChangeResponse(
+            success=True,
+            message="Password changed successfully" if not was_forced else "Password reset completed successfully",
+            force_password_reset=False
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Password change failed for {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to change password. Please try again."
+        )
+
+
+@router.get("/password-reset-required")
+def check_password_reset_required(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Check if current user needs to reset their password.
+
+    Returns:
+        Object with force_password_reset flag and additional context
+
+    This endpoint allows frontend to check password reset status
+    without parsing JWT token directly.
+    """
+    return {
+        "force_password_reset": current_user.force_password_reset,
+        "password_reset_required_at": current_user.password_reset_required_at,
+        "is_council_member": current_user.is_superuser,
+        "email": current_user.email
+    }
 

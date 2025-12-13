@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, Literal
 from datetime import datetime
 from uuid import UUID
@@ -24,12 +24,94 @@ class UserResponse(UserBase):
     user_uid: str
     is_active: bool
     is_superuser: bool
+    role: str
     preferred_company_id: Optional[UUID] = None
+    force_password_reset: bool
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
 
     class Config:
         from_attributes = True
+
+
+# Council Member (Super User) schemas
+class CouncilMemberCreate(BaseModel):
+    """
+    Schema for creating a Council Member (Super User).
+
+    SECURITY NOTES:
+    - Only accessible to existing Council Members
+    - Requires strict password policy validation
+    - Creates user with elevated privileges
+    - Forces password reset on first login
+    """
+    email: EmailStr = Field(..., description="Email address for the Council Member")
+    password: Optional[str] = Field(
+        None,
+        min_length=12,
+        description="Password (auto-generated if not provided). Must meet strict policy."
+    )
+    full_name: Optional[str] = Field(None, description="Full name of the Council Member")
+
+    @validator('email')
+    def validate_email_domain(cls, v):
+        """Optional: Enforce email domain restrictions for Council Members."""
+        # You can add domain restrictions here if needed
+        # Example: if not v.endswith('@aequitas.local'):
+        #     raise ValueError('Council Members must use company email domain')
+        return v
+
+
+class CouncilMemberCreateResponse(BaseModel):
+    """
+    Response schema for Council Member creation.
+
+    CRITICAL SECURITY:
+    - This is the ONLY time the password is ever shown
+    - Password must be securely communicated to the new Council Member
+    - Frontend should display password in a secure manner and confirm it was saved
+    """
+    user: UserResponse
+    temporary_password: str = Field(
+        ...,
+        description="IMPORTANT: This password will only be shown once. Save it securely."
+    )
+    password_policy: str = Field(
+        ...,
+        description="Description of password requirements"
+    )
+    force_password_reset: bool = Field(
+        True,
+        description="User must change password on first login"
+    )
+    message: str = Field(
+        default="Council Member account created successfully. Password must be changed on first login.",
+        description="Success message with instructions"
+    )
+
+
+class PasswordChangeRequest(BaseModel):
+    """Schema for password change (including forced resets)."""
+    current_password: str = Field(..., description="Current password for verification")
+    new_password: str = Field(..., min_length=8, description="New password")
+
+    @validator('new_password')
+    def passwords_must_differ(cls, v, values):
+        """Ensure new password is different from current password."""
+        if 'current_password' in values and v == values['current_password']:
+            raise ValueError('New password must be different from current password')
+        return v
+
+
+class PasswordChangeResponse(BaseModel):
+    """Response for password change operation."""
+    success: bool
+    message: str
+    force_password_reset: bool = Field(
+        default=False,
+        description="Whether user still needs to reset password"
+    )
 
 # Authentication schemas
 class Token(BaseModel):
