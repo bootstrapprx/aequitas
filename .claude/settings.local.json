@@ -21,7 +21,8 @@
       "Bash(npm --prefix frontend run build)",
       "Bash(test:*)",
       "Bash(python -c:*)",
-      "Bash(python -m ast:*)"
+      "Bash(python -m ast:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

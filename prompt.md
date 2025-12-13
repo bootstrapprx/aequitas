@@ -1,51 +1,59 @@
-/agent dexter-orchestrator
+/agent backend-architect
 
-Perform a system-level acceptance review for Aequitas after completion of Milestones 4.1 and 4.2.
-
---------------------------------------------------
-OBJECTIVE
---------------------------------------------------
-Validate that the system is coherent, secure, and ready to move into Phase 5
-(Externalization / Client Readiness).
+Implement the missing permission check methods in PermissionService to resolve
+BLOCKER B2.1 identified by dexter-orchestrator.
 
 --------------------------------------------------
-REVIEW AREAS
+CONTEXT
 --------------------------------------------------
+API endpoints across the accounting module call:
 
-1. Architecture Coherence
-   - Verify context hierarchy (Auth → Company → Routes)
-   - Identify any remaining implicit assumptions
-   - Flag coupling risks
+- permission_service.can_view_company(user_id, company_id)
+- permission_service.can_manage_company(user_id, company_id)
 
-2. Security & Access Control
-   - Review auth enforcement
-   - Review company isolation guarantees
-   - Identify privilege escalation risks
-
-3. Data Integrity
-   - Confirm company-scoped queries everywhere
-   - Identify any possible cross-company bleed
-   - Review cache invalidation logic
-
-4. UX Failure Modes
-   - What happens when:
-     • No company exists
-     • User has one company
-     • User has many companies
-     • Token expires mid-session
-     • Password reset is required
-
-5. Operational Risks
-   - Identify issues that would appear only with real users
-   - Flag areas needing logging, metrics, or alerts
+These methods DO NOT currently exist, causing runtime AttributeError and breaking
+all accounting APIs.
 
 --------------------------------------------------
-OUTPUT
+TASKS
 --------------------------------------------------
-Provide:
-- A short ACCEPT / ACCEPT WITH NOTES / BLOCK verdict
-- A prioritized list of risks (if any)
-- Clear recommendation for Phase 5 scope
 
-DO NOT implement code.
-This is a review-only task.
+1. Implement the following methods in:
+   backend/app/services/permission_service.py
+
+   def can_view_company(self, user_id: UUID, company_id: UUID) -> bool
+   def can_manage_company(self, user_id: UUID, company_id: UUID) -> bool
+
+2. Logic Requirements:
+   - Respect Council Member / Super User roles
+   - Enforce company-level access control
+   - Use existing role, membership, or permission tables
+   - No hardcoded role names unless already established
+   - Deny by default
+
+3. Security Requirements:
+   - No silent fallbacks
+   - No implicit access
+   - Explicit True / False return
+   - Raise no exceptions during normal execution
+
+4. Testing:
+   - Add minimal unit or integration tests validating:
+     • authorized user → True
+     • unauthorized user → False
+     • non-member → False
+
+--------------------------------------------------
+OUT OF SCOPE
+--------------------------------------------------
+- No frontend changes
+- No refactors
+- No new roles
+- No Phase 5 features
+
+--------------------------------------------------
+SUCCESS CRITERIA
+--------------------------------------------------
+- All accounting endpoints execute without AttributeError
+- Permission checks correctly gate access
+- dexter-orchestrator P0 issue B2.1 resolved
