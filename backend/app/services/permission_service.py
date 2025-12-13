@@ -171,3 +171,99 @@ class PermissionService:
             UserCompany.company_id == company_id
         ).first()
 
+    def can_view_company(self, user_id: UUID, company_id: UUID) -> bool:
+        """
+        Check if a user can view a specific company.
+
+        Args:
+            user_id: UUID of the user
+            company_id: UUID of the company
+
+        Returns:
+            True if user can view the company, False otherwise
+
+        Logic:
+            - Superusers can view all companies
+            - Council members can view all companies
+            - Users with UserCompany relationship where can_view=True can view
+            - All other users cannot view (deny by default)
+        """
+        try:
+            # Check if user exists and get their role/superuser status
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+
+            # Superusers have access to all companies
+            if user.is_superuser:
+                return True
+
+            # Council members have access to all companies
+            if user.role == "COUNCIL_MEMBER":
+                return True
+
+            # Check UserCompany relationship for view permission
+            user_company = self.db.query(UserCompany).filter(
+                UserCompany.user_id == user_id,
+                UserCompany.company_id == company_id
+            ).first()
+
+            if user_company and user_company.can_view:
+                return True
+
+            # Deny by default
+            return False
+
+        except Exception as e:
+            # Log error but don't raise - return False for security
+            logger.error(f"Error checking view permission for user {user_id} on company {company_id}: {e}")
+            return False
+
+    def can_manage_company(self, user_id: UUID, company_id: UUID) -> bool:
+        """
+        Check if a user can manage (edit/admin) a specific company.
+
+        Args:
+            user_id: UUID of the user
+            company_id: UUID of the company
+
+        Returns:
+            True if user can manage the company, False otherwise
+
+        Logic:
+            - Superusers can manage all companies
+            - Council members can manage all companies
+            - Users with UserCompany relationship where is_admin=True can manage
+            - All other users cannot manage (deny by default)
+        """
+        try:
+            # Check if user exists and get their role/superuser status
+            user = self.db.query(User).filter(User.id == user_id).first()
+            if not user:
+                return False
+
+            # Superusers have admin access to all companies
+            if user.is_superuser:
+                return True
+
+            # Council members have admin access to all companies
+            if user.role == "COUNCIL_MEMBER":
+                return True
+
+            # Check UserCompany relationship for admin permission
+            user_company = self.db.query(UserCompany).filter(
+                UserCompany.user_id == user_id,
+                UserCompany.company_id == company_id
+            ).first()
+
+            if user_company and user_company.is_admin:
+                return True
+
+            # Deny by default
+            return False
+
+        except Exception as e:
+            # Log error but don't raise - return False for security
+            logger.error(f"Error checking manage permission for user {user_id} on company {company_id}: {e}")
+            return False
+
