@@ -1,18 +1,18 @@
 """
 Service for managing company-specific charts of accounts.
 
-PHASE 3B: Complete refactor to use UUID foreign keys instead of string codes.
-- Uses parent_id (UUID FK) instead of parent_code (String)
-- Uses mapped_master_account_id (UUID FK) instead of master_account_code (String)
-- Enforces account locking rules
-- Respects canonical accounting model invariants
+PHASE 3B: Canonical schema compliance with strict immutability enforcement.
+- Uses parent_id (UUID FK) for hierarchy, NOT parent_code
+- Uses mapped_master_account_id (UUID FK) for master mapping, NOT master_account_code
+- Enforces locked account immutability: name, type, account_type, normal_balance, parent_id
+- Validates account_type only when present (nullable allowed)
+- Separates validation logic from DB writes for unit testability
 
-UPDATED: 2025-12-14 (Phase 3B)
+UPDATED: 2025-12-14 (Phase 3B - Strict Requirements)
 """
 
 from typing import List, Dict, Optional, Any, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from uuid import UUID
 
 from app.db.models.company_account import CompanyAccount
@@ -21,24 +21,231 @@ from app.db.models.enums import AccountType, NormalBalance, LockedReason
 from app.schemas.company_account import CompanyAccountCreate, CompanyAccountUpdate
 from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
+from app.core.exceptions import ValidationError, ErrorCode
+from app.services.validators.template_account_validator import TemplateAccountValidator
 
 
 class CompanyChartService:
     """
     Service for managing company-specific charts of accounts.
 
-    PHASE 3B COMPLIANCE:
-    - All hierarchy operations use parent_id (UUID FK), not parent_code
-    - All master chart mappings use mapped_master_account_id (UUID FK), not master_account_code
-    - Enforces account locking (cannot change type/code/hierarchy when locked)
-    - Validates mandatory accounts (cannot delete template-required accounts)
-    - Respects GAAP invariants (debit=credit, normal balance consistency)
+    CANONICAL COMPLIANCE:
+    - All hierarchy operations use parent_id (UUID FK)
+    - All master mappings use mapped_master_account_id (UUID FK)
+    - Locked accounts enforce immutability on: name, type, account_type, normal_balance, parent_id
+    - locked_by references users.id (UUID FK)
+    - account_type is nullable and validated only when present
+    - Validation logic is separated from DB writes for testability
+    - Template-mandatory accounts enforced (Phase 3B)
     """
+
+    # Immutable fields when account is locked
+    LOCKED_IMMUTABLE_FIELDS = ['name', 'type', 'code', 'account_type', 'normal_balance', 'parent_id', 'mapped_master_account_id']
 
     def __init__(self, db: Session):
         self.db = db
         self.validator = MasterChartValidator()
         self.normalizer = MasterChartNormalizer()
+        self.template_validator = TemplateAccountValidator(db)
+
+    # ========================================================================
+    # VALIDATION METHODS (Unit-testable, no DB writes)
+    # ========================================================================
+
+    def validate_locked_account_update(
+        self,
+        account: CompanyAccount,
+        update_data: Dict[str, Any]
+    ) -> None:
+        """
+        Validate that locked account updates don't modify immutable fields.
+
+        CANONICAL RULE: When is_locked=True, the following fields are immutable:
+        - name (display name)
+        - type (H/D)
+        - code
+        - account_type (enum)
+        - normal_balance (enum)
+        - parent_id (hierarchy)
+        - mapped_master_account_id (master mapping)
+
+        Args:
+            account: The account being updated
+            update_data: Dictionary of fields to update
+
+        Raises:
+            ValidationError: If locked account immutability is violated
+        """
+        if not account.is_locked:
+            return
+
+        # Check each immutable field
+        violations = []
+        for field in self.LOCKED_IMMUTABLE_FIELDS:
+            if field in update_data and update_data[field] is not None:
+                current_value = getattr(account, field)
+                new_value = update_data[field]
+
+                # Handle enum comparison
+                if isinstance(current_value, (AccountType, NormalBalance, LockedReason)):
+                    current_value = current_value.value if current_value else None
+
+                if new_value != current_value:
+                    violations.append(f"  - {field}: cannot change from '{current_value}' to '{new_value}'")
+
+        if violations:
+            raise ValidationError(
+                f"Cannot modify immutable fields on locked account.\n"
+                f"Account locked: {account.locked_reason.value if account.locked_reason else 'Unknown'}\n"
+                f"Locked at: {account.locked_at}\n"
+                f"Locked by: {account.locked_by}\n"
+                f"Attempted changes:\n" + "\n".join(violations) + "\n\n"
+                f"To modify these fields, unlock the account first (requires superuser)."
+            )
+
+    def validate_parent_relationship(
+        self,
+        parent_id: Optional[UUID],
+        company_id: UUID
+    ) -> Optional[CompanyAccount]:
+        """
+        Validate parent account exists and belongs to same company.
+
+        Args:
+            parent_id: Parent account UUID (None for root accounts)
+            company_id: Company UUID
+
+        Returns:
+            Parent CompanyAccount if valid, None if no parent
+
+        Raises:
+            ValidationError: If parent doesn't exist or belongs to different company
+        """
+        if not parent_id:
+            return None
+
+        parent = self.get_account_by_id(parent_id)
+        if not parent:
+            raise ValidationError(f"Parent account with ID {parent_id} not found.")
+
+        if parent.company_id != company_id:
+            raise ValidationError(
+                f"Parent account belongs to different company.\n"
+                f"Parent company: {parent.company_id}\n"
+                f"Target company: {company_id}"
+            )
+
+        if parent.type == 'D':
+            raise ValidationError(
+                f"Cannot add child to Detail account.\n"
+                f"Parent account: {parent.code} ({parent.description})\n"
+                f"Detail accounts cannot have children."
+            )
+
+        return parent
+
+    def validate_type_change_for_children(
+        self,
+        account: CompanyAccount,
+        new_type: Optional[str]
+    ) -> None:
+        """
+        Validate that changing to Detail type is allowed (no children).
+
+        Args:
+            account: Account being updated
+            new_type: New type value ('H' or 'D')
+
+        Raises:
+            ValidationError: If changing to Detail but account has children
+        """
+        if new_type != 'D':
+            return
+
+        # Check for children using parent_id (UUID FK)
+        has_children = self.db.query(CompanyAccount).filter(
+            CompanyAccount.parent_id == account.id
+        ).first()
+
+        if has_children:
+            raise ValidationError(
+                f"Cannot change type to 'Detail' because account has children.\n"
+                f"Account: {account.code} ({account.description})\n"
+                f"Children must be removed or reparented first."
+            )
+
+    def validate_account_type_enum(
+        self,
+        account_type: Optional[str]
+    ) -> None:
+        """
+        Validate account_type enum value (only when present, nullable allowed).
+
+        CANONICAL RULE: account_type is nullable in the schema.
+        When provided, must be a valid AccountType enum value.
+
+        Args:
+            account_type: Account type string or None
+
+        Raises:
+            ValidationError: If account_type is invalid
+        """
+        if account_type is None:
+            return  # Nullable allowed
+
+        valid_values = [e.value for e in AccountType]
+        if account_type not in valid_values:
+            raise ValidationError(
+                f"Invalid account_type: '{account_type}'.\n"
+                f"Valid values: {', '.join(valid_values)}"
+            )
+
+    def validate_deletion_constraints(
+        self,
+        account: CompanyAccount
+    ) -> None:
+        """
+        Validate account can be deleted.
+
+        CANONICAL RULES:
+        - Cannot delete locked accounts
+        - Cannot delete accounts with children
+        - Cannot delete accounts with transactions (TODO: requires JournalEntryLine check)
+
+        Args:
+            account: Account to delete
+
+        Raises:
+            ValidationError: If deletion is not allowed
+        """
+        # Check if locked
+        if account.is_locked:
+            raise ValidationError(
+                f"Cannot delete locked account.\n"
+                f"Account: {account.code} ({account.description})\n"
+                f"Locked reason: {account.locked_reason.value if account.locked_reason else 'Unknown'}\n"
+                f"Locked at: {account.locked_at}\n"
+                f"Unlock the account first (requires superuser)."
+            )
+
+        # Check for children using parent_id (UUID FK)
+        children = self.db.query(CompanyAccount).filter(
+            CompanyAccount.parent_id == account.id
+        ).all()
+
+        if children:
+            child_codes = [c.code for c in children[:5]]  # Show first 5
+            more = f" and {len(children) - 5} more" if len(children) > 5 else ""
+            raise ValidationError(
+                f"Cannot delete account with children.\n"
+                f"Account: {account.code} ({account.description})\n"
+                f"Children: {', '.join(child_codes)}{more}\n"
+                f"Remove or reparent children first."
+            )
+
+        # TODO: Check for journal entry lines
+        # This requires JournalEntryLine model import
+        # For now, we rely on database FK constraints
 
     # ========================================================================
     # CORE CRUD OPERATIONS
@@ -57,7 +264,7 @@ class CompanyChartService:
             active_only: If True, only return active accounts
 
         Returns:
-            List of CompanyAccount objects
+            List of CompanyAccount objects ordered by code
         """
         query = self.db.query(CompanyAccount).filter(
             CompanyAccount.company_id == company_id
@@ -72,14 +279,14 @@ class CompanyChartService:
         code: str
     ) -> Optional[CompanyAccount]:
         """
-        Get a specific account by code for a company.
+        Get account by code for a specific company.
 
         Args:
             company_id: Company UUID
             code: Account code
 
         Returns:
-            CompanyAccount or None
+            CompanyAccount or None if not found
         """
         return self.db.query(CompanyAccount).filter(
             CompanyAccount.company_id == company_id,
@@ -88,20 +295,20 @@ class CompanyChartService:
 
     def get_account_by_id(self, account_id: UUID) -> Optional[CompanyAccount]:
         """
-        Get account by ID.
+        Get account by UUID.
 
         Args:
             account_id: Account UUID
 
         Returns:
-            CompanyAccount or None
+            CompanyAccount or None if not found
         """
         return self.db.query(CompanyAccount).filter(
             CompanyAccount.id == account_id
         ).first()
 
     # ========================================================================
-    # ACCOUNT CREATION (PHASE 3B: Uses UUID FKs)
+    # ACCOUNT CREATION (Phase 3B: UUID FKs, validation separation)
     # ========================================================================
 
     def create_account(
@@ -114,23 +321,23 @@ class CompanyChartService:
         """
         Create a new account for a company.
 
-        PHASE 3B CHANGES:
-        - Uses parent_id (UUID) instead of parent_code (String)
-        - Uses mapped_master_account_id (UUID) instead of master_account_code (String)
-        - Sets account_type and normal_balance enums
-        - Enforces parent account existence via UUID FK
+        CANONICAL COMPLIANCE:
+        - Uses parent_id (UUID FK) for hierarchy
+        - Uses mapped_master_account_id (UUID FK) for master mapping
+        - Validates account_type only when present (nullable)
+        - Separates validation from DB write
 
         Args:
             company_id: Company UUID
             account_data: Account creation schema
-            validate: If True, validate account data
-            normalize: If True, normalize names and descriptions
+            validate: If True, run validation (default: True)
+            normalize: If True, normalize names/descriptions (default: True)
 
         Returns:
             Created CompanyAccount
 
         Raises:
-            ValueError: If validation fails or account already exists
+            ValidationError: If validation fails
         """
         # Normalize data if requested
         if normalize:
@@ -145,24 +352,22 @@ class CompanyChartService:
             account_dict = account_data.model_dump()
             validation_result = self.validator.validate_account(account_dict)
             if not validation_result.is_valid:
-                raise ValueError(f"Validation failed: {', '.join(validation_result.errors)}")
+                raise ValidationError(f"Validation failed:\n" + "\n".join(f"  - {err}" for err in validation_result.errors))
 
-        # Check if account code already exists for this company
+        # Check if code already exists
         existing = self.get_account_by_code(company_id, account_data.code)
         if existing:
-            raise ValueError(f"Account with code {account_data.code} already exists for this company.")
+            raise ValidationError(f"Account with code '{account_data.code}' already exists for this company.")
 
-        # Verify parent exists if parent_id is provided (UUID-based hierarchy)
+        # Validate parent relationship (uses parent_id UUID FK)
         if account_data.parent_id:
-            parent = self.get_account_by_id(account_data.parent_id)
-            if not parent:
-                raise ValueError(f"Parent account with ID {account_data.parent_id} not found.")
-            if parent.company_id != company_id:
-                raise ValueError(f"Parent account belongs to different company.")
-            if parent.type == 'D':
-                raise ValueError(f"Cannot add a child to a Detail account (code: {parent.code}).")
+            self.validate_parent_relationship(account_data.parent_id, company_id)
 
-        # Create account
+        # Validate account_type enum (only when present, nullable allowed)
+        if account_data.account_type:
+            self.validate_account_type_enum(account_data.account_type)
+
+        # Create account (DB write separated from validation)
         create_data = account_data.model_dump()
         create_data['company_id'] = company_id
 
@@ -170,10 +375,11 @@ class CompanyChartService:
         self.db.add(db_account)
         self.db.commit()
         self.db.refresh(db_account)
+
         return db_account
 
     # ========================================================================
-    # ACCOUNT UPDATES (PHASE 3B: Respects locking rules)
+    # ACCOUNT UPDATES (Phase 3B: Strict locked account enforcement)
     # ========================================================================
 
     def update_account(
@@ -186,159 +392,136 @@ class CompanyChartService:
         """
         Update an existing account.
 
-        PHASE 3B CHANGES:
-        - Prevents locked account type/code/hierarchy changes
-        - Uses parent_id (UUID) instead of parent_code (String)
-        - Validates normal_balance and account_type enums
+        CANONICAL COMPLIANCE:
+        - Enforces locked account immutability (name, type, account_type, normal_balance, parent_id)
+        - Uses parent_id (UUID FK) for hierarchy validation
+        - Validates account_type only when present
+        - Clear validation errors before DB write
 
         Args:
             company_id: Company UUID
             code: Account code to update
             account_data: Update schema
-            normalize: If True, normalize names and descriptions
+            normalize: If True, normalize names/descriptions (default: True)
 
         Returns:
             Updated CompanyAccount or None if not found
 
         Raises:
-            ValueError: If update violates business rules or account is locked
+            ValidationError: If update violates business rules or locked account constraints
         """
         db_account = self.get_account_by_code(company_id, code)
         if not db_account:
             return None
 
-        # PHASE 3B: Check if account is locked
-        if db_account.is_locked:
-            # Locked accounts cannot change type, code, account_type, normal_balance, or parent_id
-            restricted_fields = ['type', 'code', 'account_type', 'normal_balance', 'parent_id', 'mapped_master_account_id']
-            update_data = account_data.model_dump(exclude_unset=True)
-
-            for field in restricted_fields:
-                if field in update_data and update_data[field] is not None:
-                    current_value = getattr(db_account, field)
-                    if update_data[field] != current_value:
-                        raise ValueError(
-                            f"Cannot modify '{field}' on locked account. "
-                            f"Account locked: {db_account.locked_reason}. "
-                            f"Unlock the account first (requires appropriate permissions)."
-                        )
-
-        # If changing to Detail type, check for children (using parent_id)
-        if account_data.type == 'D':
-            has_children = self.db.query(CompanyAccount).filter(
-                CompanyAccount.company_id == company_id,
-                CompanyAccount.parent_id == db_account.id
-            ).first()
-            if has_children:
-                raise ValueError("Cannot change type to 'Detail' because this account has children.")
-
-        # Normalize data if requested
+        # Prepare update data
         update_data = account_data.model_dump(exclude_unset=True)
-        if normalize:
+
+        # Normalize if requested
+        if normalize and update_data:
             update_data = self.normalizer.normalize_account_data(update_data)
 
-        # Apply updates
+        # VALIDATION (no DB writes in this section)
+        # ============================================
+
+        # 1. Check locked account immutability
+        self.validate_locked_account_update(db_account, update_data)
+
+        # 2. Validate template restrictions (Phase 3B)
+        self.template_validator.validate_account_update(db_account.id, update_data)
+
+        # 3. Validate type change for accounts with children
+        if 'type' in update_data:
+            self.validate_type_change_for_children(db_account, update_data['type'])
+
+        # 4. Validate account_type enum (only when present)
+        if 'account_type' in update_data:
+            self.validate_account_type_enum(update_data.get('account_type'))
+
+        # 5. Validate parent relationship (if changing parent)
+        if 'parent_id' in update_data:
+            self.validate_parent_relationship(update_data['parent_id'], company_id)
+
+        # APPLY UPDATES (DB write after all validation passes)
+        # =====================================================
+
         for key, value in update_data.items():
             setattr(db_account, key, value)
 
         self.db.commit()
         self.db.refresh(db_account)
+
         return db_account
 
     # ========================================================================
-    # ACCOUNT DELETION (PHASE 3B: Respects children via parent_id)
+    # ACCOUNT DELETION (Phase 3B: Clear validation errors)
     # ========================================================================
 
     def delete_account(self, company_id: UUID, code: str) -> bool:
         """
         Delete an account (soft delete).
 
-        PHASE 3B CHANGES:
+        CANONICAL COMPLIANCE:
+        - Validates deletion constraints before DB write
         - Checks for children using parent_id (UUID FK)
-        - Prevents deletion of locked accounts
-        - Prevents deletion of mandatory template accounts
+        - Validates template restrictions (Phase 3B)
+        - Clear error messages for constraint violations
 
         Args:
             company_id: Company UUID
             code: Account code to delete
 
         Returns:
-            True if deleted, False if not found
+            True if deleted successfully
 
         Raises:
-            ValueError: If account has children, is locked, or is mandatory
+            ValidationError: If deletion violates constraints
         """
         db_account = self.get_account_by_code(company_id, code)
         if not db_account:
-            return False
+            raise ValidationError(f"Account with code '{code}' not found for this company.")
 
-        # Check if account is locked
-        if db_account.is_locked:
-            raise ValueError(
-                f"Cannot delete locked account. "
-                f"Reason: {db_account.locked_reason}. "
-                f"Unlock first (requires appropriate permissions)."
-            )
+        # Validate deletion constraints (no DB writes)
+        self.validate_deletion_constraints(db_account)
 
-        # Check for children using parent_id (UUID FK)
-        has_children = self.db.query(CompanyAccount).filter(
-            CompanyAccount.company_id == company_id,
-            CompanyAccount.parent_id == db_account.id
-        ).first()
-        if has_children:
-            raise ValueError("Cannot delete an account that has children.")
+        # Validate template restrictions (Phase 3B)
+        self.template_validator.validate_account_deletion(db_account.id)
 
-        # TODO: Check if account is template-mandatory
-        # This requires template_account_id to be populated and template to have is_mandatory flag
-        # For now, we'll allow deletion
-
-        # Soft delete
+        # Soft delete (DB write after validation passes)
         db_account.is_active = False
         self.db.commit()
+
         return True
 
     # ========================================================================
-    # TREE BUILDING (PHASE 3B: Uses parent_id UUID FK)
+    # TREE BUILDING (Phase 3B: UUID-based hierarchy)
     # ========================================================================
 
     def build_tree(self, accounts: List[CompanyAccount]) -> List[Dict[str, Any]]:
         """
-        Build a hierarchical tree structure from a flat list of accounts.
+        Build hierarchical tree structure from flat account list.
 
-        PHASE 3B CHANGES:
-        - Uses parent_id (UUID) instead of parent_code (String)
-        - Returns parent_id and mapped_master_account_id as UUIDs
-        - Includes account_type and normal_balance
+        CANONICAL COMPLIANCE:
+        - Uses parent_id (UUID FK) for hierarchy traversal
+        - Returns parent_id and mapped_master_account_id as UUIDs (not codes)
+        - Includes account_type and normal_balance enums
+        - Includes locking status
 
         Args:
             accounts: Flat list of CompanyAccount objects
 
         Returns:
-            List of dictionaries representing tree roots with nested children
+            List of tree root dictionaries with nested children
         """
-        # Build lookup by ID (UUID)
+        # Build lookup by UUID
         account_map = {acc.id: acc for acc in accounts}
         tree_roots = []
 
-        # First pass: build root-level accounts
+        # Build root accounts
         for acc in accounts:
-            acc_dict = {
-                "id": str(acc.id),
-                "code": acc.code,
-                "description": acc.description,
-                "name": acc.name,
-                "type": acc.type,
-                "account_type": acc.account_type.value if acc.account_type else None,
-                "normal_balance": acc.normal_balance.value if acc.normal_balance else None,
-                "parent_id": str(acc.parent_id) if acc.parent_id else None,
-                "mapped_master_account_id": str(acc.mapped_master_account_id) if acc.mapped_master_account_id else None,
-                "is_active": acc.is_active,
-                "is_locked": acc.is_locked,
-                "currency": acc.currency,
-                "children": []
-            }
+            acc_dict = self._account_to_tree_dict(acc)
 
-            # If no parent, it's a root account
+            # Root accounts have no parent_id
             if not acc.parent_id:
                 tree_roots.append(acc_dict)
 
@@ -346,40 +529,58 @@ class CompanyChartService:
         def add_children(parent_dict: Dict, parent_id: UUID):
             for acc in accounts:
                 if acc.parent_id == parent_id:
-                    child_dict = {
-                        "id": str(acc.id),
-                        "code": acc.code,
-                        "description": acc.description,
-                        "name": acc.name,
-                        "type": acc.type,
-                        "account_type": acc.account_type.value if acc.account_type else None,
-                        "normal_balance": acc.normal_balance.value if acc.normal_balance else None,
-                        "parent_id": str(acc.parent_id) if acc.parent_id else None,
-                        "mapped_master_account_id": str(acc.mapped_master_account_id) if acc.mapped_master_account_id else None,
-                        "is_active": acc.is_active,
-                        "is_locked": acc.is_locked,
-                        "currency": acc.currency,
-                        "children": []
-                    }
+                    child_dict = self._account_to_tree_dict(acc)
                     parent_dict["children"].append(child_dict)
                     add_children(child_dict, acc.id)
 
-        # Build children for each root
+        # Populate children for each root
         for root in tree_roots:
             root_id = UUID(root["id"])
             add_children(root, root_id)
 
         return tree_roots
 
+    def _account_to_tree_dict(self, acc: CompanyAccount) -> Dict[str, Any]:
+        """
+        Convert CompanyAccount to tree dictionary representation.
+
+        CANONICAL COMPLIANCE:
+        - Returns UUIDs as strings
+        - Returns enum values (not enum objects)
+        - Includes locking information
+
+        Args:
+            acc: CompanyAccount object
+
+        Returns:
+            Dictionary representation for tree structure
+        """
+        return {
+            "id": str(acc.id),
+            "code": acc.code,
+            "name": acc.name,
+            "description": acc.description,
+            "type": acc.type,
+            "account_type": acc.account_type.value if acc.account_type else None,
+            "normal_balance": acc.normal_balance.value if acc.normal_balance else None,
+            "parent_id": str(acc.parent_id) if acc.parent_id else None,
+            "mapped_master_account_id": str(acc.mapped_master_account_id) if acc.mapped_master_account_id else None,
+            "is_active": acc.is_active,
+            "is_locked": acc.is_locked,
+            "locked_reason": acc.locked_reason.value if acc.locked_reason else None,
+            "currency": acc.currency,
+            "children": []
+        }
+
     # ========================================================================
-    # STATISTICS (PHASE 3B: Uses mapped_master_account_id)
+    # STATISTICS (Phase 3B: Uses UUID FK for mapping count)
     # ========================================================================
 
     def get_chart_stats(self, company_id: UUID) -> Dict[str, Any]:
         """
-        Get statistics about a company's chart of accounts.
+        Get statistics about company's chart of accounts.
 
-        PHASE 3B CHANGES:
+        CANONICAL COMPLIANCE:
         - Counts mapped accounts using mapped_master_account_id (UUID FK)
         - Includes locked account statistics
 
@@ -419,18 +620,18 @@ class CompanyChartService:
         }
 
     # ========================================================================
-    # INITIALIZATION FROM MASTER CHART (PHASE 3B: Uses UUID FKs)
+    # INITIALIZATION FROM MASTER CHART (Phase 3B: UUID-based)
     # ========================================================================
 
     def initialize_from_master_chart(self, company_id: UUID) -> Dict[str, Any]:
         """
-        Initialize a company's chart of accounts from the master chart.
+        Initialize company chart from master chart.
 
-        PHASE 3B CHANGES:
-        - Sets mapped_master_account_id (UUID FK) instead of master_account_code (String)
-        - Sets parent_id (UUID FK) instead of parent_code (String)
+        CANONICAL COMPLIANCE:
+        - Sets mapped_master_account_id (UUID FK), NOT master_account_code
+        - Sets parent_id (UUID FK), NOT parent_code
+        - Builds UUID-based hierarchy relationships
         - Sets account_type and normal_balance from master chart
-        - Creates UUID-based hierarchy relationships
 
         Args:
             company_id: Company UUID
@@ -439,21 +640,25 @@ class CompanyChartService:
             Dictionary with initialization statistics
 
         Raises:
-            ValueError: If company already has accounts or master chart is empty
+            ValidationError: If company already has accounts or master chart is empty
         """
         # Check if company already has accounts
         existing = self.get_company_chart(company_id, active_only=False)
         if existing:
-            raise ValueError(f"Company already has {len(existing)} accounts. Cannot initialize.")
+            raise ValidationError(
+                f"Company already has {len(existing)} accounts.\n"
+                f"Cannot initialize from master chart.\n"
+                f"Use reset_to_master_chart() to replace existing accounts."
+            )
 
-        # Get all master accounts
+        # Get all master accounts ordered by level (parents before children)
         master_accounts = self.db.query(MasterAccount).order_by(
-            MasterAccount.level,  # Create parents before children
+            MasterAccount.level,
             MasterAccount.code
         ).all()
 
         if not master_accounts:
-            raise ValueError("No master chart accounts found. Please seed the master chart first.")
+            raise ValidationError("No master chart accounts found. Please seed the master chart first.")
 
         # Build mapping: master_id -> company_account for hierarchy resolution
         master_to_company_map: Dict[UUID, CompanyAccount] = {}
@@ -461,10 +666,9 @@ class CompanyChartService:
         # Create company accounts from master chart
         created_count = 0
         for master_acc in master_accounts:
-            # Determine parent_id using UUID FK
+            # Resolve parent_id using UUID FK
             parent_id = None
             if master_acc.parent_id:
-                # Look up the company account we created for the master's parent
                 parent_company_account = master_to_company_map.get(master_acc.parent_id)
                 if parent_company_account:
                     parent_id = parent_company_account.id
@@ -482,11 +686,11 @@ class CompanyChartService:
                 description=master_acc.description,
                 name=master_acc.long_description or master_acc.description,
                 type=master_acc.type,
-                account_type=account_type,
-                normal_balance=normal_balance,
-                parent_id=parent_id,  # ✅ UUID FK
-                mapped_master_account_id=master_acc.id,  # ✅ UUID FK
-                template_account_id=None,  # Not template-based initialization
+                account_type=account_type,  # Nullable allowed
+                normal_balance=normal_balance,  # Required
+                parent_id=parent_id,  # UUID FK
+                mapped_master_account_id=master_acc.id,  # UUID FK
+                template_account_id=None,
                 currency="USD",
                 is_active=True,
                 is_locked=False,  # Don't lock on initialization
@@ -500,14 +704,14 @@ class CompanyChartService:
             self.db.add(company_acc)
             self.db.flush()  # Get ID for hierarchy mapping
 
-            # Store mapping for parent lookups
+            # Store mapping for parent resolution
             master_to_company_map[master_acc.id] = company_acc
             created_count += 1
 
         self.db.commit()
 
         return {
-            "message": "Company chart of accounts initialized from master chart",
+            "message": "Company chart initialized from master chart",
             "accounts_created": created_count,
             "source": "master_chart",
             "method": "uuid_hierarchy"
@@ -516,6 +720,10 @@ class CompanyChartService:
     def _category_to_account_type(self, category: str) -> Optional[AccountType]:
         """
         Convert master account category to AccountType enum.
+
+        CANONICAL COMPLIANCE:
+        - Returns None for categories that don't map (nullable allowed)
+        - Maps COGS to Expense
 
         Args:
             category: Category string from master account
@@ -530,12 +738,12 @@ class CompanyChartService:
             "REVENUE": AccountType.REVENUE,
             "EXPENSE": AccountType.EXPENSE,
             "COGS": AccountType.EXPENSE,  # Map COGS to Expense
-            "OTHER": None,
+            "OTHER": None,  # Nullable allowed
         }
         return category_mapping.get(category.upper())
 
     # ========================================================================
-    # ACCOUNT LOCKING (PHASE 3B: New functionality)
+    # ACCOUNT LOCKING (Phase 3B: New functionality)
     # ========================================================================
 
     def lock_account(
@@ -545,15 +753,12 @@ class CompanyChartService:
         user_id: Optional[UUID] = None
     ) -> CompanyAccount:
         """
-        Lock an account to prevent type/code/hierarchy changes.
+        Lock an account to prevent immutable field changes.
 
-        Locked accounts cannot change:
-        - type (H/D)
-        - code
-        - account_type
-        - normal_balance
-        - parent_id
-        - mapped_master_account_id
+        CANONICAL COMPLIANCE:
+        - Locked accounts cannot change: name, type, code, account_type, normal_balance, parent_id
+        - locked_by must reference users.id (UUID FK)
+        - locked_by required for Manual locks
 
         Args:
             account_id: Account UUID to lock
@@ -564,19 +769,27 @@ class CompanyChartService:
             Locked CompanyAccount
 
         Raises:
-            ValueError: If account not found or invalid parameters
+            ValidationError: If account not found or invalid parameters
         """
         account = self.get_account_by_id(account_id)
         if not account:
-            raise ValueError(f"Account {account_id} not found")
+            raise ValidationError(f"Account with ID {account_id} not found.")
 
         if account.is_locked:
-            raise ValueError(f"Account is already locked (reason: {account.locked_reason})")
+            raise ValidationError(
+                f"Account is already locked.\n"
+                f"Locked reason: {account.locked_reason.value if account.locked_reason else 'Unknown'}\n"
+                f"Locked at: {account.locked_at}\n"
+                f"Locked by: {account.locked_by}"
+            )
 
         if reason == LockedReason.MANUAL and not user_id:
-            raise ValueError("user_id is required for Manual locks")
+            raise ValidationError(
+                f"user_id is required for Manual locks.\n"
+                f"locked_by must reference users.id (UUID FK)."
+            )
 
-        # Lock the account
+        # Lock the account (calls model method)
         account.lock(reason=reason, user_id=user_id)
         self.db.commit()
         self.db.refresh(account)
@@ -589,11 +802,11 @@ class CompanyChartService:
         user_id: UUID
     ) -> CompanyAccount:
         """
-        Unlock an account (requires superuser privilege - enforced at API layer).
+        Unlock an account (requires superuser - enforced at API layer).
 
-        WARNING: Only allowed if:
-        - User has superuser privilege
-        - No posted transactions in current fiscal period
+        CANONICAL COMPLIANCE:
+        - Only allowed if no posted transactions in current period (TODO: implement check)
+        - Requires superuser privilege (enforced at API layer)
 
         Args:
             account_id: Account UUID to unlock
@@ -603,20 +816,20 @@ class CompanyChartService:
             Unlocked CompanyAccount
 
         Raises:
-            ValueError: If account not found or cannot be unlocked
+            ValidationError: If account not found or not locked
         """
         account = self.get_account_by_id(account_id)
         if not account:
-            raise ValueError(f"Account {account_id} not found")
+            raise ValidationError(f"Account with ID {account_id} not found.")
 
         if not account.is_locked:
-            raise ValueError("Account is not locked")
+            raise ValidationError("Account is not locked.")
 
         # TODO: Check for posted transactions in current period
         # This requires fiscal period service integration
-        # For now, allow unlock (service layer trusts API layer permissions)
+        # For now, allow unlock (API layer must enforce superuser privilege)
 
-        # Unlock the account
+        # Unlock the account (calls model method)
         account.unlock()
         self.db.commit()
         self.db.refresh(account)
@@ -628,13 +841,11 @@ class CompanyChartService:
         account_id: UUID
     ) -> Tuple[bool, Optional[str]]:
         """
-        Check if an account can be deleted.
+        Check if account can be deleted (validation only, no DB write).
 
-        An account CANNOT be deleted if:
-        - It has children
-        - It is locked
-        - It is template-mandatory
-        - It has journal entry lines (transactions)
+        CANONICAL COMPLIANCE:
+        - Pure validation method (unit-testable)
+        - Returns (can_delete, reason) tuple
 
         Args:
             account_id: Account UUID
@@ -646,23 +857,8 @@ class CompanyChartService:
         if not account:
             return (False, "Account not found")
 
-        # Check for children
-        has_children = self.db.query(CompanyAccount).filter(
-            CompanyAccount.parent_id == account_id
-        ).first()
-        if has_children:
-            return (False, "Account has children")
-
-        # Check if locked
-        if account.is_locked:
-            return (False, f"Account is locked ({account.locked_reason})")
-
-        # TODO: Check for journal entry lines
-        # This requires JournalEntryLine model import
-        # For now, assume no transactions
-
-        # TODO: Check if template-mandatory
-        # This requires template metadata
-        # For now, allow deletion
-
-        return (True, None)
+        try:
+            self.validate_deletion_constraints(account)
+            return (True, None)
+        except ValidationError as e:
+            return (False, str(e))

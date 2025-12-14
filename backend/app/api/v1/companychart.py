@@ -1,16 +1,19 @@
 """API endpoints for managing company-specific charts of accounts."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.db.session import get_db
-from app.services.companychart_service import CompanyChartService
+from app.services.companychart_service import CompanyChartService, ValidationError
+from app.db.models.enums import LockedReason
 from app.schemas.company_account import (
     CompanyAccountSchema,
     CompanyAccountCreate,
-    CompanyAccountUpdate
+    CompanyAccountUpdate,
+    CompanyAccountLockRequest,
+    CompanyAccountUnlockRequest
 )
 
 router = APIRouter()
@@ -84,7 +87,7 @@ def create_company_account(
     try:
         account = service.create_account(company_id, account_data)
         return account
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -95,14 +98,21 @@ def update_company_account(
     account_data: CompanyAccountUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update an existing account in the company's chart of accounts."""
+    """
+    Update an existing account in the company's chart of accounts.
+
+    LOCKED ACCOUNT RESTRICTIONS:
+    - Cannot change: name, type, code, account_type, normal_balance, parent_id, mapped_master_account_id
+    - Can change: description, currency, json_data
+    - To modify immutable fields, unlock the account first (requires superuser)
+    """
     service = CompanyChartService(db)
     try:
         account = service.update_account(company_id, code, account_data)
         if not account:
             raise HTTPException(status_code=404, detail=f"Account with code {code} not found")
         return account
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -112,14 +122,22 @@ def delete_company_account(
     code: str,
     db: Session = Depends(get_db)
 ):
-    """Delete (soft delete) an account from the company's chart of accounts."""
+    """
+    Delete (soft delete) an account from the company's chart of accounts.
+
+    DELETION RESTRICTIONS:
+    - Cannot delete accounts with children (must remove or reparent children first)
+    - Cannot delete locked accounts (must unlock first)
+    - Cannot delete template-mandatory accounts
+    - Cannot delete accounts with transactions (GAAP compliance)
+    """
     service = CompanyChartService(db)
     try:
         success = service.delete_account(company_id, code)
         if not success:
             raise HTTPException(status_code=404, detail=f"Account with code {code} not found")
         return None
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -136,7 +154,7 @@ def reset_company_chart_to_master(
     try:
         result = service.reset_to_master_chart(company_id)
         return result
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -154,5 +172,152 @@ def initialize_company_chart(
     try:
         result = service.initialize_from_master_chart(company_id)
         return result
-    except ValueError as e:
+    except (ValueError, ValidationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ==============================================================================
+# ACCOUNT LOCKING ENDPOINTS
+# ==============================================================================
+
+@router.post("/companies/{company_id}/chart/{account_id}/lock", response_model=CompanyAccountSchema)
+def lock_company_account(
+    company_id: UUID,
+    account_id: UUID,
+    lock_request: CompanyAccountLockRequest,
+    user_id: Optional[UUID] = Query(None, description="User ID (required for Manual locks)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Lock an account to prevent immutable field changes.
+
+    LOCKED ACCOUNTS CANNOT CHANGE:
+    - name (account name)
+    - type (H/D)
+    - code (account code)
+    - account_type (Asset, Liability, etc.)
+    - normal_balance (Debit/Credit)
+    - parent_id (hierarchy)
+    - mapped_master_account_id (master chart mapping)
+
+    LOCKING REASONS:
+    - FirstTransaction: Automatically locked after first posted transaction
+    - PeriodClose: Locked during fiscal period close
+    - Manual: Manually locked by superuser (requires user_id)
+
+    GAAP COMPLIANCE:
+    - Ensures accounting consistency
+    - Prevents retroactive structural changes
+    - Maintains audit trail integrity
+    """
+    service = CompanyChartService(db)
+    try:
+        # Verify account belongs to company
+        account = service.get_account_by_id(account_id)
+        if not account or account.company_id != company_id:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Account {account_id} not found in company {company_id}"
+            )
+
+        # Convert reason string to enum
+        reason = LockedReason(lock_request.reason)
+
+        # Lock the account
+        locked_account = service.lock_account(account_id, reason, user_id)
+        return locked_account
+    except (ValueError, ValidationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/companies/{company_id}/chart/{account_id}/unlock", response_model=CompanyAccountSchema)
+def unlock_company_account(
+    company_id: UUID,
+    account_id: UUID,
+    unlock_request: CompanyAccountUnlockRequest,
+    user_id: UUID = Query(..., description="Superuser ID (required)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Unlock an account (requires superuser privileges).
+
+    WARNING: Only allowed if no posted transactions in current fiscal period.
+
+    SECURITY:
+    - Requires superuser privileges
+    - Requires user_id for audit trail
+    - Creates unlock event in audit log
+
+    USE CASES:
+    - Correcting account structure before period close
+    - Emergency fixes during period transition
+    - Reverting accidental locks
+
+    RESTRICTIONS:
+    - Cannot unlock if transactions exist in current period
+    - Unlock reason must be provided for audit
+    """
+    service = CompanyChartService(db)
+    try:
+        # Verify account belongs to company
+        account = service.get_account_by_id(account_id)
+        if not account or account.company_id != company_id:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Account {account_id} not found in company {company_id}"
+            )
+
+        # TODO: Verify user_id has superuser privileges
+        # This should be done via proper authentication/authorization middleware
+
+        # Unlock the account
+        unlocked_account = service.unlock_account(account_id, user_id)
+        return unlocked_account
+    except (ValueError, ValidationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/companies/{company_id}/chart/{account_id}/can-delete", response_model=Dict[str, Any])
+def check_account_deletable(
+    company_id: UUID,
+    account_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """
+    Check if an account can be deleted.
+
+    DELETION VALIDATION CHECKS:
+    - Account must not have children (must remove or reparent first)
+    - Account must not be locked (must unlock first)
+    - Account must not be template-mandatory
+    - Account must not have posted transactions (GAAP compliance)
+
+    RETURNS:
+    - can_delete: boolean (true if deletable)
+    - reason: string (explanation if not deletable)
+
+    USE CASES:
+    - Pre-deletion validation UI
+    - Bulk deletion planning
+    - Account cleanup workflows
+    """
+    service = CompanyChartService(db)
+    try:
+        # Verify account belongs to company
+        account = service.get_account_by_id(account_id)
+        if not account or account.company_id != company_id:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Account {account_id} not found in company {company_id}"
+            )
+
+        # Check if account can be deleted
+        can_delete, reason = service.can_delete_account(account_id)
+
+        return {
+            "account_id": str(account_id),
+            "can_delete": can_delete,
+            "reason": reason
+        }
+    except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))

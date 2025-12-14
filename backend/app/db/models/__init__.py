@@ -23,6 +23,9 @@ from .pending_registration import PendingRegistration
 from .group_company import GroupCompany
 from .group_company_member import GroupCompanyMember
 
+# Chart template models (Phase 3B)
+from .chart_template import ChartTemplate, ChartTemplateAccount, CompanyTemplateUsage
+
 # Accounting models
 from .fiscal_period import FiscalPeriod
 from .journal_entry import JournalEntry
@@ -57,6 +60,10 @@ __all__ = [
     "PendingRegistration",
     "GroupCompany",
     "GroupCompanyMember",
+    # Chart template models (Phase 3B)
+    "ChartTemplate",
+    "ChartTemplateAccount",
+    "CompanyTemplateUsage",
     # Accounting models
     "FiscalPeriod",
     "JournalEntry",
