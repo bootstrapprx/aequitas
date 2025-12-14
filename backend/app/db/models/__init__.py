@@ -1,3 +1,13 @@
+"""
+Database models package.
+
+CANONICAL REFERENCE:
+- docs/canonical/DATA_DICTIONARY.md
+- Phase 3A: Backend Model Alignment
+
+All models MUST match PostgreSQL schema exactly.
+"""
+
 from .company import Company
 from .company_account import CompanyAccount
 from .master_account import MasterAccount
@@ -14,12 +24,25 @@ from .group_company import GroupCompany
 from .group_company_member import GroupCompanyMember
 
 # Accounting models
-from .fiscal_period import FiscalPeriod, PeriodStatus, PeriodType
-from .journal_entry import JournalEntry, EntryType, EntryStatus
+from .fiscal_period import FiscalPeriod
+from .journal_entry import JournalEntry
 from .journal_entry_line import JournalEntryLine
 from .account_balance import AccountBalance
 
+# Centralized enums (aligned with PostgreSQL enum types)
+from .enums import (
+    AccountType,
+    NormalBalance,
+    LockedReason,
+    EntryStatus,
+    EntryType,
+    PeriodStatus,
+    PeriodType,
+    MasterAccountType,
+)
+
 __all__ = [
+    # Core models
     "Company",
     "CompanyAccount",
     "MasterAccount",
@@ -36,12 +59,17 @@ __all__ = [
     "GroupCompanyMember",
     # Accounting models
     "FiscalPeriod",
-    "PeriodStatus",
-    "PeriodType",
     "JournalEntry",
-    "EntryType",
-    "EntryStatus",
     "JournalEntryLine",
     "AccountBalance",
+    # Enums
+    "AccountType",
+    "NormalBalance",
+    "LockedReason",
+    "EntryStatus",
+    "EntryType",
+    "PeriodStatus",
+    "PeriodType",
+    "MasterAccountType",
 ]
 

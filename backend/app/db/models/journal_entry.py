@@ -1,25 +1,16 @@
+"""
+JournalEntry SQLAlchemy model.
+
+CANONICAL REFERENCE:
+- docs/canonical/DATA_DICTIONARY.md (Section 5.1: journal_entries)
+- Phase 3A: Backend Model Alignment
+"""
 import uuid
 from sqlalchemy import Column, String, DateTime, Date, func, ForeignKey, Text, Integer, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-import enum
-
-
-class EntryType(str, enum.Enum):
-    """Type of journal entry"""
-    STANDARD = "standard"
-    ADJUSTING = "adjusting"
-    CLOSING = "closing"
-    REVERSING = "reversing"
-    OPENING = "opening"
-
-
-class EntryStatus(str, enum.Enum):
-    """Status of a journal entry"""
-    DRAFT = "draft"
-    POSTED = "posted"
-    VOID = "void"
+from app.db.models.enums import EntryType, EntryStatus
 
 
 class JournalEntry(Base):
@@ -41,8 +32,8 @@ class JournalEntry(Base):
     reference = Column(String, nullable=True)  # External reference (invoice #, check #, etc.)
 
     # Entry classification
-    entry_type = Column(SQLEnum(EntryType), nullable=False, default=EntryType.STANDARD)
-    status = Column(SQLEnum(EntryStatus), nullable=False, default=EntryStatus.DRAFT, index=True)
+    entry_type = Column(SQLEnum(EntryType, name="entrytype"), nullable=False, default=EntryType.STANDARD)
+    status = Column(SQLEnum(EntryStatus, name="entrystatus"), nullable=False, default=EntryStatus.DRAFT, index=True)
 
     # Audit trail
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)

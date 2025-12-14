@@ -24,7 +24,9 @@
       "Bash(python -m ast:*)",
       "Bash(python3:*)",
       "Bash(python -m pytest:*)",
-      "Bash(alembic current:*)"
+      "Bash(alembic current:*)",
+      "Bash(cat:*)",
+      "Bash(__NEW_LINE__ cat PHASE_3A_VERIFICATION.md)"
     ],
     "deny": [],
     "ask": []

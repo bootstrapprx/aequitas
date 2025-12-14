@@ -1,23 +1,16 @@
+"""
+FiscalPeriod SQLAlchemy model.
+
+CANONICAL REFERENCE:
+- docs/canonical/DATA_DICTIONARY.md (Section 6.1: fiscal_periods)
+- Phase 3A: Backend Model Alignment
+"""
 import uuid
 from sqlalchemy import Column, String, DateTime, Date, func, ForeignKey, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
-import enum
-
-
-class PeriodStatus(str, enum.Enum):
-    """Status of a fiscal period"""
-    OPEN = "open"
-    CLOSED = "closed"
-    LOCKED = "locked"
-
-
-class PeriodType(str, enum.Enum):
-    """Type of fiscal period"""
-    MONTH = "month"
-    QUARTER = "quarter"
-    YEAR = "year"
+from app.db.models.enums import PeriodStatus, PeriodType
 
 
 class FiscalPeriod(Base):
@@ -31,11 +24,11 @@ class FiscalPeriod(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False, index=True)
 
-    period_type = Column(SQLEnum(PeriodType), nullable=False, default=PeriodType.MONTH)
+    period_type = Column(SQLEnum(PeriodType, name="periodtype"), nullable=False, default=PeriodType.MONTH)
     period_number = Column(String, nullable=False)  # "2024-01", "2024-Q1", "2024"
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
-    status = Column(SQLEnum(PeriodStatus), nullable=False, default=PeriodStatus.OPEN)
+    status = Column(SQLEnum(PeriodStatus, name="periodstatus"), nullable=False, default=PeriodStatus.OPEN)
 
     closed_at = Column(DateTime, nullable=True)
     closed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
