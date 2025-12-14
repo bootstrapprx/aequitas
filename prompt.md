@@ -1,59 +1,29 @@
-/agent backend-architect
+You are executing Phase 3A: Backend Model Alignment.
 
-Implement the missing permission check methods in PermissionService to resolve
-BLOCKER B2.1 identified by dexter-orchestrator.
+Authoritative references:
+- docs/canonical/DATA_DICTIONARY.md
+- docs/canonical/CHART_OF_ACCOUNTS_MODEL.md
+- Current PostgreSQL schema (migrations up to 023)
 
---------------------------------------------------
-CONTEXT
---------------------------------------------------
-API endpoints across the accounting module call:
+Rules:
+- Database schema is final.
+- No migrations allowed.
+- No business logic or API behavior changes.
+- Remove deprecated fields completely.
+- Backend must reflect DB constraints exactly.
 
-- permission_service.can_view_company(user_id, company_id)
-- permission_service.can_manage_company(user_id, company_id)
+Objectives:
+1. Align SQLAlchemy models to canonical schema.
+2. Remove legacy columns (parent_code, master_account_code).
+3. Align enums exactly to PostgreSQL enums.
+4. Fix relationships using UUID foreign keys.
+5. Update Pydantic schemas accordingly.
+6. Ensure backend respects immutability and locking rules.
 
-These methods DO NOT currently exist, causing runtime AttributeError and breaking
-all accounting APIs.
+Produce:
+- Updated models
+- Updated schemas
+- Summary of changes
+- Verification notes
 
---------------------------------------------------
-TASKS
---------------------------------------------------
-
-1. Implement the following methods in:
-   backend/app/services/permission_service.py
-
-   def can_view_company(self, user_id: UUID, company_id: UUID) -> bool
-   def can_manage_company(self, user_id: UUID, company_id: UUID) -> bool
-
-2. Logic Requirements:
-   - Respect Council Member / Super User roles
-   - Enforce company-level access control
-   - Use existing role, membership, or permission tables
-   - No hardcoded role names unless already established
-   - Deny by default
-
-3. Security Requirements:
-   - No silent fallbacks
-   - No implicit access
-   - Explicit True / False return
-   - Raise no exceptions during normal execution
-
-4. Testing:
-   - Add minimal unit or integration tests validating:
-     • authorized user → True
-     • unauthorized user → False
-     • non-member → False
-
---------------------------------------------------
-OUT OF SCOPE
---------------------------------------------------
-- No frontend changes
-- No refactors
-- No new roles
-- No Phase 5 features
-
---------------------------------------------------
-SUCCESS CRITERIA
---------------------------------------------------
-- All accounting endpoints execute without AttributeError
-- Permission checks correctly gate access
-- dexter-orchestrator P0 issue B2.1 resolved
+Do not proceed beyond Phase 3A scope.
