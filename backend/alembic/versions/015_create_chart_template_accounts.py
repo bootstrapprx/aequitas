@@ -122,26 +122,14 @@ def upgrade() -> None:
     # ========================================================================
     # STEP 3: Create indexes
     # ========================================================================
+    # Note: template_id and master_account_id already have indexes from index=True
+    # on their column definitions, so we only create additional indexes here.
 
-    # Index for template lookups
-    op.create_index(
-        'ix_chart_template_accounts_template_id',
-        'chart_template_accounts',
-        ['template_id']
-    )
-
-    # Index for hierarchy traversal
+    # Index for hierarchy traversal (parent_id doesn't have index=True)
     op.create_index(
         'ix_chart_template_accounts_parent_id',
         'chart_template_accounts',
         ['parent_id']
-    )
-
-    # Index for master account lookups
-    op.create_index(
-        'ix_chart_template_accounts_master_account_id',
-        'chart_template_accounts',
-        ['master_account_id']
     )
 
     # Index for mandatory account queries
@@ -159,22 +147,43 @@ def upgrade() -> None:
     )
 
     # ========================================================================
-    # STEP 4: Add CHECK constraint for hierarchy integrity
+    # STEP 4: Add trigger for hierarchy integrity (same template)
     # ========================================================================
     # Ensure parent_id references same template (if not NULL)
+    # Cannot use CHECK constraint because PostgreSQL doesn't allow subqueries
     # ========================================================================
 
     op.execute("""
-        ALTER TABLE chart_template_accounts
-        ADD CONSTRAINT chk_template_accounts_same_template_parent
-        CHECK (
-            parent_id IS NULL OR
-            EXISTS (
-                SELECT 1 FROM chart_template_accounts parent
-                WHERE parent.id = chart_template_accounts.parent_id
-                  AND parent.template_id = chart_template_accounts.template_id
-            )
-        )
+        CREATE OR REPLACE FUNCTION check_template_account_same_template_parent()
+        RETURNS TRIGGER AS $$
+        DECLARE
+            v_parent_template_id UUID;
+        BEGIN
+            IF NEW.parent_id IS NOT NULL THEN
+                SELECT template_id INTO v_parent_template_id
+                FROM chart_template_accounts
+                WHERE id = NEW.parent_id;
+
+                IF NOT FOUND THEN
+                    RAISE EXCEPTION 'Parent account % does not exist', NEW.parent_id;
+                END IF;
+
+                IF v_parent_template_id != NEW.template_id THEN
+                    RAISE EXCEPTION 'Parent account must belong to the same template (parent template: %, current template: %)',
+                        v_parent_template_id, NEW.template_id;
+                END IF;
+            END IF;
+
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+    """)
+
+    op.execute("""
+        CREATE TRIGGER trg_check_template_account_same_template_parent
+        BEFORE INSERT OR UPDATE OF parent_id ON chart_template_accounts
+        FOR EACH ROW
+        EXECUTE FUNCTION check_template_account_same_template_parent();
     """)
 
     # ========================================================================
@@ -264,16 +273,15 @@ def downgrade() -> None:
     # Drop triggers first
     op.execute("DROP TRIGGER IF EXISTS trg_prevent_template_account_hierarchy_cycle ON chart_template_accounts")
     op.execute("DROP FUNCTION IF EXISTS prevent_template_account_hierarchy_cycle()")
-
-    # Drop constraints (explicit for documentation)
-    op.execute("ALTER TABLE chart_template_accounts DROP CONSTRAINT IF EXISTS chk_template_accounts_same_template_parent")
+    op.execute("DROP TRIGGER IF EXISTS trg_check_template_account_same_template_parent ON chart_template_accounts")
+    op.execute("DROP FUNCTION IF EXISTS check_template_account_same_template_parent()")
 
     # Drop indexes (automatically dropped with table, but explicit for clarity)
+    # Note: template_id and master_account_id indexes are auto-created by index=True
+    # and will be automatically dropped with the table
     op.drop_index('ix_chart_template_accounts_sort_order', 'chart_template_accounts')
     op.drop_index('ix_chart_template_accounts_is_mandatory', 'chart_template_accounts')
-    op.drop_index('ix_chart_template_accounts_master_account_id', 'chart_template_accounts')
     op.drop_index('ix_chart_template_accounts_parent_id', 'chart_template_accounts')
-    op.drop_index('ix_chart_template_accounts_template_id', 'chart_template_accounts')
 
     # Drop foreign key constraints
     op.drop_constraint('fk_chart_template_accounts_parent_id', 'chart_template_accounts', type_='foreignkey')

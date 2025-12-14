@@ -85,18 +85,8 @@ def upgrade() -> None:
         sa.UniqueConstraint('company_id', name='uq_company_template_usage_company_id'),
     )
 
-    # Add indexes
-    op.create_index(
-        'ix_company_template_usage_company_id',
-        'company_template_usage',
-        ['company_id']
-    )
-
-    op.create_index(
-        'ix_company_template_usage_template_id',
-        'company_template_usage',
-        ['template_id']
-    )
+    # Indexes for company_id and template_id are automatically created
+    # by index=True on their column definitions
 
     # ========================================================================
     # STEP 2: Add template_account_id to company_accounts (optional)
@@ -311,7 +301,5 @@ def downgrade() -> None:
     op.drop_constraint('fk_company_accounts_template_account_id', 'company_accounts', type_='foreignkey')
     op.drop_column('company_accounts', 'template_account_id')
 
-    # Drop table
-    op.drop_index('ix_company_template_usage_template_id', 'company_template_usage')
-    op.drop_index('ix_company_template_usage_company_id', 'company_template_usage')
+    # Drop table (indexes automatically dropped with table)
     op.drop_table('company_template_usage')

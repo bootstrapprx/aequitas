@@ -119,22 +119,11 @@ def upgrade() -> None:
     # Codes are the primary identifier for accounts within a company.
     # ========================================================================
 
+    # UNIQUE constraint automatically creates an index in PostgreSQL
     op.create_unique_constraint(
         'uq_company_accounts_company_code',
         'company_accounts',
         ['company_id', 'code']
-    )
-
-    # Add index to support fast code lookups
-    # (UNIQUE constraint automatically creates index in PostgreSQL,
-    # but explicit for documentation)
-    op.create_index(
-        'ix_company_accounts_company_code',
-        'company_accounts',
-        ['company_id', 'code'],
-        unique=True,
-        # Index already exists via UNIQUE constraint, this is idempotent
-        postgresql_if_not_exists=True
     )
 
     # ========================================================================
@@ -144,19 +133,11 @@ def upgrade() -> None:
     # Prevents confusion when selecting accounts in UI.
     # ========================================================================
 
+    # UNIQUE constraint automatically creates an index in PostgreSQL
     op.create_unique_constraint(
         'uq_company_accounts_company_name',
         'company_accounts',
         ['company_id', 'name']
-    )
-
-    # Add index to support fast name lookups
-    op.create_index(
-        'ix_company_accounts_company_name',
-        'company_accounts',
-        ['company_id', 'name'],
-        unique=True,
-        postgresql_if_not_exists=True
     )
 
     # ========================================================================
@@ -212,11 +193,7 @@ def downgrade() -> None:
     Only use for rollback during migration issues.
     """
 
-    # Drop indexes (if they exist independently)
-    op.drop_index('ix_company_accounts_company_name', 'company_accounts', if_exists=True)
-    op.drop_index('ix_company_accounts_company_code', 'company_accounts', if_exists=True)
-
-    # Drop UNIQUE constraints
+    # Drop UNIQUE constraints (indexes are automatically dropped with constraints)
     op.drop_constraint('uq_company_accounts_company_name', 'company_accounts', type_='unique')
     op.drop_constraint('uq_company_accounts_company_code', 'company_accounts', type_='unique')
 
