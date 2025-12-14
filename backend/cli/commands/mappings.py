@@ -96,10 +96,10 @@ def list_mappings(
 
 @app.command("propagate")
 def propagate_mappings(
-    source: str = typer.Option(..., "--source", "-s", help="Source company ID or UCID"),
-    group_id: str = typer.Option(..., "--group", "-g", help="Group ID"),
-    targets: Optional[List[str]] = typer.Option(None, "--target", "-t", help="Target company IDs (optional, all if not specified)"),
-    force: bool = typer.Option(False, "--force", "-f", help="Force overwrite existing mappings"),
+    source: str = typer.Option(..., "-s", help="Source company ID or UCID"),
+    group_id: str = typer.Option(..., "-g", help="Group ID"),
+    targets: Optional[List[str]] = typer.Option(None, "-t", help="Target company IDs (optional, all if not specified)"),
+    force: bool = typer.Option(False, "-f", help="Force overwrite existing mappings"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """

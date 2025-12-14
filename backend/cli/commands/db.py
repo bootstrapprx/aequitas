@@ -16,7 +16,7 @@ app = typer.Typer()
 
 @app.command("upgrade")
 def upgrade_db(
-    revision: str = typer.Option("head", "--revision", "-r", help="Revision to upgrade to"),
+    revision: str = typer.Option("head", "-r", help="Revision to upgrade to"),
 ):
     """Run database migrations (alembic upgrade)."""
     try:
@@ -49,7 +49,7 @@ def upgrade_db(
 
 @app.command("downgrade")
 def downgrade_db(
-    steps: int = typer.Option(1, "--steps", "-n", help="Number of revisions to downgrade"),
+    steps: int = typer.Option(1, "-n", help="Number of revisions to downgrade"),
 ):
     """Downgrade database migrations (alembic downgrade)."""
     try:
@@ -84,7 +84,7 @@ def downgrade_db(
 
 @app.command("revision")
 def create_revision(
-    message: str = typer.Option(..., "--msg", "-m", help="Revision message"),
+    message: str = typer.Option(..., "-m", help="Revision message"),
     autogenerate: bool = typer.Option(True, "--autogenerate/--no-autogenerate", help="Auto-generate migration"),
 ):
     """Create a new database migration."""

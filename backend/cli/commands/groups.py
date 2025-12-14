@@ -65,7 +65,7 @@ def list_groups(
 @app.command("create")
 def create_group(
     name: str = typer.Argument(..., help="Group name"),
-    description: Optional[str] = typer.Option(None, "--description", "-d", help="Group description"),
+    description: Optional[str] = typer.Option(None, "-d", help="Group description"),
     owner_user_id: Optional[str] = typer.Option(None, "--owner", help="Owner user ID (defaults to first superuser)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):

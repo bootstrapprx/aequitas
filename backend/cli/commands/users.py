@@ -69,10 +69,10 @@ def list_users(
 
 @app.command("create")
 def create_user(
-    email: str = typer.Option(..., "--email", "-e", help="User email"),
-    password: str = typer.Option(..., "--password", "-p", help="User password"),
+    email: str = typer.Option(..., "-e", help="User email"),
+    password: str = typer.Option(..., "-p", help="User password"),
     superuser: bool = typer.Option(False, "--su/--no-su", help="Make user a superuser"),
-    role: str = typer.Option("USER", "--role", "-r", help="User role (USER, ACCOUNTANT, ADMIN, SU)"),
+    role: str = typer.Option("USER", "-r", help="User role (USER, ACCOUNTANT, ADMIN, SU)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Create a new user."""

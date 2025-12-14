@@ -75,8 +75,8 @@ def list_companies(
 
 @app.command("create")
 def create_company(
-    name: str = typer.Option(..., "--name", help="Company name"),
-    email: Optional[str] = typer.Option(None, "--email", help="Company email"),
+    name: str = typer.Option(..., help="Company name"),
+    email: Optional[str] = typer.Option(None, help="Company email"),
     tax_id: Optional[str] = typer.Option(None, "--tax-id", help="Tax ID"),
     skip_payment: bool = typer.Option(True, "--skip-payment/--no-skip-payment", help="Skip payment (SU only)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),

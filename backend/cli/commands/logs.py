@@ -14,8 +14,8 @@ app = typer.Typer()
 
 @app.command("tail")
 def tail_logs(
-    lines: int = typer.Option(50, "--lines", "-n", help="Number of lines to show"),
-    follow: bool = typer.Option(False, "--follow", "-f", help="Follow log output"),
+    lines: int = typer.Option(50, "-n", help="Number of lines to show"),
+    follow: bool = typer.Option(False, "-f", help="Follow log output"),
 ):
     """
     Tail backend logs.
@@ -60,7 +60,7 @@ def tail_logs(
 
 @app.command("session")
 def session_logs(
-    limit: int = typer.Option(100, "--limit", "-n", help="Number of session logs to show"),
+    limit: int = typer.Option(100, "-n", help="Number of session logs to show"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Dump internal session/activity logs from database."""
@@ -125,7 +125,7 @@ def session_logs(
 
 @app.command("dump")
 def dump_logs(
-    output_file: str = typer.Option("logs_dump.txt", "--output", "-o", help="Output file path"),
+    output_file: str = typer.Option("logs_dump.txt", "-o", help="Output file path"),
 ):
     """Export logs to a file."""
     try:
