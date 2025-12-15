@@ -19,7 +19,7 @@ app = typer.Typer()
 @app.command("list")
 def list_mappings(
     company_id: str = typer.Argument(..., help="Company ID or UCID"),
-    status: Optional[str] = typer.Option(None, "--status", help="Filter by status (suggested, confirmed, rejected)"),
+    status: Optional[str] = typer.Option(None, help="Filter by status (suggested, confirmed, rejected)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """List account mappings for a company."""

@@ -77,8 +77,8 @@ def list_companies(
 def create_company(
     name: str = typer.Option(..., help="Company name"),
     email: Optional[str] = typer.Option(None, help="Company email"),
-    tax_id: Optional[str] = typer.Option(None, "--tax-id", help="Tax ID"),
-    skip_payment: bool = typer.Option(True, "--skip-payment/--no-skip-payment", help="Skip payment (SU only)"),
+    tax_id: Optional[str] = typer.Option(None, help="Tax ID"),
+    skip_payment: bool = typer.Option(True, help="Skip payment (SU only)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """
@@ -218,7 +218,7 @@ def company_info(
 @app.command("delete")
 def delete_company(
     company_id: str = typer.Argument(..., help="Company ID or UCID"),
-    confirmation: str = typer.Option(..., "--confirm", help="Company name for confirmation"),
+    confirm: str = typer.Option(..., help="Company name for confirmation"),
 ):
     """Inactivate a company (soft delete)."""
     db = SessionLocal()
@@ -239,7 +239,7 @@ def delete_company(
             sys.exit(1)
 
         # Inactivate using existing service
-        CompanyService.inactivate_company(db, company_id, confirmation)
+        CompanyService.inactivate_company(db, company_id, confirm)
 
         console.print(f"[green]✓[/green] Company '{company.name}' inactivated successfully")
         sys.exit(0)

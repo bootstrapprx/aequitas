@@ -66,27 +66,27 @@ def list_groups(
 def create_group(
     name: str = typer.Argument(..., help="Group name"),
     description: Optional[str] = typer.Option(None, "-d", help="Group description"),
-    owner_user_id: Optional[str] = typer.Option(None, "--owner", help="Owner user ID (defaults to first superuser)"),
+    owner: Optional[str] = typer.Option(None, help="Owner user ID (defaults to first superuser)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Create a new company group."""
     db = SessionLocal()
     try:
         # Get owner user ID
-        if not owner_user_id:
+        if not owner:
             # Default to first superuser
             from app.db.models.user import User
             superuser = db.query(User).filter(User.is_superuser == True).first()
             if not superuser:
                 console.print("[red]No superuser found. Please specify --owner[/red]", style="bold red")
                 sys.exit(1)
-            owner_user_id = str(superuser.id)
+            owner = str(superuser.id)
 
         group = GroupService.create_group(
             db=db,
             name=name,
             description=description,
-            owner_user_id=UUID(owner_user_id),
+            owner_user_id=UUID(owner),
         )
 
         if json_output:

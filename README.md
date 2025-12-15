@@ -96,6 +96,17 @@ aequitas diag health                       # Check system health
 
 See [docs/cli.md](docs/cli.md) for complete CLI documentation.
 
+### ⚡ Quick Access with 'aq'
+
+For Docker users, a convenience wrapper script is available at the project root:
+
+```bash
+./aq companies list
+./aq diag health
+```
+
+This is equivalent to running `docker compose exec backend python -m cli.main ...`.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
