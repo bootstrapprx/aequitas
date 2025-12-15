@@ -1,6 +1,19 @@
+"""
+JournalEntryService - Service layer for managing journal entries.
+
+CANONICAL COMPLIANCE - Phase 3B:
+- Enforces accounting invariants (debits = credits)
+- Validates against inactive accounts
+- Validates against locked accounts
+- Ensures all accounts belong to same company
+- Enforces fiscal period constraints (OPEN only)
+- Separates validation from persistence
+- Returns structured validation errors (not generic exceptions)
+"""
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
@@ -16,13 +29,206 @@ from app.schemas.journal_entry import (
     JournalEntryResponse,
     JournalEntryLineResponse
 )
+from app.core.exceptions import ValidationError, ErrorCode, MultipleValidationErrors
+from app.services.validators.fiscal_period_guard import FiscalPeriodGuard
 
 
 class JournalEntryService:
-    """Service for managing journal entries"""
+    """
+    Service for managing journal entries with GAAP-compliant invariant enforcement.
+
+    CANONICAL COMPLIANCE:
+    - Mandatory invariants enforced before persistence
+    - Transactional integrity (reject partial writes)
+    - Structured validation errors with error codes
+    - Fiscal period guard integration
+    """
 
     def __init__(self, db: Session):
         self.db = db
+        self.period_guard = FiscalPeriodGuard(db)
+
+    # ========================================================================
+    # VALIDATION METHODS (Unit-testable, no DB writes)
+    # ========================================================================
+
+    def validate_journal_entry_balance(
+        self,
+        lines: List
+    ) -> None:
+        """
+        Validate that journal entry is balanced (debits = credits).
+
+        MANDATORY INVARIANT: Sum(debits) == Sum(credits)
+
+        Args:
+            lines: List of journal entry line data
+
+        Raises:
+            ValidationError: If debits do not equal credits
+        """
+        if not lines or len(lines) < 2:
+            raise ValidationError(
+                message="Journal entry must have at least 2 lines",
+                code=ErrorCode.JOURNAL_EMPTY_LINES,
+                details={"line_count": len(lines) if lines else 0}
+            )
+
+        total_debits = sum(Decimal(str(line.debit_amount)) for line in lines)
+        total_credits = sum(Decimal(str(line.credit_amount)) for line in lines)
+
+        if total_debits != total_credits:
+            raise ValidationError(
+                message=(
+                    f"Journal entry is not balanced.\n"
+                    f"Total debits: {total_debits}\n"
+                    f"Total credits: {total_credits}\n"
+                    f"Difference: {abs(total_debits - total_credits)}\n\n"
+                    f"Debits must equal credits in double-entry bookkeeping."
+                ),
+                code=ErrorCode.JOURNAL_IMBALANCE,
+                details={
+                    "total_debits": str(total_debits),
+                    "total_credits": str(total_credits),
+                    "difference": str(abs(total_debits - total_credits))
+                }
+            )
+
+    def validate_journal_entry_accounts(
+        self,
+        company_id: UUID,
+        lines: List
+    ) -> List[CompanyAccount]:
+        """
+        Validate all accounts in journal entry lines.
+
+        MANDATORY INVARIANTS:
+        - All accounts must exist
+        - All accounts must belong to the same company
+        - No account may be inactive
+        - No account may be locked
+
+        Args:
+            company_id: Company UUID
+            lines: List of journal entry line data
+
+        Returns:
+            List of validated CompanyAccount objects
+
+        Raises:
+            ValidationError: If any account validation fails
+        """
+        account_ids = [line.company_account_id for line in lines]
+
+        # Get all accounts
+        accounts = self.db.query(CompanyAccount).filter(
+            CompanyAccount.id.in_(account_ids)
+        ).all()
+
+        # Check all accounts exist
+        if len(accounts) != len(account_ids):
+            found_ids = {acc.id for acc in accounts}
+            missing_ids = [aid for aid in account_ids if aid not in found_ids]
+            raise ValidationError(
+                message=(
+                    f"One or more accounts not found.\n"
+                    f"Missing account IDs: {', '.join(str(mid) for mid in missing_ids)}"
+                ),
+                code=ErrorCode.JOURNAL_INACTIVE_ACCOUNT,
+                details={"missing_account_ids": [str(mid) for mid in missing_ids]}
+            )
+
+        # Validate all accounts belong to same company
+        errors = []
+        for acc in accounts:
+            if acc.company_id != company_id:
+                errors.append(ValidationError(
+                    message=f"Account {acc.code} belongs to different company",
+                    code=ErrorCode.JOURNAL_CROSS_COMPANY,
+                    details={
+                        "account_id": str(acc.id),
+                        "account_code": acc.code,
+                        "account_company_id": str(acc.company_id),
+                        "journal_company_id": str(company_id)
+                    },
+                    field="company_account_id"
+                ))
+
+            # Check account is active
+            if not acc.is_active:
+                errors.append(ValidationError(
+                    message=f"Account {acc.code} ({acc.description}) is inactive and cannot be used in journal entries",
+                    code=ErrorCode.JOURNAL_INACTIVE_ACCOUNT,
+                    details={
+                        "account_id": str(acc.id),
+                        "account_code": acc.code
+                    },
+                    field="company_account_id"
+                ))
+
+            # Check account is not locked
+            if acc.is_locked:
+                errors.append(ValidationError(
+                    message=(
+                        f"Account {acc.code} ({acc.description}) is locked and cannot be used in new journal entries.\n"
+                        f"Locked reason: {acc.locked_reason.value if acc.locked_reason else 'Unknown'}\n"
+                        f"Locked at: {acc.locked_at}"
+                    ),
+                    code=ErrorCode.JOURNAL_LOCKED_ACCOUNT,
+                    details={
+                        "account_id": str(acc.id),
+                        "account_code": acc.code,
+                        "locked_reason": acc.locked_reason.value if acc.locked_reason else None,
+                        "locked_at": str(acc.locked_at) if acc.locked_at else None
+                    },
+                    field="company_account_id"
+                ))
+
+        if errors:
+            raise MultipleValidationErrors(errors)
+
+        return accounts
+
+    def validate_journal_entry_amounts(
+        self,
+        lines: List
+    ) -> None:
+        """
+        Validate that all journal entry line amounts are positive.
+
+        Args:
+            lines: List of journal entry line data
+
+        Raises:
+            ValidationError: If any amount is negative or zero
+        """
+        for idx, line in enumerate(lines):
+            if line.debit_amount < 0 or line.credit_amount < 0:
+                raise ValidationError(
+                    message=f"Line {idx + 1}: Amounts cannot be negative",
+                    code=ErrorCode.JOURNAL_INVALID_AMOUNT,
+                    details={
+                        "line_number": idx + 1,
+                        "debit_amount": str(line.debit_amount),
+                        "credit_amount": str(line.credit_amount)
+                    },
+                    field="amount"
+                )
+
+            # At least one amount must be non-zero
+            if line.debit_amount == 0 and line.credit_amount == 0:
+                raise ValidationError(
+                    message=f"Line {idx + 1}: At least one amount (debit or credit) must be non-zero",
+                    code=ErrorCode.JOURNAL_INVALID_AMOUNT,
+                    details={
+                        "line_number": idx + 1
+                    },
+                    field="amount"
+                )
+
+    # ========================================================================
+    # CRUD OPERATIONS (with validation separation)
+    # ========================================================================
 
     def create_journal_entry(
         self,
@@ -30,7 +236,13 @@ class JournalEntryService:
         created_by: UUID
     ) -> JournalEntry:
         """
-        Create a new journal entry with double-entry validation.
+        Create a new journal entry with GAAP-compliant validation.
+
+        CANONICAL COMPLIANCE - Phase 3B:
+        - Validates before persistence (no partial writes)
+        - Enforces all mandatory invariants
+        - Returns structured validation errors
+        - Fiscal period must be OPEN
 
         Args:
             entry_data: Journal entry creation data
@@ -40,44 +252,36 @@ class JournalEntryService:
             Created journal entry
 
         Raises:
-            ValueError: If validation fails
+            ValidationError: If any validation fails
         """
-        # Validate fiscal period exists and is open
-        fiscal_period = self.db.query(FiscalPeriod).filter(
-            FiscalPeriod.id == entry_data.fiscal_period_id
-        ).first()
+        # ========================================================================
+        # VALIDATION SECTION (no DB writes)
+        # ========================================================================
 
-        if not fiscal_period:
-            raise ValueError("Fiscal period not found")
+        # 1. Validate fiscal period is OPEN
+        self.period_guard.validate_journal_entry_creation(
+            entry_data.company_id,
+            entry_data.entry_date
+        )
 
-        if not fiscal_period.is_open():
-            raise ValueError(f"Fiscal period is {fiscal_period.status}, cannot post entries")
+        # 2. Validate journal entry balance (debits = credits)
+        self.validate_journal_entry_balance(entry_data.lines)
 
-        # Validate entry date is within fiscal period
-        if not (fiscal_period.start_date <= entry_data.entry_date <= fiscal_period.end_date):
-            raise ValueError(
-                f"Entry date {entry_data.entry_date} is outside fiscal period "
-                f"{fiscal_period.start_date} to {fiscal_period.end_date}"
-            )
+        # 3. Validate amounts are positive
+        self.validate_journal_entry_amounts(entry_data.lines)
 
-        # Validate all accounts exist and belong to the company
-        account_ids = [line.company_account_id for line in entry_data.lines]
-        accounts = self.db.query(CompanyAccount).filter(
-            and_(
-                CompanyAccount.id.in_(account_ids),
-                CompanyAccount.company_id == entry_data.company_id
-            )
-        ).all()
+        # 4. Validate all accounts (exist, active, not locked, same company)
+        self.validate_journal_entry_accounts(entry_data.company_id, entry_data.lines)
 
-        if len(accounts) != len(account_ids):
-            raise ValueError("One or more accounts not found or do not belong to company")
+        # ========================================================================
+        # PERSISTENCE SECTION (after all validation passes)
+        # ========================================================================
 
-        # Validate double-entry (already validated in schema, but double-check)
-        total_debits = sum(line.debit_amount for line in entry_data.lines)
-        total_credits = sum(line.credit_amount for line in entry_data.lines)
-
-        if total_debits != total_credits:
-            raise ValueError(f"Debits ({total_debits}) must equal credits ({total_credits})")
+        # Get fiscal period for assignment
+        fiscal_period = self.period_guard.get_period_for_date(
+            entry_data.company_id,
+            entry_data.entry_date
+        )
 
         # Generate entry number
         entry_number = self._generate_entry_number(entry_data.company_id, entry_data.entry_date)
@@ -85,7 +289,7 @@ class JournalEntryService:
         # Create journal entry
         journal_entry = JournalEntry(
             company_id=entry_data.company_id,
-            fiscal_period_id=entry_data.fiscal_period_id,
+            fiscal_period_id=fiscal_period.id,
             entry_number=entry_number,
             entry_date=entry_data.entry_date,
             description=entry_data.description,

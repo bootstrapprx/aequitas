@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.db.session import get_db
-from app.services.companychart_service import CompanyChartService, ValidationError
+from app.services.companychart_service import CompanyChartService
+from app.core.exceptions import ValidationError, ErrorCode
 from app.db.models.enums import LockedReason
 from app.schemas.company_account import (
     CompanyAccountSchema,
