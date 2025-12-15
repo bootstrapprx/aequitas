@@ -244,6 +244,161 @@ class AuditService:
             }
         )
 
+    def log_account_lock(
+        self,
+        user_id: UUID,
+        account_id: UUID,
+        account_code: str,
+        account_name: str,
+        company_id: UUID,
+        locked_reason: str
+    ) -> AuditLog:
+        """
+        Log account locking event.
+
+        Args:
+            user_id: UUID of user locking the account
+            account_id: UUID of locked account
+            account_code: Code of locked account
+            account_name: Name of locked account
+            company_id: Company ID
+            locked_reason: Reason for lock (FirstTransaction, PeriodClose, Manual)
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="ACCOUNT_LOCKED",
+            entity_type="company_account",
+            user_id=user_id,
+            entity_id=str(account_id),
+            payload={
+                "account_code": account_code,
+                "account_name": account_name,
+                "company_id": str(company_id),
+                "locked_reason": locked_reason,
+                "locked_fields": ["name", "type", "code", "account_type", "normal_balance", "parent_id", "mapped_master_account_id"]
+            }
+        )
+
+    def log_account_unlock(
+        self,
+        user_id: UUID,
+        account_id: UUID,
+        account_code: str,
+        account_name: str,
+        company_id: UUID,
+        unlock_reason: Optional[str] = None
+    ) -> AuditLog:
+        """
+        Log account unlocking event (CRITICAL SECURITY OPERATION).
+
+        Args:
+            user_id: UUID of superuser unlocking the account
+            account_id: UUID of unlocked account
+            account_code: Code of unlocked account
+            account_name: Name of unlocked account
+            company_id: Company ID
+            unlock_reason: Reason for unlock (from request)
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="ACCOUNT_UNLOCKED",
+            entity_type="company_account",
+            user_id=user_id,
+            entity_id=str(account_id),
+            payload={
+                "account_code": account_code,
+                "account_name": account_name,
+                "company_id": str(company_id),
+                "unlock_reason": unlock_reason,
+                "security_level": "CRITICAL",
+                "requires_superuser": True
+            }
+        )
+
+    def log_fiscal_period_close(
+        self,
+        user_id: UUID,
+        period_id: UUID,
+        period_name: str,
+        company_id: UUID,
+        start_date: str,
+        end_date: str
+    ) -> AuditLog:
+        """
+        Log fiscal period close event.
+
+        Args:
+            user_id: UUID of user closing the period
+            period_id: UUID of closed period
+            period_name: Name of period
+            company_id: Company ID
+            start_date: Period start date (ISO format)
+            end_date: Period end date (ISO format)
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="FISCAL_PERIOD_CLOSED",
+            entity_type="fiscal_period",
+            user_id=user_id,
+            entity_id=str(period_id),
+            payload={
+                "period_name": period_name,
+                "company_id": str(company_id),
+                "start_date": start_date,
+                "end_date": end_date,
+                "gaap_impact": "Period is now read-only, no journal entries can be posted",
+                "reversible": "Only via superuser REOPEN operation"
+            }
+        )
+
+    def log_fiscal_period_reopen(
+        self,
+        user_id: UUID,
+        period_id: UUID,
+        period_name: str,
+        company_id: UUID,
+        start_date: str,
+        end_date: str,
+        reopen_reason: Optional[str] = None
+    ) -> AuditLog:
+        """
+        Log fiscal period reopen event (CRITICAL SECURITY OPERATION).
+
+        Args:
+            user_id: UUID of superuser reopening the period
+            period_id: UUID of reopened period
+            period_name: Name of period
+            company_id: Company ID
+            start_date: Period start date (ISO format)
+            end_date: Period end date (ISO format)
+            reopen_reason: Reason for reopen (optional)
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="FISCAL_PERIOD_REOPENED",
+            entity_type="fiscal_period",
+            user_id=user_id,
+            entity_id=str(period_id),
+            payload={
+                "period_name": period_name,
+                "company_id": str(company_id),
+                "start_date": start_date,
+                "end_date": end_date,
+                "reopen_reason": reopen_reason,
+                "security_level": "CRITICAL",
+                "requires_superuser": True,
+                "gaap_impact": "Period is now writable, journal entries can be modified"
+            }
+        )
+
     def _sanitize_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Remove sensitive data from payload before logging.

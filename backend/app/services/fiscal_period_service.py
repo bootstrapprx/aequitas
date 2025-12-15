@@ -8,6 +8,7 @@ from dateutil.relativedelta import relativedelta
 from app.db.models.fiscal_period import FiscalPeriod, PeriodStatus, PeriodType
 from app.db.models.journal_entry import JournalEntry, EntryStatus
 from app.schemas.fiscal_period import FiscalPeriodCreate, FiscalPeriodUpdate
+from app.services.audit_service import AuditService
 
 
 class FiscalPeriodService:
@@ -177,14 +178,26 @@ class FiscalPeriodService:
         self.db.commit()
         self.db.refresh(period)
 
+        # AUDIT LOGGING: Record fiscal period close event
+        audit_service = AuditService(self.db)
+        audit_service.log_fiscal_period_close(
+            user_id=closed_by,
+            period_id=period.id,
+            period_name=period.period_name,
+            company_id=period.company_id,
+            start_date=period.start_date.isoformat(),
+            end_date=period.end_date.isoformat()
+        )
+
         return period
 
-    def reopen_fiscal_period(self, period_id: UUID) -> FiscalPeriod:
+    def reopen_fiscal_period(self, period_id: UUID, reopened_by: Optional[UUID] = None) -> FiscalPeriod:
         """
-        Reopen a closed fiscal period.
+        Reopen a closed fiscal period (requires superuser - enforced at API layer).
 
         Args:
             period_id: Fiscal period ID
+            reopened_by: User ID reopening the period (for audit trail)
 
         Returns:
             Reopened fiscal period
@@ -209,6 +222,19 @@ class FiscalPeriodService:
 
         self.db.commit()
         self.db.refresh(period)
+
+        # AUDIT LOGGING: Record fiscal period reopen event (CRITICAL SECURITY OPERATION)
+        if reopened_by:
+            audit_service = AuditService(self.db)
+            audit_service.log_fiscal_period_reopen(
+                user_id=reopened_by,
+                period_id=period.id,
+                period_name=period.period_name,
+                company_id=period.company_id,
+                start_date=period.start_date.isoformat(),
+                end_date=period.end_date.isoformat(),
+                reopen_reason=None  # Could be passed from API request if needed
+            )
 
         return period
 

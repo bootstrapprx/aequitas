@@ -7,6 +7,8 @@ from datetime import date
 from app.db.session import get_db
 from app.db.models.user import User
 from app.api.v1.auth import get_current_user
+from app.core.security import check_superuser
+from app.core.rate_limiting import rate_limit_critical, rate_limit_write
 from app.schemas.ledger import (
     AccountLedger,
     TrialBalanceResponse,
@@ -209,7 +211,12 @@ def get_cash_flow_statement(
 
 # ===== Fiscal Period Endpoints =====
 
-@router.post("/fiscal-periods", response_model=FiscalPeriodResponse, status_code=201)
+@router.post(
+    "/fiscal-periods",
+    response_model=FiscalPeriodResponse,
+    status_code=201,
+    dependencies=[Depends(rate_limit_write())]
+)
 def create_fiscal_period(
     period_data: FiscalPeriodCreate,
     current_user: User = Depends(get_current_user),
@@ -275,7 +282,11 @@ def list_fiscal_periods(
     return [FiscalPeriodResponse(**p.__dict__) for p in periods]
 
 
-@router.post("/fiscal-periods/{period_id}/close", response_model=FiscalPeriodResponse)
+@router.post(
+    "/fiscal-periods/{period_id}/close",
+    response_model=FiscalPeriodResponse,
+    dependencies=[Depends(rate_limit_critical())]
+)
 def close_fiscal_period(
     period_id: UUID,
     close_data: FiscalPeriodClose,
@@ -308,30 +319,49 @@ def close_fiscal_period(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/fiscal-periods/{period_id}/reopen", response_model=FiscalPeriodResponse)
+@router.post(
+    "/fiscal-periods/{period_id}/reopen",
+    response_model=FiscalPeriodResponse,
+    dependencies=[Depends(rate_limit_critical())]
+)
 def reopen_fiscal_period(
     period_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Reopen a closed fiscal period.
+    Reopen a closed fiscal period (requires superuser privileges).
 
-    Cannot reopen locked periods.
+    SECURITY:
+    - Requires superuser privileges (enforced)
+    - Cannot reopen locked periods (GAAP compliance)
+    - Creates audit trail of reopen operation
+
+    RESTRICTIONS:
+    - LOCKED periods cannot be reopened (immutable)
+    - Only CLOSED periods can transition to OPEN
+
+    USE CASES:
+    - Correcting period close errors
+    - Emergency adjustments after premature close
+    - Reversing accidental period closure
     """
+    # CRITICAL SECURITY: Enforce superuser privileges
+    check_superuser(current_user)
+
     service = FiscalPeriodService(db)
     period = service.get_fiscal_period(period_id)
 
     if not period:
         raise HTTPException(status_code=404, detail="Fiscal period not found")
 
-    # Check permissions
+    # Check permissions (superuser can manage all companies, but verify access)
     perm_service = PermissionService(db)
     if not perm_service.can_manage_company(current_user.id, period.company_id):
         raise HTTPException(status_code=403, detail="No permission to reopen this fiscal period")
 
     try:
-        reopened_period = service.reopen_fiscal_period(period_id)
+        reopened_period = service.reopen_fiscal_period(period_id, reopened_by=current_user.id)
         return FiscalPeriodResponse(**reopened_period.__dict__)
 
     except ValueError as e:

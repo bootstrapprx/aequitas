@@ -23,6 +23,7 @@ from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 from app.core.exceptions import ValidationError, ErrorCode
 from app.services.validators.template_account_validator import TemplateAccountValidator
+from app.services.audit_service import AuditService
 
 
 class CompanyChartService:
@@ -794,6 +795,18 @@ class CompanyChartService:
         self.db.commit()
         self.db.refresh(account)
 
+        # AUDIT LOGGING: Record account lock event
+        if user_id:
+            audit_service = AuditService(self.db)
+            audit_service.log_account_lock(
+                user_id=user_id,
+                account_id=account.id,
+                account_code=account.code,
+                account_name=account.name,
+                company_id=account.company_id,
+                locked_reason=reason.value
+            )
+
         return account
 
     def unlock_account(
@@ -833,6 +846,17 @@ class CompanyChartService:
         account.unlock()
         self.db.commit()
         self.db.refresh(account)
+
+        # AUDIT LOGGING: Record account unlock event (CRITICAL SECURITY OPERATION)
+        audit_service = AuditService(self.db)
+        audit_service.log_account_unlock(
+            user_id=user_id,
+            account_id=account.id,
+            account_code=account.code,
+            account_name=account.name,
+            company_id=account.company_id,
+            unlock_reason=None  # Could be passed from API request if needed
+        )
 
         return account
 

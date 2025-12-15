@@ -6,8 +6,11 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.db.session import get_db
+from app.db.models.user import User
 from app.services.companychart_service import CompanyChartService
 from app.core.exceptions import ValidationError, ErrorCode
+from app.core.security import check_superuser
+from app.core.rate_limiting import rate_limit_critical, rate_limit_write
 from app.db.models.enums import LockedReason
 from app.schemas.company_account import (
     CompanyAccountSchema,
@@ -16,6 +19,7 @@ from app.schemas.company_account import (
     CompanyAccountLockRequest,
     CompanyAccountUnlockRequest
 )
+from app.api.v1.auth import get_current_user
 
 router = APIRouter()
 
@@ -70,7 +74,12 @@ def get_company_account_by_code(
     return account
 
 
-@router.post("/companies/{company_id}/chart", response_model=CompanyAccountSchema, status_code=201)
+@router.post(
+    "/companies/{company_id}/chart",
+    response_model=CompanyAccountSchema,
+    status_code=201,
+    dependencies=[Depends(rate_limit_write())]
+)
 def create_company_account(
     company_id: UUID,
     account_data: CompanyAccountCreate,
@@ -92,7 +101,11 @@ def create_company_account(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.put("/companies/{company_id}/chart/{code}", response_model=CompanyAccountSchema)
+@router.put(
+    "/companies/{company_id}/chart/{code}",
+    response_model=CompanyAccountSchema,
+    dependencies=[Depends(rate_limit_write())]
+)
 def update_company_account(
     company_id: UUID,
     code: str,
@@ -117,7 +130,11 @@ def update_company_account(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.delete("/companies/{company_id}/chart/{code}", status_code=204)
+@router.delete(
+    "/companies/{company_id}/chart/{code}",
+    status_code=204,
+    dependencies=[Depends(rate_limit_write())]
+)
 def delete_company_account(
     company_id: UUID,
     code: str,
@@ -181,7 +198,11 @@ def initialize_company_chart(
 # ACCOUNT LOCKING ENDPOINTS
 # ==============================================================================
 
-@router.post("/companies/{company_id}/chart/{account_id}/lock", response_model=CompanyAccountSchema)
+@router.post(
+    "/companies/{company_id}/chart/{account_id}/lock",
+    response_model=CompanyAccountSchema,
+    dependencies=[Depends(rate_limit_write())]
+)
 def lock_company_account(
     company_id: UUID,
     account_id: UUID,
@@ -231,12 +252,16 @@ def lock_company_account(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/companies/{company_id}/chart/{account_id}/unlock", response_model=CompanyAccountSchema)
+@router.post(
+    "/companies/{company_id}/chart/{account_id}/unlock",
+    response_model=CompanyAccountSchema,
+    dependencies=[Depends(rate_limit_critical())]
+)
 def unlock_company_account(
     company_id: UUID,
     account_id: UUID,
     unlock_request: CompanyAccountUnlockRequest,
-    user_id: UUID = Query(..., description="Superuser ID (required)"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -245,8 +270,8 @@ def unlock_company_account(
     WARNING: Only allowed if no posted transactions in current fiscal period.
 
     SECURITY:
-    - Requires superuser privileges
-    - Requires user_id for audit trail
+    - Requires superuser privileges (enforced)
+    - Requires authenticated user for audit trail
     - Creates unlock event in audit log
 
     USE CASES:
@@ -258,6 +283,9 @@ def unlock_company_account(
     - Cannot unlock if transactions exist in current period
     - Unlock reason must be provided for audit
     """
+    # CRITICAL SECURITY: Enforce superuser privileges
+    check_superuser(current_user)
+
     service = CompanyChartService(db)
     try:
         # Verify account belongs to company
@@ -268,11 +296,8 @@ def unlock_company_account(
                 detail=f"Account {account_id} not found in company {company_id}"
             )
 
-        # TODO: Verify user_id has superuser privileges
-        # This should be done via proper authentication/authorization middleware
-
-        # Unlock the account
-        unlocked_account = service.unlock_account(account_id, user_id)
+        # Unlock the account (using current_user.id for audit trail)
+        unlocked_account = service.unlock_account(account_id, current_user.id)
         return unlocked_account
     except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))
