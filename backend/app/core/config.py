@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     ALLOW_PUBLIC_SIGNUP: bool = False
     ALLOW_MOCK_PAYMENTS: bool = True  # Allow mock payments when Stripe not configured
 
+    # --- OAuth Settings (Google, Microsoft, Apple) ---
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: Optional[str] = None
+    OAUTH_STATE_SECRET: Optional[str] = None  # For signing CSRF state tokens
+
     # --- Stripe Settings (Optional) ---
     STRIPE_API_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
@@ -92,6 +98,16 @@ class Settings(BaseSettings):
     def STRIPE_ENABLED(self) -> bool:
         """Returns True if Stripe is configured."""
         return bool(self.STRIPE_API_KEY)
+
+    @property
+    def GOOGLE_OAUTH_ENABLED(self) -> bool:
+        """Returns True if Google OAuth is fully configured."""
+        return all([self.GOOGLE_CLIENT_ID, self.GOOGLE_CLIENT_SECRET, self.GOOGLE_REDIRECT_URI])
+
+    @property
+    def OAUTH_STATE_SECRET_KEY(self) -> str:
+        """Returns the OAuth state signing secret, falling back to SECRET_KEY."""
+        return self.OAUTH_STATE_SECRET or self.SECRET_KEY
 
 # Instantiate the settings object
 settings = Settings()

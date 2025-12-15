@@ -399,6 +399,72 @@ class AuditService:
             }
         )
 
+    def log_oauth_login(
+        self,
+        user_id: UUID,
+        user_email: str,
+        provider: str,
+        is_new_user: bool = False,
+        ip_address: Optional[str] = None
+    ) -> AuditLog:
+        """
+        Log OAuth login event.
+
+        Args:
+            user_id: UUID of user
+            user_email: Email of user
+            provider: OAuth provider (google, microsoft, apple)
+            is_new_user: Whether this is a new user creation via OAuth
+            ip_address: IP address of request (if available)
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="OAUTH_LOGIN" if not is_new_user else "OAUTH_USER_CREATE",
+            entity_type="authentication",
+            user_id=user_id,
+            entity_id=str(user_id),
+            payload={
+                "email": user_email,
+                "provider": provider,
+                "is_new_user": is_new_user,
+                "ip_address": ip_address
+            }
+        )
+
+    def log_oauth_account_linked(
+        self,
+        user_id: UUID,
+        user_email: str,
+        provider: str,
+        provider_email: str
+    ) -> AuditLog:
+        """
+        Log OAuth account linking event.
+
+        Args:
+            user_id: UUID of user linking account
+            user_email: Email of existing user
+            provider: OAuth provider being linked
+            provider_email: Email from OAuth provider
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="OAUTH_ACCOUNT_LINKED",
+            entity_type="oauth_account",
+            user_id=user_id,
+            entity_id=str(user_id),
+            payload={
+                "user_email": user_email,
+                "provider": provider,
+                "provider_email": provider_email,
+                "security_level": "IMPORTANT"
+            }
+        )
+
     def _sanitize_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Remove sensitive data from payload before logging.

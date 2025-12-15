@@ -69,6 +69,8 @@ import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
 import ChangePasswordPage from "./pages/auth/ChangePasswordPage";
+import OAuthCallbackPage from "./pages/auth/OAuthCallbackPage";
+import PostAuthSetupPage from "./pages/auth/PostAuthSetupPage";
 
 // User Management Pages (legacy)
 import UsersPage from "./pages/users/UsersPage";
@@ -101,6 +103,15 @@ const App = () => (
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
+                <Route path="/auth/callback/google" element={<OAuthCallbackPage />} />
+                <Route
+                  path="/auth/setup"
+                  element={
+                    <ProtectedRoute>
+                      <PostAuthSetupPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Change Password Route - Protected but accessible even with force_password_reset */}
                 <Route

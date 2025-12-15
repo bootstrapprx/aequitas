@@ -73,12 +73,12 @@ def list_companies(
         db.close()
 
 
-@app.command("create")
+# @app.command("create")
 def create_company(
     name: str = typer.Option(..., help="Company name"),
     email: Optional[str] = typer.Option(None, help="Company email"),
     tax_id: Optional[str] = typer.Option(None, help="Tax ID"),
-    skip_payment: bool = typer.Option(True, help="Skip payment (SU only)"),
+    pay_now: bool = typer.Option(False, "--pay", help="Enforce payment (do not skip)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """
@@ -89,16 +89,17 @@ def create_company(
     """
     db = SessionLocal()
     try:
-        subscription_type = SubscriptionType.NATIVE if skip_payment else SubscriptionType.STRIPE
-
-        company_data = CompanyCreate(
+        if pay_now:
+            console.print("[yellow]Payment enforcement enabled[/yellow]")
+        
+        # Pass skip_payment = not pay_now
+        company = CompanyService.create_company(
+            db=db,
             name=name,
             email=email,
             tax_id=tax_id,
-            subscription_type=subscription_type,
+            skip_payment=not pay_now,
         )
-
-        company = CompanyService.create_company(db, company_data)
 
         if json_output:
             output = {

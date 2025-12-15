@@ -11,7 +11,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_uid = Column(String, unique=True, index=True, nullable=False, default=lambda: str(uuid.uuid4()))
     email = Column(String, unique=True, index=True, nullable=False)
-    hashed_password = Column(String, nullable=False)
+    hashed_password = Column(String, nullable=True)  # Nullable for OAuth-only users
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     role = Column(String, default="USER") # USER, ACCOUNTANT, ADMIN, SU, COUNCIL_MEMBER
@@ -32,6 +32,9 @@ class User(Base):
 
     # Relationship to owned groups
     owned_groups = relationship("GroupCompany", back_populates="owner")
+
+    # Relationship to OAuth accounts (federated authentication)
+    oauth_accounts = relationship("OAuthAccount", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id='{self.id}', email='{self.email}')>"

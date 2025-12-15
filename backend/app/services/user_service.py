@@ -85,24 +85,29 @@ class UserService:
     def authenticate_user(self, email: str, password: str) -> Optional[User]:
         """
         Authenticate a user by email and password.
-        
+
         Args:
             email: User email
             password: Plain text password
-        
+
         Returns:
             User object if authentication successful, None otherwise
         """
         user = self.db.query(User).filter(User.email == email).first()
         if not user:
             return None
-        
+
+        # OAuth-only users have no password
+        if not user.hashed_password:
+            logger.warning(f"Password login attempted for OAuth-only user: {email}")
+            return None
+
         if not verify_password(password, user.hashed_password):
             return None
-        
+
         if not user.is_active:
             return None
-        
+
         return user
     
     def get_user_by_id(self, user_id: UUID) -> Optional[User]:

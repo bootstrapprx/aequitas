@@ -71,7 +71,7 @@ def list_users(
 def create_user(
     email: str = typer.Option(..., "-e", help="User email"),
     password: str = typer.Option(..., "-p", help="User password"),
-    superuser: bool = typer.Option(False, "--su/--no-su", help="Make user a superuser"),
+    superuser: bool = typer.Option(False, "--su", help="Make user a superuser"),
     role: str = typer.Option("USER", "-r", help="User role (USER, ACCOUNTANT, ADMIN, SU)"),
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):

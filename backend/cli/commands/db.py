@@ -85,14 +85,14 @@ def downgrade_db(
 @app.command("revision")
 def create_revision(
     message: str = typer.Option(..., "-m", help="Revision message"),
-    autogenerate: bool = typer.Option(True, "--autogenerate/--no-autogenerate", help="Auto-generate migration"),
+    manual: bool = typer.Option(False, "--manual", help="Manual migration (disable auto-generate)"),
 ):
     """Create a new database migration."""
     try:
         console.print(f"[cyan]Creating new migration: {message}...[/cyan]")
 
         cmd = ["alembic", "revision", "-m", message]
-        if autogenerate:
+        if not manual:
             cmd.insert(2, "--autogenerate")
 
         result = subprocess.run(
