@@ -143,8 +143,6 @@ class Invitation(Base):
     __table_args__ = (
         # Index for finding pending invitations by email
         Index('ix_invitations_email_status', 'email', 'status'),
-        # Index for finding invitations by target
-        Index('ix_invitations_target', 'target_type', 'target_id'),
     )
 
     def __repr__(self):

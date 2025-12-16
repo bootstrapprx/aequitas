@@ -179,7 +179,7 @@ class CompanyAccount(Base):
     """User who locked the account"""
 
     # Journal entry lines using this account
-    journal_entry_lines = relationship("JournalEntryLine", back_populates="account")
+    journal_entry_lines = relationship("JournalEntryLine", back_populates="company_account")
     """Journal entry lines referencing this account"""
 
     # Account balances by fiscal period
