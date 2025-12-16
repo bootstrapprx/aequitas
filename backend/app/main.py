@@ -13,6 +13,7 @@ from app.api.v1 import (
     settings, # New
     auth, # New
     oauth, # New - OAuth authentication
+    invitations, # New - User invitations
     users, # New
     users_management, # New - Users Management module
     permissions, # New
@@ -47,6 +48,7 @@ from app.db.models import (
     user, # New
     user_company, # New
     oauth_account, # New - OAuth accounts
+    invitation, # New - User invitations
     elevation_request, # New
     pending_registration, # New - for paid registration flow
     group_company, # New - GroupCompany feature
@@ -129,6 +131,7 @@ app.include_router(code_generator_router, prefix="/api/v1/code", tags=["CodeGene
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(oauth.router, prefix="/api/v1/auth/oauth", tags=["OAuth Authentication"])
+app.include_router(invitations.router, prefix="/api/v1/invitations", tags=["Invitations"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(users_management.router, prefix="/api/v1", tags=["Users Management"])
 app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["Permissions"])

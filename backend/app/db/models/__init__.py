@@ -21,6 +21,7 @@ from .user import User
 from .user_company import UserCompany
 from .oauth_account import OAuthAccount
 from .pending_registration import PendingRegistration
+from .invitation import Invitation
 from .group_company import GroupCompany
 from .group_company_member import GroupCompanyMember
 
@@ -60,6 +61,7 @@ __all__ = [
     "UserCompany",
     "OAuthAccount",
     "PendingRegistration",
+    "Invitation",
     "GroupCompany",
     "GroupCompanyMember",
     # Chart template models (Phase 3B)

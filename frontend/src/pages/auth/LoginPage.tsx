@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import api from '@/integrations/api';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -22,12 +23,32 @@ const LoginPage = () => {
 
     try {
       await login(email, password);
+
+      // Check user context to determine routing (matches OAuth flow)
+      const contextResponse = await api.get('/invitations/context');
+      const { requires_setup, pending_invitations, has_company } = contextResponse.data;
+
       toast({
         title: 'Access Granted',
         description: 'Welcome to the Athenaeum.',
         className: 'bg-background border-gold text-gold font-heading',
       });
-      navigate('/dashboard');
+
+      // Route based on user context
+      if (requires_setup) {
+        // User has no companies - redirect to setup (will show invitations if any)
+        if (pending_invitations > 0) {
+          toast({
+            title: 'Invitations Pending',
+            description: `You have ${pending_invitations} invitation${pending_invitations > 1 ? 's' : ''} waiting.`,
+            className: 'bg-background border-gold text-gold font-heading',
+          });
+        }
+        navigate('/auth/setup');
+      } else {
+        // User has companies - proceed to dashboard
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: 'Access Denied',
@@ -58,6 +79,56 @@ const LoginPage = () => {
       toast({
         title: 'OAuth Error',
         description: error.message || 'Failed to connect with Google.',
+        variant: 'destructive',
+        className: 'font-heading',
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Call backend to get Microsoft OAuth URL
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/microsoft/start`);
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate Microsoft OAuth');
+      }
+
+      const data = await response.json();
+
+      // Redirect to Microsoft OAuth consent page
+      window.location.href = data.authorization_url;
+    } catch (error: any) {
+      toast({
+        title: 'OAuth Error',
+        description: error.message || 'Failed to connect with Microsoft.',
+        variant: 'destructive',
+        className: 'font-heading',
+      });
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setIsLoading(true);
+    try {
+      // Call backend to get Apple Sign-In URL
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/apple/start`);
+
+      if (!response.ok) {
+        throw new Error('Failed to initiate Apple Sign-In');
+      }
+
+      const data = await response.json();
+
+      // Redirect to Apple Sign-In consent page
+      window.location.href = data.authorization_url;
+    } catch (error: any) {
+      toast({
+        title: 'OAuth Error',
+        description: error.message || 'Failed to connect with Apple.',
         variant: 'destructive',
         className: 'font-heading',
       });
@@ -170,6 +241,37 @@ const LoginPage = () => {
                 />
               </svg>
               Continue with Google
+            </Button>
+
+            {/* Microsoft OAuth Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300"
+              onClick={handleMicrosoftLogin}
+              disabled={isLoading}
+            >
+              <svg className="mr-3 h-5 w-5" viewBox="0 0 23 23">
+                <path fill="#f35325" d="M0 0h11v11H0z" />
+                <path fill="#81bc06" d="M12 0h11v11H12z" />
+                <path fill="#05a6f0" d="M0 12h11v11H0z" />
+                <path fill="#ffba08" d="M12 12h11v11H12z" />
+              </svg>
+              Continue with Microsoft
+            </Button>
+
+            {/* Apple Sign-In Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300"
+              onClick={handleAppleLogin}
+              disabled={isLoading}
+            >
+              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+              </svg>
+              Continue with Apple
             </Button>
 
             <div className="text-center text-sm text-muted-foreground pt-4 font-body">

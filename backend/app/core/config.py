@@ -36,6 +36,18 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
+
+    MICROSOFT_CLIENT_ID: Optional[str] = None
+    MICROSOFT_CLIENT_SECRET: Optional[str] = None
+    MICROSOFT_REDIRECT_URI: Optional[str] = None
+    MICROSOFT_TENANT: str = "common"  # "common" for personal+org, "organizations", or specific tenant ID
+
+    APPLE_CLIENT_ID: Optional[str] = None
+    APPLE_TEAM_ID: Optional[str] = None
+    APPLE_KEY_ID: Optional[str] = None
+    APPLE_PRIVATE_KEY: Optional[str] = None  # Base64 encoded or file path
+    APPLE_REDIRECT_URI: Optional[str] = None
+
     OAUTH_STATE_SECRET: Optional[str] = None  # For signing CSRF state tokens
 
     # --- Stripe Settings (Optional) ---
@@ -103,6 +115,22 @@ class Settings(BaseSettings):
     def GOOGLE_OAUTH_ENABLED(self) -> bool:
         """Returns True if Google OAuth is fully configured."""
         return all([self.GOOGLE_CLIENT_ID, self.GOOGLE_CLIENT_SECRET, self.GOOGLE_REDIRECT_URI])
+
+    @property
+    def MICROSOFT_OAUTH_ENABLED(self) -> bool:
+        """Returns True if Microsoft OAuth is fully configured."""
+        return all([self.MICROSOFT_CLIENT_ID, self.MICROSOFT_CLIENT_SECRET, self.MICROSOFT_REDIRECT_URI])
+
+    @property
+    def APPLE_OAUTH_ENABLED(self) -> bool:
+        """Returns True if Apple Sign-In is fully configured."""
+        return all([
+            self.APPLE_CLIENT_ID,
+            self.APPLE_TEAM_ID,
+            self.APPLE_KEY_ID,
+            self.APPLE_PRIVATE_KEY,
+            self.APPLE_REDIRECT_URI
+        ])
 
     @property
     def OAUTH_STATE_SECRET_KEY(self) -> str:

@@ -103,7 +103,7 @@ const App = () => (
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
-                <Route path="/auth/callback/google" element={<OAuthCallbackPage />} />
+                <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
                 <Route
                   path="/auth/setup"
                   element={

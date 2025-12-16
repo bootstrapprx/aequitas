@@ -65,23 +65,25 @@ class OAuthAccount(Base):
         comment="Whether provider has verified this email"
     )
 
-    # OAuth tokens (encrypted at rest in production)
+    # OAuth tokens (stored for future provider API access; not currently used for refresh logic)
+    # TODO: Implement token refresh rotation in Phase 2
+    # TODO: Add field-level encryption for production deployments
     access_token = Column(
         Text,
         nullable=True,
-        comment="OAuth access token (encrypted)"
+        comment="OAuth access token from provider (for future API calls, not active refresh)"
     )
 
     refresh_token = Column(
         Text,
         nullable=True,
-        comment="OAuth refresh token (encrypted)"
+        comment="OAuth refresh token from provider (for future token rotation, not active)"
     )
 
     expires_at = Column(
         DateTime,
         nullable=True,
-        comment="When the access token expires"
+        comment="When the access token expires (tracked but not enforced yet)"
     )
 
     # Additional provider data

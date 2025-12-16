@@ -53,13 +53,18 @@ CREATE INDEX ix_oauth_user_provider ON oauth_accounts(user_id, provider);
 
 ### Modified Table: `users`
 
-**Changed:**
+**Changed (via SQLAlchemy model, NOT migration):**
 - `hashed_password` column: `nullable=False` → `nullable=True`
 
 **Added:**
 - New relationship: `oauth_accounts` (one-to-many)
 
 **Impact:** OAuth-only users can exist with NULL password
+
+**Important:** This is a conceptual schema change applied through the SQLAlchemy model definition. No ALTER TABLE migration is executed. The code safely handles both scenarios:
+- **Existing databases:** Column remains NOT NULL in PostgreSQL (compatible)
+- **Fresh installations:** Column created as nullable (via `Base.metadata.create_all()`)
+- **Application logic:** Password login explicitly checks for NULL and rejects OAuth-only users
 
 ---
 
@@ -364,6 +369,27 @@ Response: { status: "success", access_token: string, message: string }
 - [ ] Profile picture sync from OAuth provider
 - [ ] Refresh token rotation
 - [ ] CLI OAuth support
+- [ ] Invitation resolution in PostAuthSetup flow
+
+### Route Normalization (v2 Consideration)
+
+**Current routes:**
+- `/api/v1/auth/oauth/google/start`
+- `/api/v1/auth/oauth/google/callback`
+- `/api/v1/auth/oauth/link/confirm`
+
+**Proposed normalization (future):**
+- `/api/v1/auth/providers/google/start`
+- `/api/v1/auth/providers/google/callback`
+- `/api/v1/auth/providers/link/confirm`
+
+**Rationale:**
+- Removes `auth/oauth` redundancy
+- Cleaner naming convention
+- Easier to scale with `/providers/microsoft`, `/providers/apple`
+- More RESTful resource naming
+
+**Status:** Not urgent, consider for v2 cleanup
 
 ### Architecture Already Supports
 

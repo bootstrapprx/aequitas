@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 
 const OAuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
+  const { provider } = useParams<{ provider: string }>();
   const navigate = useNavigate();
   const { login: authLogin } = useAuth();
   const { toast } = useToast();
@@ -21,6 +22,9 @@ const OAuthCallbackPage = () => {
       const code = searchParams.get('code');
       const state = searchParams.get('state');
       const errorParam = searchParams.get('error');
+
+      // Get provider from URL or default to google
+      const oauthProvider = provider || 'google';
 
       // Handle OAuth errors (user cancelled, etc.)
       if (errorParam) {
@@ -36,9 +40,9 @@ const OAuthCallbackPage = () => {
       }
 
       try {
-        // Call backend callback endpoint
+        // Call backend callback endpoint (provider-specific)
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/google/callback`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/${oauthProvider}/callback`,
           {
             method: 'POST',
             headers: {
@@ -55,33 +59,46 @@ const OAuthCallbackPage = () => {
 
         const data = await response.json();
 
-        if (data.status === 'success') {
-          // Successful login - store token and redirect
+        if (data.status === 'success' || data.status === 'setup_required') {
+          // Successful login - store token
           localStorage.setItem('token', data.access_token);
 
-          toast({
-            title: 'Access Granted',
-            description: 'Welcome to the Athenaeum.',
-            className: 'bg-background border-gold text-gold font-heading',
-          });
+          // Check user context to determine routing
+          const contextResponse = await fetch(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/invitations/context`,
+            {
+              headers: {
+                'Authorization': `Bearer ${data.access_token}`
+              }
+            }
+          );
 
-          // Check if user needs setup
-          if (data.requires_setup) {
-            navigate('/auth/setup');
+          if (contextResponse.ok) {
+            const context = await contextResponse.json();
+
+            if (context.requires_setup) {
+              // User needs setup (no companies) - may have invitations
+              toast({
+                title: 'Welcome',
+                description: context.pending_invitations > 0
+                  ? 'You have pending invitations!'
+                  : 'Please complete your account setup.',
+                className: 'bg-background border-gold text-gold font-heading',
+              });
+              navigate('/auth/setup');
+            } else {
+              // User has companies - go to dashboard
+              toast({
+                title: 'Access Granted',
+                description: 'Welcome to the Athenaeum.',
+                className: 'bg-background border-gold text-gold font-heading',
+              });
+              navigate('/dashboard');
+            }
           } else {
-            navigate('/dashboard');
+            // Fallback if context check fails
+            navigate(data.requires_setup ? '/auth/setup' : '/dashboard');
           }
-        } else if (data.status === 'setup_required') {
-          // New OAuth user - needs to complete setup
-          localStorage.setItem('token', data.access_token);
-
-          toast({
-            title: 'Account Created',
-            description: 'Please complete your account setup.',
-            className: 'bg-background border-gold text-gold font-heading',
-          });
-
-          navigate('/auth/setup');
         } else if (data.status === 'link_required') {
           // Email collision - show linking UI
           setLinkToken(data.link_token);

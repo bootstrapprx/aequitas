@@ -465,6 +465,120 @@ class AuditService:
             }
         )
 
+    def log_invitation_sent(
+        self,
+        inviter_id: UUID,
+        invitee_email: str,
+        target_type: str,
+        target_id: UUID,
+        target_name: str,
+        invitation_id: UUID
+    ) -> AuditLog:
+        """
+        Log invitation sent event.
+
+        Args:
+            inviter_id: UUID of user sending invitation
+            invitee_email: Email of person being invited
+            target_type: Type of invitation (company/group)
+            target_id: ID of company or group
+            target_name: Name of company or group
+            invitation_id: UUID of invitation
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="INVITATION_SENT",
+            entity_type="invitation",
+            user_id=inviter_id,
+            entity_id=str(invitation_id),
+            payload={
+                "invitee_email": invitee_email,
+                "target_type": target_type,
+                "target_id": str(target_id),
+                "target_name": target_name
+            }
+        )
+
+    def log_invitation_accepted(
+        self,
+        user_id: UUID,
+        user_email: str,
+        target_type: str,
+        target_id: UUID,
+        target_name: str,
+        invitation_id: UUID,
+        membership_id: UUID
+    ) -> AuditLog:
+        """
+        Log invitation acceptance.
+
+        Args:
+            user_id: UUID of user accepting invitation
+            user_email: Email of user
+            target_type: Type of invitation (company/group)
+            target_id: ID of company or group
+            target_name: Name of company or group
+            invitation_id: UUID of invitation
+            membership_id: UUID of created membership record
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="INVITATION_ACCEPTED",
+            entity_type=target_type,
+            user_id=user_id,
+            entity_id=str(target_id),
+            payload={
+                "user_email": user_email,
+                "invitation_id": str(invitation_id),
+                "membership_id": str(membership_id),
+                "target_type": target_type,
+                "target_name": target_name
+            }
+        )
+
+    def log_invitation_declined(
+        self,
+        user_id: UUID,
+        user_email: str,
+        target_type: str,
+        target_id: UUID,
+        target_name: str,
+        invitation_id: UUID,
+        reason: Optional[str] = None
+    ) -> AuditLog:
+        """
+        Log invitation declined.
+
+        Args:
+            user_id: UUID of user declining invitation
+            user_email: Email of user
+            target_type: Type of invitation (company/group)
+            target_id: ID of company or group
+            target_name: Name of company or group
+            invitation_id: UUID of invitation
+            reason: Optional reason for declining
+
+        Returns:
+            Created AuditLog object
+        """
+        return self.log_action(
+            action="INVITATION_DECLINED",
+            entity_type="invitation",
+            user_id=user_id,
+            entity_id=str(invitation_id),
+            payload={
+                "user_email": user_email,
+                "target_type": target_type,
+                "target_id": str(target_id),
+                "target_name": target_name,
+                "reason": reason
+            }
+        )
+
     def _sanitize_payload(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         """
         Remove sensitive data from payload before logging.
