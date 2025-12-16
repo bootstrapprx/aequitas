@@ -61,79 +61,10 @@ const LoginPage = () => {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    try {
-      // Call backend to get Google OAuth URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/google/start`);
+  const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '');
 
-      if (!response.ok) {
-        throw new Error('Failed to initiate Google OAuth');
-      }
-
-      const data = await response.json();
-
-      // Redirect to Google OAuth consent page
-      window.location.href = data.authorization_url;
-    } catch (error: any) {
-      toast({
-        title: 'OAuth Error',
-        description: error.message || 'Failed to connect with Google.',
-        variant: 'destructive',
-        className: 'font-heading',
-      });
-      setIsLoading(false);
-    }
-  };
-
-  const handleMicrosoftLogin = async () => {
-    setIsLoading(true);
-    try {
-      // Call backend to get Microsoft OAuth URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/microsoft/start`);
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate Microsoft OAuth');
-      }
-
-      const data = await response.json();
-
-      // Redirect to Microsoft OAuth consent page
-      window.location.href = data.authorization_url;
-    } catch (error: any) {
-      toast({
-        title: 'OAuth Error',
-        description: error.message || 'Failed to connect with Microsoft.',
-        variant: 'destructive',
-        className: 'font-heading',
-      });
-      setIsLoading(false);
-    }
-  };
-
-  const handleAppleLogin = async () => {
-    setIsLoading(true);
-    try {
-      // Call backend to get Apple Sign-In URL
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/oauth/apple/start`);
-
-      if (!response.ok) {
-        throw new Error('Failed to initiate Apple Sign-In');
-      }
-
-      const data = await response.json();
-
-      // Redirect to Apple Sign-In consent page
-      window.location.href = data.authorization_url;
-    } catch (error: any) {
-      toast({
-        title: 'OAuth Error',
-        description: error.message || 'Failed to connect with Apple.',
-        variant: 'destructive',
-        className: 'font-heading',
-      });
-      setIsLoading(false);
-    }
+  const redirectToOAuthProvider = (provider: 'google' | 'microsoft' | 'apple') => {
+    window.location.href = `${apiBaseUrl}/api/v1/auth/oauth/${provider}/start`;
   };
 
   return (
@@ -218,11 +149,11 @@ const LoginPage = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300"
-              onClick={handleGoogleLogin}
+              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-3"
+              onClick={() => redirectToOAuthProvider('google')}
               disabled={isLoading}
             >
-              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -247,11 +178,11 @@ const LoginPage = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300"
-              onClick={handleMicrosoftLogin}
+              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-3"
+              onClick={() => redirectToOAuthProvider('microsoft')}
               disabled={isLoading}
             >
-              <svg className="mr-3 h-5 w-5" viewBox="0 0 23 23">
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 23 23">
                 <path fill="#f35325" d="M0 0h11v11H0z" />
                 <path fill="#81bc06" d="M12 0h11v11H12z" />
                 <path fill="#05a6f0" d="M0 12h11v11H0z" />
@@ -264,11 +195,11 @@ const LoginPage = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300"
-              onClick={handleAppleLogin}
+              className="w-full h-12 border-sidebar-border hover:border-gold/50 hover:bg-card/50 font-heading font-medium tracking-wide transition-all duration-300 flex items-center justify-center gap-3"
+              onClick={() => redirectToOAuthProvider('apple')}
               disabled={isLoading}
             >
-              <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
               Continue with Apple
@@ -293,4 +224,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-
