@@ -29,7 +29,240 @@ const DEFAULT_AUTH_CONFIG: AuthConfig = {
   mock_payments_allowed: false,
 };
 
+const parseAuthConfig = (data: any): AuthConfig => ({
+  allow_public_signup: data?.allow_public_signup ?? false,
+  stripe_enabled: data?.stripe_enabled ?? data?.stripe_configured ?? false,
+  stripe_configured: data?.stripe_configured ?? data?.stripe_enabled ?? false,
+  stripe_mock_mode: data?.stripe_mock_mode ?? data?.mock_payments_allowed ?? false,
+  mock_payments_allowed: data?.mock_payments_allowed ?? data?.stripe_mock_mode ?? false,
+});
+
+const USER_FIRST_REGISTER_ENDPOINT = '/auth/register/user-first';
+
 const RegisterPage = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const { toast } = useToast();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authConfig, setAuthConfig] = useState<AuthConfig>(DEFAULT_AUTH_CONFIG);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      setConfigLoading(true);
+      try {
+        const response = await api.get<any>('/auth/config');
+        setAuthConfig(parseAuthConfig(response));
+      } catch (err) {
+        console.warn('Failed to fetch auth config', err);
+        setAuthConfig(DEFAULT_AUTH_CONFIG);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+
+    fetchConfig();
+  }, []);
+
+  const validateForm = () => {
+    if (!email || !password || !confirmPassword) {
+      setError('Email and password are required');
+      return false;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!validateForm() || !authConfig.allow_public_signup) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const payload: Record<string, string> = {
+        email,
+        password,
+      };
+
+      if (fullName.trim()) {
+        payload.full_name = fullName.trim();
+      }
+
+      await api.post(USER_FIRST_REGISTER_ENDPOINT, payload);
+
+      toast({
+        title: 'Account created',
+        description: "Welcome to Aequitas. Let's finish your setup.",
+        className: 'bg-background border-gold text-gold font-heading',
+      });
+
+      // Authenticate the new user immediately and continue setup
+      await login(email, password);
+      navigate('/auth/setup');
+    } catch (err: any) {
+      const details = err?.details || {};
+      const message =
+        details?.detail ||
+        details?.message ||
+        err?.message ||
+        'Registration failed. Please try again.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (configLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const registrationDisabled = !authConfig.allow_public_signup;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
+          <CardDescription>
+            Enter your details to get started. You'll set up your company after signing in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertTitle>What happens next?</AlertTitle>
+            <AlertDescription>
+              This creates your personal Aequitas login. We will guide you through company setup on the next step.
+            </AlertDescription>
+          </Alert>
+
+          {registrationDisabled && (
+            <Alert variant="destructive">
+              <AlertTitle>Registration is currently closed</AlertTitle>
+              <AlertDescription>
+                Public sign ups are disabled. Contact your administrator for an invitation.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading || registrationDisabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="full-name">Full name (optional)</Label>
+              <Input
+                id="full-name"
+                type="text"
+                placeholder="Ada Lovelace"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                disabled={isLoading || registrationDisabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={isLoading || registrationDisabled}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isLoading || registrationDisabled}
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isLoading || registrationDisabled}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Continue'
+              )}
+            </Button>
+          </form>
+
+          <div className="text-center text-sm text-muted-foreground pt-2">
+            You'll choose or create a company on the next step.
+          </div>
+
+          <div className="text-center text-sm text-muted-foreground pt-4 border-t">
+            Already have an account?{' '}
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Log in
+            </Link>
+          </div>
+
+          <div className="text-center text-xs text-muted-foreground">
+            Need the legacy company-based flow?{' '}
+            <Link to="/register/company" className="text-primary hover:underline font-medium">
+              Access it here
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+const LegacyCompanyRegisterPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -58,17 +291,9 @@ const RegisterPage = () => {
       setConfigLoading(true);
       try {
         const response = await api.get<any>('/auth/config');
-        // Defensive: use response directly as it is the data
         if (response && typeof response === 'object') {
-          const data = response;
-          setAuthConfig({
-            allow_public_signup: data.allow_public_signup ?? false,
-            stripe_enabled: data.stripe_enabled ?? data.stripe_configured ?? false,
-            stripe_configured: data.stripe_configured ?? data.stripe_enabled ?? false,
-            stripe_mock_mode: data.stripe_mock_mode ?? data.mock_payments_allowed ?? false,
-            mock_payments_allowed: data.mock_payments_allowed ?? data.stripe_mock_mode ?? false,
-          });
-          // If public signup is allowed, default to free tab
+          const data = parseAuthConfig(response);
+          setAuthConfig(data);
           if (data.allow_public_signup) {
             setActiveTab('free');
           }
@@ -78,7 +303,6 @@ const RegisterPage = () => {
         }
       } catch (err) {
         console.error('Failed to fetch auth config:', err);
-        // Use safe defaults on error
         setAuthConfig(DEFAULT_AUTH_CONFIG);
       } finally {
         setConfigLoading(false);
@@ -123,14 +347,12 @@ const RegisterPage = () => {
         plan: 'starter'
       });
 
-      // Free registration returns token directly
       if (response && response.access_token) {
         toast({
           title: 'Registration successful!',
           description: 'Welcome to Aequitas. Redirecting to dashboard...',
         });
 
-        // Auto-login
         await login(email, password);
         navigate('/dashboard');
       }
@@ -158,14 +380,12 @@ const RegisterPage = () => {
         plan
       });
 
-      // Paid registration returns checkout URL
       if (response && response.checkout_url) {
         toast({
           title: 'Redirecting to payment...',
           description: 'You will be redirected to complete your payment.',
         });
 
-        // Redirect to Stripe checkout or mock payment page
         window.location.href = response.checkout_url;
       }
     } catch (err: any) {
@@ -176,7 +396,6 @@ const RegisterPage = () => {
     }
   };
 
-  // Show loading while fetching config
   if (configLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -195,7 +414,6 @@ const RegisterPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Canceled payment alert */}
           {wasCanceled && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -206,7 +424,6 @@ const RegisterPage = () => {
             </Alert>
           )}
 
-          {/* Error alert */}
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -222,13 +439,15 @@ const RegisterPage = () => {
                   Free Account
                 </TabsTrigger>
               )}
-              <TabsTrigger value="paid" className={`flex items-center gap-2 ${!authConfig.allow_public_signup ? 'col-span-2' : ''}`}>
+              <TabsTrigger
+                value="paid"
+                className={`flex items-center gap-2 ${!authConfig.allow_public_signup ? 'col-span-2' : ''}`}
+              >
                 <CreditCard className="h-4 w-4" />
                 Pay & Register
               </TabsTrigger>
             </TabsList>
 
-            {/* Free Registration Tab */}
             {authConfig.allow_public_signup && (
               <TabsContent value="free">
                 <form onSubmit={handleFreeRegister} className="space-y-4 mt-4">
@@ -298,7 +517,6 @@ const RegisterPage = () => {
               </TabsContent>
             )}
 
-            {/* Paid Registration Tab */}
             <TabsContent value="paid">
               <form onSubmit={handlePaidRegister} className="space-y-4 mt-4">
                 <div className="space-y-2">
@@ -414,4 +632,5 @@ const RegisterPage = () => {
   );
 };
 
+export { LegacyCompanyRegisterPage };
 export default RegisterPage;

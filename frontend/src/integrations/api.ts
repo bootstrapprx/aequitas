@@ -31,7 +31,11 @@ api.interceptors.response.use(
       localStorage.removeItem('aequitas_token');
       localStorage.removeItem('aequitas_user');
       // Only redirect if we're not already on the login page
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      if (
+        window.location.pathname !== '/login' &&
+        window.location.pathname !== '/register' &&
+        window.location.pathname !== '/register/company'
+      ) {
         window.location.href = '/login';
       }
     }

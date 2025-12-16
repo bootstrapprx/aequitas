@@ -66,7 +66,7 @@ import DocumentationPage from "./pages/DocumentationPage";
 
 // Auth Pages
 import LoginPage from "./pages/auth/LoginPage";
-import RegisterPage from "./pages/auth/RegisterPage";
+import RegisterPage, { LegacyCompanyRegisterPage } from "./pages/auth/RegisterPage";
 import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
 import ChangePasswordPage from "./pages/auth/ChangePasswordPage";
 import OAuthCallbackPage from "./pages/auth/OAuthCallbackPage";
@@ -102,6 +102,7 @@ const App = () => (
                 {/* Auth Routes */}
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register/company" element={<LegacyCompanyRegisterPage />} />
                 <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
                 <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
                 <Route
