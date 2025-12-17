@@ -70,6 +70,48 @@ The project is organized into two main directories: `frontend` and `backend`.
 └── README.md        # This file
 ```
 
+## 📜 Canonical Contracts
+
+Aequitas follows a **contract-first architecture** where API behavior, data structures, and accounting rules are governed by authoritative documentation.
+
+**Core Principle:** Code must conform to contracts, not vice-versa.
+
+### Canonical Documents
+
+All authoritative specifications live in [`docs/canonical/`](docs/canonical/):
+
+- **[API_BOUNDARIES.md](docs/canonical/API_BOUNDARIES.md)** - Frozen API surface definition
+  - Allowed vs. forbidden operations
+  - Permission model (view / manage / superuser)
+  - Security boundaries and rate limiting
+
+- **[PHASE_3C1_DTO_SPECIFICATION.md](docs/canonical/PHASE_3C1_DTO_SPECIFICATION.md)** - Data transfer objects
+  - 8 canonical DTOs with field classifications
+  - Immutability rules (locked accounts, posted entries)
+  - OpenAPI-ready schemas
+
+- **[PHASE_3C2_WRITE_APIS.md](docs/canonical/PHASE_3C2_WRITE_APIS.md)** - Write API specifications
+  - 17 write endpoints with complete contracts
+  - Validation rules and error codes
+  - Audit requirements (who/when/what/why)
+
+- **[DATA_DICTIONARY.md](docs/canonical/DATA_DICTIONARY.md)** - Database schema reference
+  - PostgreSQL table definitions
+  - UUID-based relationships
+  - Enum types and constraints
+
+### Why Canonical Contracts?
+
+1. **Accounting Correctness First** - GAAP compliance is non-negotiable
+2. **Security by Design** - Assume hostile or buggy clients
+3. **Immutability Enforcement** - Posted entries and locked accounts are protected
+4. **Deterministic Behavior** - Every error has an explicit code
+5. **Audit Integrity** - Critical operations tracked (who/when/what/why)
+
+**Read more:** [docs/canonical/README.md](docs/canonical/README.md)
+
+---
+
 ## 🖥️ Command-Line Interface (CLI)
 
 Aequitas includes a powerful CLI for administrative, operational, and diagnostic tasks:
