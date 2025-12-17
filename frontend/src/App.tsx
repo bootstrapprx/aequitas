@@ -80,6 +80,9 @@ import PermissionsPage from "./pages/permissions/PermissionsPage";
 import GroupsList from "./pages/groups/GroupsList";
 import GroupDetail from "./pages/groups/GroupDetail";
 
+// Onboarding Module (Phase 5)
+import OnboardingWizard from "./pages/onboarding/OnboardingWizard";
+
 const App = () => (
   <ErrorBoundary>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -144,6 +147,9 @@ const App = () => (
                 <Route path="companies" element={<Companies />} />
                 <Route path="companies/register" element={<CompanyRegistration />} />
                 <Route path="registration/users" element={<UsersListPage />} />
+
+                {/* Phase 5 - Onboarding Wizard */}
+                <Route path="onboarding/:companyId" element={<OnboardingWizard />} />
 
                 {/* Chart of Accounts Module (Unified) */}
                 <Route path="chartofaccounts" element={<CompanyChartPage />} />

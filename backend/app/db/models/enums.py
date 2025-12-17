@@ -120,6 +120,29 @@ class MasterAccountType(str, enum.Enum):
     DETAIL = "D"
 
 
+class OnboardingStatus(str, enum.Enum):
+    """
+    Company onboarding wizard status.
+
+    PostgreSQL enum: onboardingstatus
+    Values: DRAFT, TEMPLATE_SELECTED, CHART_READY, CHART_FINALIZED, ACTIVE
+
+    State machine for Phase 5 onboarding wizard:
+    DRAFT → TEMPLATE_SELECTED → CHART_READY → CHART_FINALIZED → ACTIVE
+
+    - DRAFT: Company exists, accounting not initialized
+    - TEMPLATE_SELECTED: Template chosen, not materialized
+    - CHART_READY: Accounts created from template
+    - CHART_FINALIZED: Accounts reviewed by user
+    - ACTIVE: Accounting live (point of no return reached)
+    """
+    DRAFT = "DRAFT"
+    TEMPLATE_SELECTED = "TEMPLATE_SELECTED"
+    CHART_READY = "CHART_READY"
+    CHART_FINALIZED = "CHART_FINALIZED"
+    ACTIVE = "ACTIVE"
+
+
 # Export all enums
 __all__ = [
     "AccountType",
@@ -130,4 +153,5 @@ __all__ = [
     "PeriodStatus",
     "PeriodType",
     "MasterAccountType",
+    "OnboardingStatus",
 ]

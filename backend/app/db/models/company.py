@@ -1,9 +1,11 @@
 import enum
 import uuid
-from sqlalchemy import Column, String, Text, Boolean, Index, DateTime, Enum
+from sqlalchemy import Column, String, Text, Boolean, Index, DateTime, Enum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.db.base import Base
+from app.db.models.enums import OnboardingStatus
 
 class SubscriptionType(str, enum.Enum):
     NATIVE = "native"
@@ -20,12 +22,12 @@ class Company(Base):
     inactivated_at = Column(DateTime, nullable=True)
     inactivated_by = Column(String, nullable=True) # User ID or Name
     subscription_type = Column(Enum(SubscriptionType), default=SubscriptionType.STRIPE, nullable=False)
-    
+
     # Contact Information
     email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
     website = Column(String, nullable=True)
-    
+
     # Address Information
     address_line1 = Column(String, nullable=True)
     address_line2 = Column(String, nullable=True)
@@ -33,11 +35,29 @@ class Company(Base):
     state = Column(String, nullable=True)
     postal_code = Column(String, nullable=True)
     country = Column(String, nullable=True)
-    
+
     # Additional Information
     tax_id = Column(String, nullable=True)  # Tax ID / EIN
     industry = Column(String, nullable=True)
     description = Column(Text, nullable=True)
+
+    # Phase 5 Onboarding Fields
+    trade_name = Column(String, nullable=True)  # Trade name (DBA)
+    timezone = Column(String, nullable=True)  # Timezone (e.g., 'America/New_York')
+    currency = Column(String(3), nullable=True)  # ISO 4217 currency code (e.g., 'USD')
+
+    # Onboarding State Machine
+    onboarding_status = Column(
+        Enum(OnboardingStatus),
+        default=OnboardingStatus.DRAFT,
+        nullable=False,
+        index=True
+    )
+    onboarding_current_step = Column(Integer, default=0, nullable=False)  # 0-6
+    onboarding_started_at = Column(DateTime(timezone=True), nullable=True)
+    onboarding_completed_at = Column(DateTime(timezone=True), nullable=True)
+    onboarding_session_lock = Column(UUID(as_uuid=True), nullable=True)  # Session lock UUID
+    onboarding_session_locked_at = Column(DateTime(timezone=True), nullable=True)
 
     accounts = relationship("CompanyAccount", back_populates="company", cascade="all, delete-orphan")
 

@@ -26,6 +26,7 @@ from app.api.v1 import (
     groups, # New - GroupCompany feature
     companies_su, # New - SU manual company creation
     mappings, # New - Account Mappings
+    onboarding, # Phase 5 - Company Onboarding Wizard
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -150,6 +151,9 @@ app.include_router(companies_su.router, prefix="/api/v1/companies", tags=["Compa
 
 # Mappings router
 app.include_router(mappings.router, prefix="/api/v1/mappings", tags=["Mappings"])
+
+# Phase 5 - Onboarding router
+app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
 
 @app.get("/health", tags=["Health"])
 def health_check():
