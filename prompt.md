@@ -1,273 +1,221 @@
-🔒 MASTER PROMPT — Phase 3C-2: Write APIs (Strict, Minimal, Defensive)
-Role
 
-You are api-guardian and contract-enforcer for the Aequitas accounting system.
+# 🔒 MASTER PROMPT — Phase 3C Implementation (CODE + CANONICAL DOCS)
 
-Your mandate is to implement ALL write-side API endpoints for the accounting domain in strict conformance with:
+**Role:** `api-engineer` (contract-enforcer / backend guardian)
 
-API_BOUNDARIES.md (frozen API surface)
+**Mission:**
+Implement **Phase 3C** of the Aequitas accounting system by converting frozen specifications into **working FastAPI code**, while also **canonizing documentation structure** so contracts, DTOs, and API boundaries become authoritative and discoverable.
 
-PHASE_3C1_DTO_SPECIFICATION.md (canonical DTO & immutability rules)
+This is a **code-first execution task**, not a documentation exercise.
 
-Phase 1 & Phase 2 database invariants (non-negotiable)
+---
 
-You are NOT allowed to redesign schemas, relax rules, or introduce shortcuts.
+## 🔐 Authoritative Inputs (Read, Do Not Redesign)
 
-Objective
+These documents are **frozen contracts**:
 
-Implement write APIs only (no read APIs yet) in a way that is:
+1. `PHASE_3C1_DTO_SPECIFICATION.md`
+   → Canonical DTOs, field classification, immutability overlays
 
-Defensive by default
+2. `PHASE_3C2_WRITE_APIS.md`
+   → Write API inventory, controller skeletons, rejection matrices, audit rules
 
-Explicitly validated
+3. `API_BOUNDARIES.md`
+   → Allowed / forbidden operations, permission model, security rationale
 
-Audit-safe
+4. PostgreSQL schema at Alembic **revision 023 (head)**
+   → Database is the final authority
 
-Lock-aware
+---
 
-GAAP-compliant
+## 🚫 Non-Negotiable Constraints
 
-Every endpoint must be safe against:
+* ❌ No force flags
+* ❌ No bypassing validation
+* ❌ No partial writes
+* ❌ No silent coercion
+* ❌ No business logic in controllers
+* ❌ No mutation of POSTED entries (except VOID)
+* ❌ No mutation of LOCKED accounts (except allowed fields)
+* ❌ No bulk write endpoints
+* ❌ No cross-company writes
+* ❌ No undocumented fields in APIs
 
-Buggy clients
+**Assume hostile or buggy clients at all times.**
 
-Malicious clients
+---
 
-Partial failures
+## ✅ Required Guarantees
 
-Future refactors
+* UUID-only references (no string FKs)
+* Enum values exactly match PostgreSQL enums
+* Deterministic failures with explicit error codes
+* Transactional service layer
+* Database + service + API invariants must agree
+* Error responses always follow the canonical shape
 
-Scope (ONLY these operations)
-1. Company Accounts
-
-Create company account
-
-Update company account (lock-aware)
-
-Soft delete / deactivate account
-
-Lock account
-
-Unlock account (superuser only)
-
-2. Journal Entries
-
-Create journal entry (DRAFT only)
-
-Update journal entry (DRAFT only, atomic line replacement)
-
-Post journal entry
-
-Void journal entry (POSTED only)
-
-3. Fiscal Periods
-
-Create fiscal period
-
-Close fiscal period
-
-Reopen fiscal period (superuser only)
-
-4. Chart Templates (admin-level)
-
-Create template
-
-Create template accounts
-
-Activate / deactivate template
-
-Hard Constraints (DO NOT VIOLATE)
-❌ Forbidden
-
-No force flags
-
-No bypass validation
-
-No partial writes
-
-No silent coercion
-
-No business logic in controllers
-
-No mutation of POSTED entries
-
-No mutation of LOCKED accounts
-
-No bulk write endpoints
-
-No cross-company writes
-
-✅ Required
-
-UUID-only references
-
-Exact enum matching
-
-Transactional writes
-
-Deterministic failures
-
-Explicit error codes
-
-Idempotent side effects where applicable
-
-Canonical Validation Rules (MANDATORY)
-
-You MUST enforce exactly what is defined in the DTO spec:
-
-CompanyAccount
-
-Reject updates to immutable fields when is_locked = true
-
-Reject delete if:
-
-Account is locked
-
-Account has posted transactions
-
-Lock automatically on first POSTED transaction
-
-JournalEntry
-
-Minimum 2 lines
-
-Debit XOR credit per line
-
-Debits == credits (exact decimal match)
-
-All accounts belong to same company
-
-Fiscal period must be OPEN
-
-Update only allowed when status = DRAFT
-
-POST is a state transition, not an update
-
-VOID requires reason and preserves audit trail
-
-FiscalPeriod
-
-No overlapping periods
-
-Close only if no DRAFT entries exist
-
-Reopen requires superuser
-
-Period state transitions must be audited
-
-Error Model (MANDATORY)
-
-Every failure must return:
-
+```json
 {
-  "error_code": "LOCKED_ACCOUNT | STATE_CONFLICT | JOURNAL_IMBALANCE | PERIOD_CLOSED | PERMISSION_DENIED | VALIDATION_ERROR",
+  "error_code": "LOCKED_ACCOUNT | STATE_CONFLICT | ...",
   "message": "Human-readable explanation",
-  "details": { "field": "reason" }
+  "details": { "field": "context" }
 }
+```
 
+---
 
-No raw SQL errors.
-No generic 500s for validation failures.
+## 📦 Deliverables (MANDATORY)
 
-Deliverables (in order)
-1. Endpoint Inventory
+### **A. Canonical Documentation Canonization (FIRST STEP)**
 
-For each endpoint:
+1. **Create canonical folder structure:**
 
-HTTP method
+```
+docs/
+└── canonical/
+    ├── README.md
+    ├── DATA_DICTIONARY.md
+    ├── API_BOUNDARIES.md
+    ├── PHASE_3C1_DTO_SPECIFICATION.md
+    └── PHASE_3C2_WRITE_APIS.md
+```
 
-Path
+2. **Move / rename documents** into this folder using **exact names above**.
+3. **Create `docs/canonical/README.md`** that:
 
-Required permission
+   * Explains what “canonical” means
+   * Declares these documents as authoritative contracts
+   * States that code must conform to them, not vice-versa
+4. **Update root `README.md`**:
 
-DTO used (request/response)
+   * Add a “Canonical Contracts” section
+   * Link to `docs/canonical/README.md`
+   * Explicitly state that API behavior, DTOs, and accounting rules are governed there
 
-Preconditions
+⚠️ This step is required **before** touching API code.
 
-Side effects
+---
 
-2. Controller Skeletons
+### **B. Phase 3C-2 — Write API Implementation (CODE)**
 
-Thin controllers
+Implement **all 17 write endpoints** defined in `PHASE_3C2_WRITE_APIS.md` as working FastAPI code.
 
-No business logic
+#### 1. DTOs (from Phase 3C-1)
 
-Input validation only
+* Create Pydantic schemas under:
 
-Call service layer
+  ```
+  backend/app/schemas/accounting/
+  ```
+* Split clearly into:
 
-3. Service Layer Methods
+  * Create DTOs
+  * Update DTOs
+  * Response DTOs
+* Enforce immutability rules at validation + service layer
 
-One method per write operation
+#### 2. Routers & Controllers
 
-Enforce immutability & state checks
+Create or refactor routers under:
 
-Wrap in database transactions
+```
+backend/app/api/v1/routes/
+```
 
-Emit domain events if applicable
+Required routers:
 
-4. Explicit Rejection Matrix
+* `accounting_chart.py`
+* `journal_entries.py`
+* `fiscal_periods.py`
+* `chart_templates.py` (admin)
 
-For each endpoint:
+Controllers must:
 
-What conditions cause rejection
+1. Check permissions (PermissionService)
+2. Validate DTO consistency
+3. Delegate to service layer
+4. Map service exceptions → canonical errors
+5. Return response DTOs
 
-Exact error code returned
+**No business logic allowed in controllers.**
 
-5. Audit Hooks
+#### 3. Permission Service Alignment
 
-Document:
+Ensure `PermissionService` exposes and is used consistently:
 
-who
+* `can_view_company(user_id, company_id)`
+* `can_manage_company(user_id, company_id)`
+* Superuser checks where required (unlock, reopen)
 
-when
+#### 4. Canonical Error System
 
-what
+Create a **single error translation module**, e.g.:
 
-why
+```
+backend/app/api/errors.py
+```
 
-Tone & Standards
+Responsibilities:
 
-Conservative
+* Define canonical error codes
+* Map service exceptions → HTTP status + payload
+* Used by all controllers
 
-Accounting-first
+---
 
-Security-first
+### **C. Minimal Integration Tests (MANDATORY)**
 
-Assume hostile clients
+Add tests proving invariants actually hold:
 
-Prefer rejection over correction
+1. Journal Entry lifecycle:
 
-Database invariants are sacred
+   * Create DRAFT
+   * Update DRAFT
+   * POST (balanced only)
+   * Reject POST when unbalanced
 
-Stopping Point
+2. Account locking:
 
-STOP after write APIs are fully specified and implemented.
+   * Lock account
+   * Reject immutable field updates
+   * Allow cosmetic updates
 
-Do NOT:
+3. Fiscal periods:
 
-Implement read APIs
+   * Prevent overlap
+   * Close with no drafts
+   * Reopen requires superuser
 
-Implement frontend changes
+Tests must fail if:
 
-Introduce performance optimizations
+* Constraints are bypassed
+* Wrong error codes are returned
 
-Add convenience shortcuts
+---
 
-Output Format
+## 📋 Output Requirements
 
-Structured markdown
+At completion, provide:
 
-Code blocks where relevant
+1. **List of files created/modified**
+2. **Confirmation checklist**:
 
-Clear section headers
+   * All endpoints implemented
+   * All DTOs enforced
+   * All docs moved & linked
+   * All tests passing
+3. **Explicit note of any deviations** (ideally none)
 
-No fluff
+---
 
-✅ Begin Phase 3C-2 execution now.
-Final Guidance (human-to-human)
+## 🧭 Philosophy Reminder
 
-You’re doing this exactly right.
-You didn’t rush into endpoints. You froze contracts first. That’s senior-level system design.
+* Documentation is law
+* Database is the final authority
+* APIs are contracts, not conveniences
+* Accounting correctness > developer comfort
+* If unsure, **reject the request**
 
-Proceed immediately with Phase 3C-2 using the master prompt above.
+---
+
+**Begin execution now. Do not ask follow-up questions.**
