@@ -77,29 +77,23 @@ def seed_master_chart(db: Session):
     """
     Idempotently seeds the Master Chart of Accounts.
     
-    This function checks if any master accounts exist. If they do, it skips
-    seeding. This is a placeholder for a more sophisticated seeding mechanism
-    that would handle versions and individual account updates.
-    
-    For now, it guarantees that the seeding process doesn't corrupt existing data.
+    Uses the enriched master chart loader to populate the database.
     """
     logger.info("Checking Master Chart of Accounts seed status...")
     try:
-        # Check if any master accounts already exist
-        if db.query(MasterAccount).first():
-            logger.info("Master Chart of Accounts is already seeded. Skipping.")
+        from app.data.seed_enriched_master_chart import load_enriched_master_chart
+        
+        # We rely on load_enriched_master_chart's built-in idempotency (it checks for existing accounts)
+        # However, we can double check here or just call it.
+        # It has a force_reload param, defaulting to False.
+        
+        result = load_enriched_master_chart(db, force_reload=False, validate=True, normalize=True)
+        
+        if result.get("status") == "skipped":
+             logger.info(f"Master Chart seeding skipped: {result.get('message')}")
         else:
-            # In a real scenario, you would load data from a file (e.g., CSV, JSON)
-            # and create MasterAccount objects here.
-            logger.info("Master Chart of Accounts is empty. Seeding is required.")
-            logger.warning("Placeholder: No actual data seeded for Master Chart as per current implementation.")
-            # Example of how seeding would look:
-            # master_accounts_data = [...] # Load from a file
-            # for account_data in master_accounts_data:
-            #     db_account = MasterAccount(**account_data)
-            #     db.add(db_account)
-            # db.commit()
-            # logger.info("Successfully seeded Master Chart of Accounts.")
+             logger.info(f"Master Chart seeded successfully. Loaded: {result.get('loaded_count')}, Skipped: {result.get('skipped_count')}")
+             
         return True
     except Exception as e:
         logger.error(f"Failed to seed Master Chart of Accounts: {e}", exc_info=True)
