@@ -192,6 +192,7 @@ def load_enriched_master_chart(
                 normal_balance=account_data.get('normal_balance'),
                 cash_flow_classification=account_data.get('cash_flow_classification'),
                 cost_center=account_data.get('cost_center'),
+                version=account_data.get('version', '2024.1'),
             )
             
             db.add(account)

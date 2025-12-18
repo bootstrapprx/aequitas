@@ -35,75 +35,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """
-    Add version field to master_accounts table.
-
-    FIELD: version VARCHAR(10)
-    DEFAULT: '2024.1' for existing accounts
-
-    This field tracks which version of the master chart an account belongs to.
-    Future updates to GAAP standards will create new versions while preserving
-    old versions for historical reference.
-    """
-
-    # ========================================================================
-    # STEP 1: Add version column
-    # ========================================================================
-    # JUSTIFICATION: Master chart evolves as accounting standards change
-    # (ASC updates, new IFRS standards, etc.). Versioning allows companies
-    # to:
-    # - Reference which standard they were using at a point in time
-    # - Migrate to new versions when ready
-    # - Maintain audit trail of mapping provenance
-    #
-    # NOT NULL DEFAULT: All existing accounts are assigned version '2024.1'
-    # ========================================================================
-
-    op.add_column(
-        'master_accounts',
-        sa.Column('version', sa.String(10), nullable=False, server_default='2024.1')
-    )
-
-    # Remove server default after creation (only needed for migration)
-    op.alter_column('master_accounts', 'version', server_default=None)
-
-    # ========================================================================
-    # STEP 2: Add index for version queries
-    # ========================================================================
-    # Companies will frequently query "give me all accounts for version X"
-    # ========================================================================
-
-    op.create_index(
-        'ix_master_accounts_version',
-        'master_accounts',
-        ['version']
-    )
-
-    # ========================================================================
-    # STEP 3: Log version assignment
-    # ========================================================================
-
-    op.execute("""
-        DO $$
-        DECLARE
-            v_account_count INTEGER;
-        BEGIN
-            SELECT COUNT(*) INTO v_account_count FROM master_accounts;
-
-            RAISE NOTICE 'Version field added to master_accounts table.';
-            RAISE NOTICE 'All % existing accounts assigned version: 2024.1', v_account_count;
-            RAISE NOTICE 'Future master chart updates should use incremented versions (e.g., 2025.1).';
-        END $$;
-    """)
-
+    pass
 
 def downgrade() -> None:
-    """
-    Remove version field from master_accounts.
+    pass
 
-    WARNING: This destroys version tracking information.
-    Only use for rollback during migration issues.
-    """
-
-    op.drop_index('ix_master_accounts_version', table_name='master_accounts')
-    op.drop_column('master_accounts', 'version')
