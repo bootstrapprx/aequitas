@@ -31,7 +31,7 @@ import { PageHeader } from '@/components/athenaeum';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 // Step components
 import Step0Welcome from './steps/Step0Welcome';
@@ -88,7 +88,7 @@ const OnboardingWizard: React.FC = () => {
     queryKey: ['onboarding-status', companyId],
     queryFn: async () => {
       const response = await api.get(`/onboarding/status/${companyId}`);
-      return response.data;
+      return response as any;
     },
     refetchInterval: 10000, // Refetch every 10 seconds to check lock status
   });
@@ -99,7 +99,7 @@ const OnboardingWizard: React.FC = () => {
       const response = await api.post(`/onboarding/lock/${companyId}`, {
         session_id: sessionId
       });
-      return response.data;
+      return response as any;
     },
     onSuccess: (data) => {
       if (!data.locked) {

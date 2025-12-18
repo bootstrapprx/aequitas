@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface Step5FiscalPeriodsProps {
   companyId: string;
@@ -88,7 +88,7 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
         fiscal_year_start: data.fiscal_year_start,
         periods
       });
-      return response.data;
+      return response as any;
     },
     onSuccess: () => {
       setApiError(null);

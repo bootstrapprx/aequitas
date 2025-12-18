@@ -83,13 +83,26 @@ def create_company(
             status_code=403,
             detail="Only superusers can create native subscriptions."
         )
-    if company_in.subscription_type == SubscriptionType.NATIVE and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="Only superusers can create native subscriptions."
-        )
+
     try:
-        return CompanyService.create_company(db, company_in)
+        # Create the company
+        company = CompanyService.create_company(db, company_in)
+
+        # Assign creating user as admin
+        permission_service = PermissionService(db)
+        try:
+            permission_service.assign_user_to_company(
+                user_id=current_user.id,
+                company_id=company.id,
+                is_admin=True,
+                can_edit=True,
+                can_view=True
+            )
+        except ValueError:
+            # User already assigned (idempotent)
+            pass
+
+        return company
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

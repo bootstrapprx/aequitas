@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface Step2TemplateSelectionProps {
   companyId: string;
@@ -66,7 +66,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
     queryKey: ['chart-templates'],
     queryFn: async () => {
       const response = await api.get('/templates');
-      return response.data;
+      return response as any;
     }
   });
 
@@ -77,7 +77,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
         template_id: templateId,
         confirmed: true
       });
-      return response.data;
+      return response as any;
     },
     onSuccess: () => {
       setApiError(null);
@@ -156,11 +156,10 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
             >
               <AtheneumCard
                 hover
-                className={`cursor-pointer transition-all ${
-                  selectedTemplate?.id === template.id
-                    ? 'ring-2 ring-emerald-500 shadow-lg'
-                    : ''
-                }`}
+                className={`cursor-pointer transition-all ${selectedTemplate?.id === template.id
+                  ? 'ring-2 ring-emerald-500 shadow-lg'
+                  : ''
+                  }`}
                 onClick={() => handleTemplateClick(template)}
               >
                 <AtheneumCardHeader

@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface Step6ActivationProps {
   companyId: string;
@@ -163,7 +163,7 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
               <WaxSealBadge type="approved" size="sm" />
             </div>
           </div>
-        </AtheneumCard>
+        </AtheneumCardContent>
       </AtheneumCard>
 
       {/* After Activation */}

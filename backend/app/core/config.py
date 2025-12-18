@@ -4,7 +4,7 @@ from typing import Optional
 
 # Determine which .env file to load
 app_env = os.getenv("APP_ENV", "development")
-env_file = ".env.dev" if app_env == "development" else ".env"
+env_file = (".env.dev", ".env") if app_env == "development" else ".env"
 
 class Settings(BaseSettings):
     """

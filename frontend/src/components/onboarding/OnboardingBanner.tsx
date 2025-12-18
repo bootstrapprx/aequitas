@@ -14,7 +14,7 @@ import { AlertCircle, Scroll, ArrowRight, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface OnboardingBannerProps {
   companyId: string;
@@ -38,7 +38,7 @@ const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ companyId }) => {
     queryKey: ['onboarding-status', companyId],
     queryFn: async () => {
       const response = await api.get(`/onboarding/status/${companyId}`);
-      return response.data;
+      return response as any;
     },
     enabled: !!companyId && !dismissed,
     refetchInterval: 30000, // Refetch every 30 seconds

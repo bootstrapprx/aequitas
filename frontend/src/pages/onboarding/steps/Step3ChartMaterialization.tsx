@@ -21,7 +21,7 @@ import { AtheneumCard, AtheneumCardHeader, AtheneumCardContent, QuillIcon } from
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface Step3ChartMaterializationProps {
   companyId: string;
@@ -49,7 +49,7 @@ const Step3ChartMaterialization: React.FC<Step3ChartMaterializationProps> = ({
       const response = await api.post(`/onboarding/${companyId}/materialize-chart`, {
         confirm_proceed: true
       });
-      return response.data;
+      return response as any;
     },
     onSuccess: (data) => {
       setApiError(null);

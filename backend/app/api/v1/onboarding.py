@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.core.security import get_current_user
+from app.api.v1.auth import get_current_user
 from app.db.models.user import User
 from app.core.exceptions import ValidationError
 from app.services import onboarding_service

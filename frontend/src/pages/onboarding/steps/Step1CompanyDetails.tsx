@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import api from '@/lib/api';
+import { api } from '@/lib/api';
 
 interface Step1CompanyDetailsProps {
   companyId: string;
@@ -115,7 +115,7 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
   const saveMutation = useMutation({
     mutationFn: async (data: CompanyDetailsForm) => {
       const response = await api.post(`/onboarding/${companyId}/company-details`, data);
-      return response.data;
+      return response as any;
     },
     onSuccess: (data) => {
       setApiError(null);
