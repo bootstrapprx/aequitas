@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     ALLOW_PUBLIC_SIGNUP: bool = False
     ALLOW_MOCK_PAYMENTS: bool = True  # Allow mock payments when Stripe not configured
 
+    # --- AUTH RECOVERY – REMOVE AFTER FIXING GOOGLE OAUTH ---
+    AUTH_RECOVERY_MODE: bool = False
+    RECOVERY_ADMIN_EMAIL: Optional[str] = None
+    RECOVERY_ADMIN_PASSWORD: Optional[str] = None
+    ENABLE_GOOGLE_AUTH: bool = True
+
     # --- OAuth Settings (Google, Microsoft, Apple) ---
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
@@ -114,6 +120,8 @@ class Settings(BaseSettings):
     @property
     def GOOGLE_OAUTH_ENABLED(self) -> bool:
         """Returns True if Google OAuth is fully configured."""
+        if not self.ENABLE_GOOGLE_AUTH:
+            return False
         return all([self.GOOGLE_CLIENT_ID, self.GOOGLE_CLIENT_SECRET, self.GOOGLE_REDIRECT_URI])
 
     @property
@@ -139,4 +147,3 @@ class Settings(BaseSettings):
 
 # Instantiate the settings object
 settings = Settings()
-

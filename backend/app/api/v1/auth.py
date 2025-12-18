@@ -15,7 +15,6 @@ from app.db.models.company import Company
 from app.db.models.user_company import UserCompany
 from app.db.models.pending_registration import PendingRegistration
 from app.schemas.user import (
-    UserCreate,
     UserResponse,
     Token,
     LoginRequest,
@@ -477,7 +476,7 @@ def login_json(
     
     # Debug: Log login attempt (no password!)
     logger.info(f"Login-JSON attempt for email: {login_data.email}")
-    
+
     user = user_service.authenticate_user(login_data.email, login_data.password)
 
     if not user:
@@ -495,6 +494,62 @@ def login_json(
         )
 
     logger.info(f"Successful login-json for: {user.email}")
+    return _generate_user_token(user)
+
+
+# AUTH RECOVERY – REMOVE AFTER FIXING GOOGLE OAUTH
+class RecoveryLoginRequest(LoginRequest):
+    """Extends login payload for explicit recovery invocation."""
+    recovery: Optional[bool] = False
+
+
+# AUTH RECOVERY – REMOVE AFTER FIXING GOOGLE OAUTH
+@router.post("/recovery-login", response_model=Token)
+def recovery_login(
+    login_data: RecoveryLoginRequest,
+    db: Session = Depends(get_db)
+):
+    """Emergency login bypass using env credentials when recovery mode is enabled."""
+    if not settings.AUTH_RECOVERY_MODE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Recovery login is disabled"
+        )
+
+    if not settings.RECOVERY_ADMIN_EMAIL or not settings.RECOVERY_ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Recovery credentials not configured"
+        )
+
+    if login_data.email != settings.RECOVERY_ADMIN_EMAIL or login_data.password != settings.RECOVERY_ADMIN_PASSWORD:
+        logger.warning("Recovery login attempt failed")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid recovery credentials"
+        )
+
+    user = db.query(User).filter(User.email == settings.RECOVERY_ADMIN_EMAIL).first()
+    hashed_recovery_password = get_password_hash(settings.RECOVERY_ADMIN_PASSWORD)
+
+    if not user:
+        user = User(
+            email=settings.RECOVERY_ADMIN_EMAIL,
+            hashed_password=hashed_recovery_password,
+            is_active=True,
+            is_superuser=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        user.hashed_password = hashed_recovery_password
+        user.is_active = True
+        user.is_superuser = True
+        db.commit()
+        db.refresh(user)
+
+    logger.warning("AUTH RECOVERY – fallback login used")
     return _generate_user_token(user)
 
 @router.get("/me", response_model=UserResponse)
@@ -531,6 +586,10 @@ def get_auth_config():
             "stripe_enabled": stripe_configured,  # Legacy compatibility
             "mock_payments_allowed": mock_payments_allowed,
             "stripe_mock_mode": mock_payments_allowed,  # Legacy compatibility
+            # AUTH RECOVERY – REMOVE AFTER FIXING GOOGLE OAUTH
+            "auth_recovery_mode": settings.AUTH_RECOVERY_MODE,
+            "recovery_endpoint": "/auth/recovery-login",
+            "google_oauth_enabled": settings.GOOGLE_OAUTH_ENABLED,
         }
     except Exception as e:
         logger.error(f"Error fetching auth config: {e}")
@@ -541,6 +600,9 @@ def get_auth_config():
             "stripe_enabled": False,
             "mock_payments_allowed": False,
             "stripe_mock_mode": False,
+            "auth_recovery_mode": False,
+            "recovery_endpoint": "/auth/recovery-login",
+            "google_oauth_enabled": False,
             "warning": "Configuration unavailable"
         }
 
@@ -650,4 +712,3 @@ def check_password_reset_required(
         "is_council_member": current_user.is_superuser,
         "email": current_user.email
     }
-

@@ -65,6 +65,12 @@ def google_oauth_start(db: Session = Depends(get_db)):
     Raises:
         503: If Google OAuth not configured
     """
+    if not settings.GOOGLE_OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth is disabled"
+        )
+
     oauth_service = OAuthService(db)
 
     try:
@@ -117,6 +123,12 @@ async def google_oauth_callback(
         403: Email not verified by Google
         500: Internal errors
     """
+    if not settings.GOOGLE_OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth is disabled"
+        )
+
     oauth_service = OAuthService(db)
     audit_service = AuditService(db)
 
