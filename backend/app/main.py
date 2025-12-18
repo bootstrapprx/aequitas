@@ -27,6 +27,7 @@ from app.api.v1 import (
     companies_su, # New - SU manual company creation
     mappings, # New - Account Mappings
     onboarding, # Phase 5 - Company Onboarding Wizard
+    fiscal, # Fiscal Engine - Tax Exposure Calculation
 )
 from app.services.organizer_ai.router import router as organizer_router
 from app.services.code_generator import router as code_generator_router
@@ -59,6 +60,13 @@ from app.db.models import (
     journal_entry,
     journal_entry_line,
     account_balance,
+    # Fiscal Engine models
+    entity_tax_profile,
+    tax_ruleset,
+    tax_run,
+    tax_fact,
+    tax_adjustment,
+    tax_position,
 )
 
 # Create all tables in the database on startup
@@ -154,6 +162,9 @@ app.include_router(mappings.router, prefix="/api/v1/mappings", tags=["Mappings"]
 
 # Phase 5 - Onboarding router
 app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
+
+# Fiscal Engine router
+app.include_router(fiscal.router, prefix="/api/v1/fiscal", tags=["Fiscal Engine"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

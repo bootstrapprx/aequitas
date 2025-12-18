@@ -34,6 +34,14 @@ from .journal_entry import JournalEntry
 from .journal_entry_line import JournalEntryLine
 from .account_balance import AccountBalance
 
+# Fiscal Engine models
+from .entity_tax_profile import EntityTaxProfile
+from .tax_ruleset import TaxRuleset
+from .tax_run import TaxRun
+from .tax_fact import TaxFact
+from .tax_adjustment import TaxAdjustment
+from .tax_position import TaxPosition
+
 # Centralized enums (aligned with PostgreSQL enum types)
 from .enums import (
     AccountType,
@@ -73,6 +81,13 @@ __all__ = [
     "JournalEntry",
     "JournalEntryLine",
     "AccountBalance",
+    # Fiscal Engine models
+    "EntityTaxProfile",
+    "TaxRuleset",
+    "TaxRun",
+    "TaxFact",
+    "TaxAdjustment",
+    "TaxPosition",
     # Enums
     "AccountType",
     "NormalBalance",

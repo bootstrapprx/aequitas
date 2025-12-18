@@ -1,7 +1,10 @@
 import logging
+import re
 from typing import Optional, Dict, Any
+from uuid import UUID
 from sqlalchemy.orm import Session
 from .models import ChatRequest, ChatResponse, IngestRequest, SuggestionRequest, AccountSuggestion
+from .fiscal_adapter import FiscalAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -12,24 +15,48 @@ class DexterEngine:
         # Initialize Ollama client here
         pass
 
+    def _is_fiscal_query(self, message: str) -> bool:
+        """
+        Detect if the query is about tax exposure / fiscal matters.
+        """
+        fiscal_keywords = [
+            "tax", "liability", "exposure", "taxable income", "projected tax",
+            "tax position", "tax driver", "what do i owe", "tax estimate",
+            "fiscal", "tax calculation", "missing input"
+        ]
+        message_lower = message.lower()
+        return any(keyword in message_lower for keyword in fiscal_keywords)
+
+    def _extract_company_id(self, ucid: str, db: Session) -> Optional[UUID]:
+        """
+        Extract company UUID from UCID.
+        """
+        from app.db.models.company import Company
+        company = db.query(Company).filter(Company.ucid == ucid).first()
+        return company.id if company else None
+
     async def chat(self, request: ChatRequest, db: Session) -> ChatResponse:
         """
         Active Mode: Process user chat message.
         """
         logger.info(f"Dexter Chat Request: {request.message} (UCID: {request.ucid})")
-        
+
+        # Check if this is a fiscal query
+        if self._is_fiscal_query(request.message):
+            return await self._handle_fiscal_query(request, db)
+
         from app.services.dexter.learning_engine import LearningEngine
         learning_engine = LearningEngine(db)
-        
+
         # 1. Get embedding
         query_vector = await learning_engine.get_embedding(request.message)
-        
+
         # 2. Search context
         context_docs = learning_engine.vector_store.search(request.ucid, query_vector, limit=5)
         context_text = "\n".join([f"- {doc.content}" for doc in context_docs])
-        
+
         # 3. Construct prompt
-        prompt = f"""You are Dexter, an expert AI accounting assistant for ChartForge.
+        prompt = f"""You are Dexter, an expert AI accounting assistant for Aequitas.
 Use the following context from the company's records to answer the user's question.
 If the answer is not in the context, use your general accounting knowledge but mention that it's general advice.
 
@@ -57,6 +84,50 @@ Dexter:"""
         return ChatResponse(
             reply=reply,
             suggested_actions=[] # Could extract actions from reply if needed
+        )
+
+    async def _handle_fiscal_query(self, request: ChatRequest, db: Session) -> ChatResponse:
+        """
+        Handle fiscal/tax-related queries using the FiscalAdapter.
+        """
+        logger.info(f"Handling fiscal query: {request.message}")
+
+        # Get company ID from UCID
+        company_id = self._extract_company_id(request.ucid, db)
+        if not company_id:
+            return ChatResponse(
+                reply="I couldn't find a company with that UCID. Please check the company identifier.",
+                suggested_actions=[]
+            )
+
+        # Initialize fiscal adapter
+        fiscal_adapter = FiscalAdapter(db)
+
+        # Determine query type
+        message_lower = request.message.lower()
+        if any(word in message_lower for word in ["driver", "what's driving", "why", "breakdown"]):
+            question_type = "drivers"
+        elif any(word in message_lower for word in ["missing", "incomplete", "what do i need", "checklist"]):
+            question_type = "missing_inputs"
+        elif any(word in message_lower for word in ["liability", "owe", "tax", "exposure", "projected"]):
+            question_type = "liability"
+        else:
+            question_type = "all"
+
+        # Get formatted response
+        reply = fiscal_adapter.format_for_dexter_response(company_id, question_type)
+
+        # Generate suggested actions based on missing inputs
+        suggested_actions = []
+        if question_type in ["missing_inputs", "all"]:
+            checklist = fiscal_adapter.get_missing_inputs_checklist(company_id)
+            if checklist.get("checklist"):
+                suggested_actions.append("Update tax profile")
+                suggested_actions.append("Add tax tags to accounts")
+
+        return ChatResponse(
+            reply=reply,
+            suggested_actions=suggested_actions
         )
 
     async def ingest(self, request: IngestRequest):

@@ -68,6 +68,9 @@ class Company(Base):
     fiscal_periods = relationship("FiscalPeriod", back_populates="company", cascade="all, delete-orphan")
     journal_entries = relationship("JournalEntry", back_populates="company", cascade="all, delete-orphan")
 
+    # Fiscal Engine relationship
+    tax_profile = relationship("EntityTaxProfile", back_populates="company", uselist=False, cascade="all, delete-orphan")
+
     __table_args__ = (
         Index('ix_companies_ucid_active', 'ucid', unique=True, postgresql_where=(is_active == True)),
         Index('ix_companies_name_active', 'name', unique=True, postgresql_where=(is_active == True)),

@@ -1,327 +1,172 @@
 
 
-**Role:** You are a senior backend/data engineer working inside the Aequitas repo (FastAPI + SQLAlchemy + Postgres).
-You must implement the Fiscal Engine foundation (DB + backend + Dexter integration).
-Do not speculate. Use only repository code patterns.
+## 🔴 PROMPT FOR GEMINI — PROD-GRADE BOOTSTRAP (DO NOT DEVIATE)
+
+**Role:**
+You are a senior DevOps / Backend engineer working on a FastAPI + SQLAlchemy + Alembic + Docker SaaS application called **Aequitas**.
+
+You must implement a **production-grade bootstrap mechanism** that guarantees the application **never starts without migrations and required seeds applied**.
+
+Do NOT propose alternatives.
+Do NOT ask questions.
+Implement the solution described below exactly.
 
 ---
 
-# GOAL
+## CONTEXT
 
-Implement **Fiscal Engine v1 (Pass-Through Tax Exposure)** with:
+* The backend runs inside Docker via `make dev` and `docker-compose`.
+* Currently, the application starts **without guaranteeing**:
 
-* Database models + migrations
-* API schemas + endpoints
-* Services (deterministic calculation, auditable)
-* Dexter integration: answer tax-exposure questions and projections based on calculated results
+  * Alembic migrations are applied
+  * Master Chart of Accounts is seeded
+  * Default Fiscal RuleSets are seeded
 
-This is **estimated/projected tax exposure**, not tax filing.
+This causes logical failures even though the app appears “up”.
 
----
-
-# SCOPE (STRICT)
-
-✅ Implement:
-
-1. DB models (SQLAlchemy) under `backend/app/db/models/`
-2. Alembic migrations under `backend/alembic/versions/` (if Alembic exists)
-
-   * If Alembic is not wired, create `backend/migrations/` with SQL migration files and a runner script.
-3. Pydantic schemas under `backend/app/schemas/`
-4. Services under `backend/app/services/fiscal_engine/`
-5. API routes under `backend/app/api/v1/fiscal/` (or similar) + include router in `main.py`
-6. Dexter integration in `backend/app/services/dexter/` to:
-
-   * answer: “What’s my projected 2025 tax liability?”
-   * explain: drivers, missing inputs, confidence score
-   * produce: consolidated vs per-company exposure
-
-❌ Do NOT:
-
-* change auth system
-* change company creation flows
-* implement filing-grade tax returns
-* fetch external tax rates at runtime
+This is unacceptable for a SaaS system.
 
 ---
 
-# CANONICAL BEHAVIOR (NON-NEGOTIABLE)
+## OBJECTIVE (MANDATORY)
 
-* Deterministic: same inputs + same ruleset_version → identical outputs.
-* Versioned: store `engine_version`, `ruleset_version`, `inputs_hash`.
-* Auditable: each output must trace back to accounts and rules.
-* “UNKNOWN” must be explicit: never silently assume.
-* Mandatory UI/response label: **“Estimated / Projected Tax Exposure — Not a Tax Filing”**.
+Implement a **single bootstrap pipeline** that runs **inside the backend container** and guarantees, on every startup:
 
----
+1. Database is reachable
+2. Alembic migrations are applied (`upgrade head`)
+3. Idempotent seeds are executed:
 
-# DATA MODEL (CREATE THESE TABLES)
+   * Master Chart of Accounts
+   * Default Fiscal RuleSet (`2025.1`)
+4. Only after all the above succeed, the FastAPI app starts
 
-## 1) entity_tax_profiles
-
-Represents fiscal assumptions per company.
-
-Fields:
-
-* id (UUID PK)
-* company_id (UUID FK → companies.id, unique)
-* entity_type (string) default "LLC"
-* tax_regime (string) default "PASS_THROUGH"
-* accounting_method (enum/string: CASH|ACCRUAL) nullable (unknown allowed)
-* fiscal_year_start (date) nullable
-* jurisdictions (JSONB) default []
-* elections (JSONB) default {}
-* notes (text) nullable
-* created_at, updated_at
-
-Indexes:
-
-* unique(company_id)
-
-## 2) tax_rulesets
-
-Stores versioned rulesets.
-
-Fields:
-
-* id (UUID PK)
-* version (string, e.g. "2025.1") indexed
-* scope (string, e.g. "PASS_THROUGH_BASE") indexed
-* jurisdiction (string nullable, placeholder)
-* status (string: ACTIVE|INACTIVE)
-* rules (JSONB) not null default []
-* created_at, updated_at
-
-Constraints:
-
-* unique(version, scope, jurisdiction)
-
-## 3) tax_runs
-
-One execution of the engine.
-
-Fields:
-
-* id (UUID PK)
-* company_id (UUID FK nullable)  # null for consolidated run
-* period_start (date)
-* period_end (date)
-* as_of_date (date) nullable
-* ruleset_id (UUID FK → tax_rulesets.id)
-* ruleset_version (string) denormalized for quick filtering
-* engine_version (string)
-* inputs_hash (string) indexed
-* status (string: SUCCESS|PARTIAL|FAILED)
-* confidence_score (int 0-100)
-* missing_inputs (JSONB) default []
-* label (string) must include: “Estimated / Projected Tax Exposure — Not a Tax Filing”
-* created_at
-
-Indexes:
-
-* (company_id, period_start, period_end)
-* inputs_hash
-
-## 4) tax_facts
-
-Normalized facts derived from trial balance / ledger.
-
-Fields:
-
-* id (UUID PK)
-* tax_run_id (UUID FK → tax_runs.id, cascade delete)
-* company_id (UUID FK)
-* period_start (date)
-* period_end (date)
-* account_id (UUID FK → company_accounts.id nullable)
-* account_code (string)
-* account_name (string)
-* amount (numeric(15,2))
-* tax_tags (JSONB) default []
-* source (string: TRIAL_BALANCE|LEDGER)
-* source_trace (JSONB) default {}  # e.g. original account ids/balances
-* created_at
-
-Indexes:
-
-* tax_run_id
-* company_id
-
-## 5) tax_adjustments
-
-Adjustments generated by rules.
-
-Fields:
-
-* id (UUID PK)
-* tax_run_id (UUID FK, cascade delete)
-* company_id (UUID FK)
-* tax_type (string: PASS_THROUGH_INCOME)
-* adjustment_type (string: permanent|timing|reclass|limit)
-* amount (numeric(15,2))
-* rule_id (string)
-* reason (text)
-* source_fact_ids (JSONB) default []
-* created_at
-
-Indexes:
-
-* tax_run_id
-* company_id
-
-## 6) tax_positions
-
-Final outputs (per company and consolidated).
-
-Fields:
-
-* id (UUID PK)
-* tax_run_id (UUID FK, cascade delete)
-* company_id (UUID FK nullable)  # null = consolidated
-* tax_type (string: PASS_THROUGH_INCOME)
-* taxable_income_estimated (numeric(15,2))
-* exposure_estimated (numeric(15,2) nullable)  # placeholder for later
-* currency (string default "USD")
-* confidence_score (int)
-* missing_inputs (JSONB) default []
-* top_drivers (JSONB) default []   # list of {account_code, amount, tag}
-* created_at
-
-Indexes:
-
-* (company_id, tax_type)
-* tax_run_id
+If any step fails, the container must fail fast.
 
 ---
 
-# MIGRATIONS
+## REQUIRED ARCHITECTURE (NON-NEGOTIABLE)
 
-Create Alembic migrations for all tables.
-If Alembic is present, use it. Otherwise:
+### 1️⃣ Create a bootstrap script
 
-* create SQL migration scripts with clear up/down
-* include a simple migration runner
+Create a new file:
 
----
+```
+backend/scripts/bootstrap.py
+```
 
-# BACKEND SERVICES (IMPLEMENT)
+This script must:
 
-Create `backend/app/services/fiscal_engine/`:
+* Wait for PostgreSQL to be available
+* Run Alembic migrations programmatically
+* Run idempotent seed functions
+* Exit with non-zero code on failure
 
-1. `hashing.py`
+### Required responsibilities (exact):
 
-* function: `compute_inputs_hash(company_id, period_start, period_end, trial_balance_snapshot, profile, ruleset_version)`
+```text
+- wait_for_db()
+- run_alembic_migrations()
+- seed_master_chart()
+- seed_default_fiscal_ruleset()
+```
 
-2. `ruleset_service.py`
-
-* create/get active ruleset for scope PASS_THROUGH_BASE
-* seed default ruleset "2025.1" if none exists (rules can be empty for v1)
-
-3. `profile_service.py`
-
-* get/create profile for a company (default LLC, PASS_THROUGH)
-
-4. `calculation_service.py`
-
-* `run_company_exposure(company_id, period_start, period_end, as_of_date=None, ruleset_version="2025.1")`
-* Steps:
-
-  * read Trial Balance (use existing ledger/accounting services or company account balances)
-  * create TaxRun
-  * build TaxFacts (attach tax_tags from master chart if available; if missing, mark UNKNOWN)
-  * compute `taxable_income_estimated` via tags:
-    taxable_income sum minus deductible_expense sum
-  * compute `top_drivers`
-  * compute `confidence_score` + `missing_inputs`
-  * write TaxPosition
-  * status SUCCESS or PARTIAL
-
-5. `consolidation_service.py`
-
-* `run_consolidated_exposure(company_ids, period_start, period_end, ...)`
-* sum company-level taxable incomes
-* consolidated TaxRun + TaxPosition (company_id null)
+Seeds MUST be idempotent (safe to run multiple times).
 
 ---
 
-# API ENDPOINTS (IMPLEMENT)
+### 2️⃣ Alembic integration
 
-Create router: `backend/app/api/v1/fiscal.py`
+* Use `alembic.config.Config`
+* Use `alembic.command.upgrade(cfg, "head")`
+* Assume `alembic.ini` already exists
 
-Endpoints (JWT protected):
-
-* `POST /api/v1/fiscal/profile/{company_id}` → upsert profile
-* `GET /api/v1/fiscal/profile/{company_id}` → get profile
-* `POST /api/v1/fiscal/runs/company/{company_id}` → run calculation
-* `POST /api/v1/fiscal/runs/consolidated` body: {company_ids: [], period_start, period_end}
-* `GET /api/v1/fiscal/runs/{run_id}` → run detail with facts/adjustments/position summary
-* `GET /api/v1/fiscal/positions/latest?company_id=...&tax_type=...` → latest position
-
-Responses must include:
-
-* label disclaimer
-* confidence score
-* missing inputs
-* top drivers
-
-Register router in `backend/app/main.py`.
+No shell calls (`subprocess`) allowed.
 
 ---
 
-# DEXTER INTEGRATION (IMPLEMENT)
+### 3️⃣ Seed logic
 
-Add a “Fiscal” capability to Dexter.
+* Master chart seed:
 
-Requirements:
+  * Must NOT reinsert if data already exists
+  * Must log what it did (inserted / skipped)
 
-* Dexter can answer:
+* Fiscal ruleset seed:
 
-  * “What’s my projected 2025 tax liability?”
-  * “Which company drives most of my tax exposure?”
-  * “What assumptions are missing?”
-  * “What changed month over month?”
-* Dexter must:
+  * Ensure a ruleset with:
 
-  * call the fiscal services to fetch latest TaxPositions
-  * explain results in plain English
-  * always show disclaimer label
-  * never claim filing-grade accuracy
-
-Implementation approach:
-
-* Add a tool-like service `backend/app/services/dexter/fiscal_adapter.py`
-* Add an intent router that detects fiscal questions and uses the adapter
-* If data missing, Dexter returns an action checklist (e.g. add tax tags, set accounting_method)
+    * version = `"2025.1"`
+    * scope = `"PASS_THROUGH_BASE"`
+  * Create only if missing
 
 ---
 
-# TESTS (MINIMUM)
+### 4️⃣ Dockerfile modification (MANDATORY)
 
-Add backend tests:
+Modify the backend Dockerfile so that:
 
-* create profile default
-* run calculation deterministic hash
-* ensure same inputs produce same outputs
-* ensure untagged accounts reduce confidence and appear in missing_inputs
+```dockerfile
+CMD python backend/scripts/bootstrap.py && uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
----
-
-# DELIVERABLES
-
-1. New SQLAlchemy models
-2. Migration(s)
-3. Schemas
-4. Services
-5. API routes wired to main.py
-6. Dexter fiscal adapter and intent routing
-7. Minimal tests
-
-Output a concise summary + file list after implementation.
+The application **must not start** if bootstrap fails.
 
 ---
 
-## IMPORTANT UX/LANGUAGE RULE
+### 5️⃣ docker-compose compatibility
 
-Every fiscal response must include:
+* Do NOT change docker-compose semantics
+* Backend container must depend on DB
+* Assume DB has a healthcheck or basic readiness
 
-**“Estimated / Projected Tax Exposure — Not a Tax Filing”**
+---
+
+## CONSTRAINTS
+
+You MUST NOT:
+
+* Require manual commands after `make dev`
+* Require developers to remember to run migrations
+* Put migration logic inside FastAPI startup events
+* Use shell scripts for migrations
+* Break existing environments
+
+This must be **CI-safe**, **prod-safe**, and **idempotent**.
+
+---
+
+## OUTPUT FORMAT
+
+Return:
+
+1. `backend/scripts/bootstrap.py` (full code)
+2. Dockerfile diff (only the relevant lines)
+3. Any small helper function needed (if applicable)
+4. Short explanation (≤ 10 lines)
+
+Do NOT include opinions.
+Do NOT include alternatives.
+Do NOT mention “other approaches”.
+
+---
+
+## DEFINITION OF DONE
+
+After this change:
+
+```bash
+make dev
+```
+
+Is sufficient to guarantee:
+
+* DB schema is correct
+* Master Chart exists
+* Fiscal Engine ruleset exists
+* Backend starts in a valid logical state
+
+This is a **production-grade requirement**, not a dev convenience.
+
+---
+
+If you want, after Gemini finishes, paste the output here and I’ll **audit it line-by-line** before you apply it.
