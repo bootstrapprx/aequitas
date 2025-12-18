@@ -12,6 +12,12 @@ the application server from starting.
 """
 import logging
 import time
+import sys
+import os
+
+# Add the project root to sys.path to allow importing 'app'
+sys.path.append(os.getcwd())
+
 from sqlalchemy.orm import Session
 from alembic.config import Config
 from alembic import command
