@@ -53,8 +53,7 @@ const PostAuthSetupPage = () => {
 
   const checkInvitations = async () => {
     try {
-      const response = await api.get('/invitations/pending');
-      const data = response.data;
+      const data = await api.get<{ invitations: Invitation[] }>('/invitations/pending');
 
       setPendingInvitations(data.invitations || []);
       setIsFetchingInvitations(false);
@@ -273,41 +272,41 @@ const PostAuthSetupPage = () => {
 
           {(showCreateForm || pendingInvitations.length === 0) && (
             <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2 group">
-              <Label htmlFor="companyName" className="font-heading text-gold flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-gold/50 group-focus-within:bg-gold transition-colors" />
-                Organization Name
-              </Label>
-              <Input
-                id="companyName"
-                type="text"
-                placeholder="Acme Corporation"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-                required
-                disabled={isLoading}
-                className="bg-input/30 border-input/50 focus:border-gold/50 focus:ring-gold/20 font-body transition-all duration-300 h-11"
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground font-body mt-2">
-                This will be your primary organization. You can create more later.
-              </p>
-            </div>
+              <div className="space-y-2 group">
+                <Label htmlFor="companyName" className="font-heading text-gold flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold/50 group-focus-within:bg-gold transition-colors" />
+                  Organization Name
+                </Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  placeholder="Acme Corporation"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  className="bg-input/30 border-input/50 focus:border-gold/50 focus:ring-gold/20 font-body transition-all duration-300 h-11"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground font-body mt-2">
+                  This will be your primary organization. You can create more later.
+                </p>
+              </div>
 
-            <Button
-              type="submit"
-              className="w-full h-12 bg-gradient-emerald hover:brightness-110 text-white font-heading font-bold tracking-wider text-lg shadow-glow transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Establishing...
-                </>
-              ) : (
-                'Complete Setup'
-              )}
-            </Button>
+              <Button
+                type="submit"
+                className="w-full h-12 bg-gradient-emerald hover:brightness-110 text-white font-heading font-bold tracking-wider text-lg shadow-glow transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Establishing...
+                  </>
+                ) : (
+                  'Complete Setup'
+                )}
+              </Button>
 
               <div className="bg-muted/30 rounded-lg p-4 border border-sidebar-border">
                 <p className="text-xs font-body text-muted-foreground text-center leading-relaxed">

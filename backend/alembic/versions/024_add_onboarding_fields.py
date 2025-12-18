@@ -14,8 +14,9 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '024_add_onboarding_fields'
-down_revision = '023_add_performance_indexes'
+# revision identifiers, used by Alembic.
+revision = '024'
+down_revision = '023'
 branch_labels = None
 depends_on = None
 
