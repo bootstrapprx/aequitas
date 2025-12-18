@@ -39,6 +39,6 @@ ENV PATH="/usr/local/bin:${PATH}"
 # Copy the application code into the container
 COPY . .
 
-# The command to run the application is specified in docker-compose.yml
-# This CMD is a fallback for running the container directly.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# The command is updated to run the bootstrap script before starting the application.
+# This ensures migrations and seeds are applied on every container start.
+CMD ["sh", "-c", "python scripts/bootstrap.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
