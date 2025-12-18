@@ -1,221 +1,327 @@
 
-# 🔒 MASTER PROMPT — Phase 3C Implementation (CODE + CANONICAL DOCS)
 
-**Role:** `api-engineer` (contract-enforcer / backend guardian)
-
-**Mission:**
-Implement **Phase 3C** of the Aequitas accounting system by converting frozen specifications into **working FastAPI code**, while also **canonizing documentation structure** so contracts, DTOs, and API boundaries become authoritative and discoverable.
-
-This is a **code-first execution task**, not a documentation exercise.
+**Role:** You are a senior backend/data engineer working inside the Aequitas repo (FastAPI + SQLAlchemy + Postgres).
+You must implement the Fiscal Engine foundation (DB + backend + Dexter integration).
+Do not speculate. Use only repository code patterns.
 
 ---
 
-## 🔐 Authoritative Inputs (Read, Do Not Redesign)
+# GOAL
 
-These documents are **frozen contracts**:
+Implement **Fiscal Engine v1 (Pass-Through Tax Exposure)** with:
 
-1. `PHASE_3C1_DTO_SPECIFICATION.md`
-   → Canonical DTOs, field classification, immutability overlays
+* Database models + migrations
+* API schemas + endpoints
+* Services (deterministic calculation, auditable)
+* Dexter integration: answer tax-exposure questions and projections based on calculated results
 
-2. `PHASE_3C2_WRITE_APIS.md`
-   → Write API inventory, controller skeletons, rejection matrices, audit rules
-
-3. `API_BOUNDARIES.md`
-   → Allowed / forbidden operations, permission model, security rationale
-
-4. PostgreSQL schema at Alembic **revision 023 (head)**
-   → Database is the final authority
+This is **estimated/projected tax exposure**, not tax filing.
 
 ---
 
-## 🚫 Non-Negotiable Constraints
+# SCOPE (STRICT)
 
-* ❌ No force flags
-* ❌ No bypassing validation
-* ❌ No partial writes
-* ❌ No silent coercion
-* ❌ No business logic in controllers
-* ❌ No mutation of POSTED entries (except VOID)
-* ❌ No mutation of LOCKED accounts (except allowed fields)
-* ❌ No bulk write endpoints
-* ❌ No cross-company writes
-* ❌ No undocumented fields in APIs
+✅ Implement:
 
-**Assume hostile or buggy clients at all times.**
+1. DB models (SQLAlchemy) under `backend/app/db/models/`
+2. Alembic migrations under `backend/alembic/versions/` (if Alembic exists)
 
----
+   * If Alembic is not wired, create `backend/migrations/` with SQL migration files and a runner script.
+3. Pydantic schemas under `backend/app/schemas/`
+4. Services under `backend/app/services/fiscal_engine/`
+5. API routes under `backend/app/api/v1/fiscal/` (or similar) + include router in `main.py`
+6. Dexter integration in `backend/app/services/dexter/` to:
 
-## ✅ Required Guarantees
+   * answer: “What’s my projected 2025 tax liability?”
+   * explain: drivers, missing inputs, confidence score
+   * produce: consolidated vs per-company exposure
 
-* UUID-only references (no string FKs)
-* Enum values exactly match PostgreSQL enums
-* Deterministic failures with explicit error codes
-* Transactional service layer
-* Database + service + API invariants must agree
-* Error responses always follow the canonical shape
+❌ Do NOT:
 
-```json
-{
-  "error_code": "LOCKED_ACCOUNT | STATE_CONFLICT | ...",
-  "message": "Human-readable explanation",
-  "details": { "field": "context" }
-}
-```
+* change auth system
+* change company creation flows
+* implement filing-grade tax returns
+* fetch external tax rates at runtime
 
 ---
 
-## 📦 Deliverables (MANDATORY)
+# CANONICAL BEHAVIOR (NON-NEGOTIABLE)
 
-### **A. Canonical Documentation Canonization (FIRST STEP)**
-
-1. **Create canonical folder structure:**
-
-```
-docs/
-└── canonical/
-    ├── README.md
-    ├── DATA_DICTIONARY.md
-    ├── API_BOUNDARIES.md
-    ├── PHASE_3C1_DTO_SPECIFICATION.md
-    └── PHASE_3C2_WRITE_APIS.md
-```
-
-2. **Move / rename documents** into this folder using **exact names above**.
-3. **Create `docs/canonical/README.md`** that:
-
-   * Explains what “canonical” means
-   * Declares these documents as authoritative contracts
-   * States that code must conform to them, not vice-versa
-4. **Update root `README.md`**:
-
-   * Add a “Canonical Contracts” section
-   * Link to `docs/canonical/README.md`
-   * Explicitly state that API behavior, DTOs, and accounting rules are governed there
-
-⚠️ This step is required **before** touching API code.
+* Deterministic: same inputs + same ruleset_version → identical outputs.
+* Versioned: store `engine_version`, `ruleset_version`, `inputs_hash`.
+* Auditable: each output must trace back to accounts and rules.
+* “UNKNOWN” must be explicit: never silently assume.
+* Mandatory UI/response label: **“Estimated / Projected Tax Exposure — Not a Tax Filing”**.
 
 ---
 
-### **B. Phase 3C-2 — Write API Implementation (CODE)**
+# DATA MODEL (CREATE THESE TABLES)
 
-Implement **all 17 write endpoints** defined in `PHASE_3C2_WRITE_APIS.md` as working FastAPI code.
+## 1) entity_tax_profiles
 
-#### 1. DTOs (from Phase 3C-1)
+Represents fiscal assumptions per company.
 
-* Create Pydantic schemas under:
+Fields:
 
-  ```
-  backend/app/schemas/accounting/
-  ```
-* Split clearly into:
+* id (UUID PK)
+* company_id (UUID FK → companies.id, unique)
+* entity_type (string) default "LLC"
+* tax_regime (string) default "PASS_THROUGH"
+* accounting_method (enum/string: CASH|ACCRUAL) nullable (unknown allowed)
+* fiscal_year_start (date) nullable
+* jurisdictions (JSONB) default []
+* elections (JSONB) default {}
+* notes (text) nullable
+* created_at, updated_at
 
-  * Create DTOs
-  * Update DTOs
-  * Response DTOs
-* Enforce immutability rules at validation + service layer
+Indexes:
 
-#### 2. Routers & Controllers
+* unique(company_id)
 
-Create or refactor routers under:
+## 2) tax_rulesets
 
-```
-backend/app/api/v1/routes/
-```
+Stores versioned rulesets.
 
-Required routers:
+Fields:
 
-* `accounting_chart.py`
-* `journal_entries.py`
-* `fiscal_periods.py`
-* `chart_templates.py` (admin)
+* id (UUID PK)
+* version (string, e.g. "2025.1") indexed
+* scope (string, e.g. "PASS_THROUGH_BASE") indexed
+* jurisdiction (string nullable, placeholder)
+* status (string: ACTIVE|INACTIVE)
+* rules (JSONB) not null default []
+* created_at, updated_at
 
-Controllers must:
+Constraints:
 
-1. Check permissions (PermissionService)
-2. Validate DTO consistency
-3. Delegate to service layer
-4. Map service exceptions → canonical errors
-5. Return response DTOs
+* unique(version, scope, jurisdiction)
 
-**No business logic allowed in controllers.**
+## 3) tax_runs
 
-#### 3. Permission Service Alignment
+One execution of the engine.
 
-Ensure `PermissionService` exposes and is used consistently:
+Fields:
 
-* `can_view_company(user_id, company_id)`
-* `can_manage_company(user_id, company_id)`
-* Superuser checks where required (unlock, reopen)
+* id (UUID PK)
+* company_id (UUID FK nullable)  # null for consolidated run
+* period_start (date)
+* period_end (date)
+* as_of_date (date) nullable
+* ruleset_id (UUID FK → tax_rulesets.id)
+* ruleset_version (string) denormalized for quick filtering
+* engine_version (string)
+* inputs_hash (string) indexed
+* status (string: SUCCESS|PARTIAL|FAILED)
+* confidence_score (int 0-100)
+* missing_inputs (JSONB) default []
+* label (string) must include: “Estimated / Projected Tax Exposure — Not a Tax Filing”
+* created_at
 
-#### 4. Canonical Error System
+Indexes:
 
-Create a **single error translation module**, e.g.:
+* (company_id, period_start, period_end)
+* inputs_hash
 
-```
-backend/app/api/errors.py
-```
+## 4) tax_facts
 
-Responsibilities:
+Normalized facts derived from trial balance / ledger.
 
-* Define canonical error codes
-* Map service exceptions → HTTP status + payload
-* Used by all controllers
+Fields:
+
+* id (UUID PK)
+* tax_run_id (UUID FK → tax_runs.id, cascade delete)
+* company_id (UUID FK)
+* period_start (date)
+* period_end (date)
+* account_id (UUID FK → company_accounts.id nullable)
+* account_code (string)
+* account_name (string)
+* amount (numeric(15,2))
+* tax_tags (JSONB) default []
+* source (string: TRIAL_BALANCE|LEDGER)
+* source_trace (JSONB) default {}  # e.g. original account ids/balances
+* created_at
+
+Indexes:
+
+* tax_run_id
+* company_id
+
+## 5) tax_adjustments
+
+Adjustments generated by rules.
+
+Fields:
+
+* id (UUID PK)
+* tax_run_id (UUID FK, cascade delete)
+* company_id (UUID FK)
+* tax_type (string: PASS_THROUGH_INCOME)
+* adjustment_type (string: permanent|timing|reclass|limit)
+* amount (numeric(15,2))
+* rule_id (string)
+* reason (text)
+* source_fact_ids (JSONB) default []
+* created_at
+
+Indexes:
+
+* tax_run_id
+* company_id
+
+## 6) tax_positions
+
+Final outputs (per company and consolidated).
+
+Fields:
+
+* id (UUID PK)
+* tax_run_id (UUID FK, cascade delete)
+* company_id (UUID FK nullable)  # null = consolidated
+* tax_type (string: PASS_THROUGH_INCOME)
+* taxable_income_estimated (numeric(15,2))
+* exposure_estimated (numeric(15,2) nullable)  # placeholder for later
+* currency (string default "USD")
+* confidence_score (int)
+* missing_inputs (JSONB) default []
+* top_drivers (JSONB) default []   # list of {account_code, amount, tag}
+* created_at
+
+Indexes:
+
+* (company_id, tax_type)
+* tax_run_id
 
 ---
 
-### **C. Minimal Integration Tests (MANDATORY)**
+# MIGRATIONS
 
-Add tests proving invariants actually hold:
+Create Alembic migrations for all tables.
+If Alembic is present, use it. Otherwise:
 
-1. Journal Entry lifecycle:
-
-   * Create DRAFT
-   * Update DRAFT
-   * POST (balanced only)
-   * Reject POST when unbalanced
-
-2. Account locking:
-
-   * Lock account
-   * Reject immutable field updates
-   * Allow cosmetic updates
-
-3. Fiscal periods:
-
-   * Prevent overlap
-   * Close with no drafts
-   * Reopen requires superuser
-
-Tests must fail if:
-
-* Constraints are bypassed
-* Wrong error codes are returned
+* create SQL migration scripts with clear up/down
+* include a simple migration runner
 
 ---
 
-## 📋 Output Requirements
+# BACKEND SERVICES (IMPLEMENT)
 
-At completion, provide:
+Create `backend/app/services/fiscal_engine/`:
 
-1. **List of files created/modified**
-2. **Confirmation checklist**:
+1. `hashing.py`
 
-   * All endpoints implemented
-   * All DTOs enforced
-   * All docs moved & linked
-   * All tests passing
-3. **Explicit note of any deviations** (ideally none)
+* function: `compute_inputs_hash(company_id, period_start, period_end, trial_balance_snapshot, profile, ruleset_version)`
+
+2. `ruleset_service.py`
+
+* create/get active ruleset for scope PASS_THROUGH_BASE
+* seed default ruleset "2025.1" if none exists (rules can be empty for v1)
+
+3. `profile_service.py`
+
+* get/create profile for a company (default LLC, PASS_THROUGH)
+
+4. `calculation_service.py`
+
+* `run_company_exposure(company_id, period_start, period_end, as_of_date=None, ruleset_version="2025.1")`
+* Steps:
+
+  * read Trial Balance (use existing ledger/accounting services or company account balances)
+  * create TaxRun
+  * build TaxFacts (attach tax_tags from master chart if available; if missing, mark UNKNOWN)
+  * compute `taxable_income_estimated` via tags:
+    taxable_income sum minus deductible_expense sum
+  * compute `top_drivers`
+  * compute `confidence_score` + `missing_inputs`
+  * write TaxPosition
+  * status SUCCESS or PARTIAL
+
+5. `consolidation_service.py`
+
+* `run_consolidated_exposure(company_ids, period_start, period_end, ...)`
+* sum company-level taxable incomes
+* consolidated TaxRun + TaxPosition (company_id null)
 
 ---
 
-## 🧭 Philosophy Reminder
+# API ENDPOINTS (IMPLEMENT)
 
-* Documentation is law
-* Database is the final authority
-* APIs are contracts, not conveniences
-* Accounting correctness > developer comfort
-* If unsure, **reject the request**
+Create router: `backend/app/api/v1/fiscal.py`
+
+Endpoints (JWT protected):
+
+* `POST /api/v1/fiscal/profile/{company_id}` → upsert profile
+* `GET /api/v1/fiscal/profile/{company_id}` → get profile
+* `POST /api/v1/fiscal/runs/company/{company_id}` → run calculation
+* `POST /api/v1/fiscal/runs/consolidated` body: {company_ids: [], period_start, period_end}
+* `GET /api/v1/fiscal/runs/{run_id}` → run detail with facts/adjustments/position summary
+* `GET /api/v1/fiscal/positions/latest?company_id=...&tax_type=...` → latest position
+
+Responses must include:
+
+* label disclaimer
+* confidence score
+* missing inputs
+* top drivers
+
+Register router in `backend/app/main.py`.
 
 ---
 
-**Begin execution now. Do not ask follow-up questions.**
+# DEXTER INTEGRATION (IMPLEMENT)
+
+Add a “Fiscal” capability to Dexter.
+
+Requirements:
+
+* Dexter can answer:
+
+  * “What’s my projected 2025 tax liability?”
+  * “Which company drives most of my tax exposure?”
+  * “What assumptions are missing?”
+  * “What changed month over month?”
+* Dexter must:
+
+  * call the fiscal services to fetch latest TaxPositions
+  * explain results in plain English
+  * always show disclaimer label
+  * never claim filing-grade accuracy
+
+Implementation approach:
+
+* Add a tool-like service `backend/app/services/dexter/fiscal_adapter.py`
+* Add an intent router that detects fiscal questions and uses the adapter
+* If data missing, Dexter returns an action checklist (e.g. add tax tags, set accounting_method)
+
+---
+
+# TESTS (MINIMUM)
+
+Add backend tests:
+
+* create profile default
+* run calculation deterministic hash
+* ensure same inputs produce same outputs
+* ensure untagged accounts reduce confidence and appear in missing_inputs
+
+---
+
+# DELIVERABLES
+
+1. New SQLAlchemy models
+2. Migration(s)
+3. Schemas
+4. Services
+5. API routes wired to main.py
+6. Dexter fiscal adapter and intent routing
+7. Minimal tests
+
+Output a concise summary + file list after implementation.
+
+---
+
+## IMPORTANT UX/LANGUAGE RULE
+
+Every fiscal response must include:
+
+**“Estimated / Projected Tax Exposure — Not a Tax Filing”**
