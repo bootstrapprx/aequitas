@@ -47,3 +47,27 @@ class CompanyResponse(CompanyBase):
     
     class Config:
         from_attributes = True
+
+class CompanyChartStatus(BaseModel):
+    master_chart_loaded: bool
+    company_chart_initialized: bool
+    account_count: int
+    mapping_coverage: float
+    onboarding_status: str
+
+    class Config:
+        from_attributes = True
+
+class DashboardActivity(BaseModel):
+    id: UUID
+    user: str
+    action: str
+    timestamp: datetime
+    type: str  # 'mapping', 'user', 'export', 'sync', 'info', 'success', 'warning'
+
+class CompanyDashboardStats(BaseModel):
+    chart_status: CompanyChartStatus
+    active_users_count: int
+    pending_reviews_count: int
+    recent_activity: list[DashboardActivity]
+    account_distribution: dict[str, int]

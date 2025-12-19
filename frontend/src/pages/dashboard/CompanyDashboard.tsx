@@ -35,39 +35,56 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useGetCompanies } from '@/integrations/queries/useCompanies';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { formatDistanceToNow } from 'date-fns';
 
-// Mock data - replace with actual API calls
-// const mockCompanies ... (replaced by hook)
-// Keeping mockMetrics for now as we don't have a stats hook ready yet
+// Interfaces matching backend schema
+interface CompanyChartStatus {
+  master_chart_loaded: boolean;
+  company_chart_initialized: boolean;
+  account_count: number;
+  mapping_coverage: number;
+  onboarding_status: string;
+}
 
-// mockCompanies removed - using API hook
+interface DashboardActivity {
+  id: string;
+  user: string;
+  action: string;
+  timestamp: string; // ISO string from API
+  type: string;
+}
 
-const mockMetrics = {
-  totalAccounts: 342,
-  mappedAccounts: 318,
-  activeUsers: 12,
-  pendingReviews: 5,
-  recentActivity: [
-    { id: 1, action: 'Account mapped', user: 'John Doe', time: '2 hours ago', type: 'mapping' },
-    { id: 2, action: 'User invited', user: 'Jane Smith', time: '4 hours ago', type: 'user' },
-    { id: 3, action: 'Chart exported', user: 'Bob Wilson', time: '1 day ago', type: 'export' },
-    { id: 4, action: 'QBO synced', user: 'System', time: '1 day ago', type: 'sync' },
-  ],
-};
+interface CompanyDashboardStats {
+  chart_status: CompanyChartStatus;
+  active_users_count: number;
+  pending_reviews_count: number;
+  recent_activity: DashboardActivity[];
+  account_distribution: Record<string, number>;
+}
+
 
 const CompanyDashboard = () => {
   const { user, currentCompanyId, switchCompany } = useAuth();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompanyId || '');
 
-  // Use real data
+  // Fetch companies
   const { data: companies, isLoading: isCompaniesLoading } = useGetCompanies();
-  const isLoading = isCompaniesLoading; // Simplified loading state
 
+  // Sync selected company from auth context
   useEffect(() => {
     if (currentCompanyId) {
       setSelectedCompanyId(currentCompanyId);
     }
   }, [currentCompanyId]);
+
+  // Fetch Dashboard Stats (Canonical Fix: One aggregate endpoint)
+  const { data: stats, isLoading: isStatsLoading } = useQuery({
+    queryKey: ['company', 'dashboard-stats', selectedCompanyId],
+    queryFn: () => api.get<CompanyDashboardStats>(`/companies/${selectedCompanyId}/dashboard-stats`),
+    enabled: !!selectedCompanyId,
+  });
 
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
@@ -75,9 +92,16 @@ const CompanyDashboard = () => {
   };
 
   const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
-  const mappingPercentage = mockMetrics.totalAccounts > 0 ? Math.round(
-    (mockMetrics.mappedAccounts / mockMetrics.totalAccounts) * 100
-  ) : 0;
+  const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading);
+
+  // Derived metrics from real data
+  const chartStatus = stats?.chart_status;
+  const totalAccounts = chartStatus?.account_count || 0;
+  const mappedPercentage = chartStatus?.mapping_coverage || 0;
+  const activeUsers = stats?.active_users_count || 0;
+  const pendingReviews = stats?.pending_reviews_count || 0;
+  const activities = stats?.recent_activity || [];
+  const distribution = stats?.account_distribution || {};
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,9 +117,9 @@ const CompanyDashboard = () => {
               </div>
               <div className="h-8 w-px bg-border"></div>
               <div className="min-w-[250px]">
-                <Select value={selectedCompanyId} onValueChange={handleCompanyChange} disabled={isLoading}>
+                <Select value={selectedCompanyId} onValueChange={handleCompanyChange} disabled={isCompaniesLoading}>
                   <SelectTrigger className="border-0 text-lg font-semibold text-foreground hover:bg-muted/50">
-                    <SelectValue placeholder={isLoading ? "Loading..." : "Select company..."} />
+                    <SelectValue placeholder={isCompaniesLoading ? "Loading..." : "Select company..."} />
                   </SelectTrigger>
                   <SelectContent>
                     {companies?.map((company) => (
@@ -159,10 +183,19 @@ const CompanyDashboard = () => {
                       : 'Select a company to get started'}
                   </p>
                 </div>
-                {mockMetrics.pendingReviews > 0 && (
+                {chartStatus?.onboarding_status !== 'ready' && !!selectedCompanyId && (
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                    <div className="text-3xl font-bold">{mockMetrics.pendingReviews}</div>
-                    <div className="text-sm text-teal-50">Pending Reviews</div>
+                    <div className="text-lg font-bold text-white mb-1">
+                      {chartStatus?.onboarding_status === 'not_started' ? 'Setup Required' : 'Setup In Progress'}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-full text-xs h-7"
+                      onClick={() => window.location.href = `/onboarding/${selectedCompanyId}`}
+                    >
+                      Continue Setup
+                    </Button>
                   </div>
                 )}
               </div>
@@ -187,231 +220,161 @@ const CompanyDashboard = () => {
             >
               <StatsCard
                 title="Total Accounts"
-                value={mockMetrics.totalAccounts}
+                value={totalAccounts}
                 subtitle="In chart of accounts"
                 icon={FileText}
                 color="teal"
               />
               <StatsCard
                 title="Mapped Accounts"
-                value={mockMetrics.mappedAccounts}
-                subtitle={`${mappingPercentage}% completion`}
+                value={chartStatus?.company_chart_initialized ? Math.round((totalAccounts * mappedPercentage) / 100) : 0}
+                subtitle={`${mappedPercentage}% completion`}
                 icon={TrendingUp}
-                trend={{ value: 12, isPositive: true }}
+                trend={{ value: 12, isPositive: true }} // TODO: Real trend
                 color="navy"
               />
               <StatsCard
                 title="Active Users"
-                value={mockMetrics.activeUsers}
+                value={activeUsers}
                 subtitle="Team members"
                 icon={Users}
                 color="yellow"
               />
               <StatsCard
-                title="Pending Reviews"
-                value={mockMetrics.pendingReviews}
-                subtitle="Requires attention"
+                title="Pending Mappings"
+                value={pendingReviews}
+                subtitle="Accounts to map"
                 icon={Bell}
-                color="red"
+                color={pendingReviews > 0 ? "red" : "green"}
               />
             </motion.div>
 
-            {/* Charts Row */}
+            {/* Dashboard Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Account Distribution */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="lg:col-span-2"
-              >
-                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-foreground">Account Mapping Progress</CardTitle>
-                        <CardDescription className="text-muted-foreground">Monthly mapping activity</CardDescription>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-muted">
-                            Last 30 days
-                            <ChevronDown className="ml-2 h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover text-popover-foreground border-border">
-                          <DropdownMenuItem className="hover:bg-muted">Last 7 days</DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-muted">Last 30 days</DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-muted">Last 90 days</DropdownMenuItem>
-                          <DropdownMenuItem className="hover:bg-muted">This year</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Mock Chart - Replace with actual chart library */}
-                    <div className="h-64 flex items-end justify-around space-x-2 p-4 bg-gradient-to-t from-muted/20 to-transparent rounded-lg">
-                      {[65, 80, 55, 90, 70, 85, 75, 95, 80, 85, 90, 93].map((height, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center">
-                          <div
-                            className="w-full bg-gradient-to-t from-primary to-primary/60 rounded-t-lg transition-all hover:opacity-80"
-                            style={{ height: `${height}%` }}
-                          ></div>
-                          <span className="text-xs text-muted-foreground mt-2">
-                            {['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'][i]}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
 
-              {/* Account Categories */}
+              {/* Account Distribution (Real Data) */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground h-full">
                   <CardHeader>
                     <CardTitle className="text-foreground">Account Distribution</CardTitle>
                     <CardDescription className="text-muted-foreground">By category</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {/* Mock Donut Chart */}
-                    <div className="relative flex items-center justify-center h-48">
-                      <svg className="w-40 h-40 transform -rotate-90">
-                        <circle
-                          cx="80"
-                          cy="80"
-                          r="60"
-                          fill="none"
-                          stroke="hsl(var(--secondary))"
-                          strokeWidth="20"
-                          strokeDasharray="113 377"
-                        />
-                        <circle
-                          cx="80"
-                          cy="80"
-                          r="60"
-                          fill="none"
-                          stroke="hsl(var(--accent))"
-                          strokeWidth="20"
-                          strokeDasharray="132 377"
-                          strokeDashoffset="-113"
-                        />
-                        <circle
-                          cx="80"
-                          cy="80"
-                          r="60"
-                          fill="none"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth="20"
-                          strokeDasharray="132 377"
-                          strokeDashoffset="-245"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-foreground">
-                            {mappingPercentage}%
+                    <div className="space-y-4">
+                      {Object.entries(distribution).map(([type, count]) => {
+                        const percentage = totalAccounts > 0 ? Math.round((count / totalAccounts) * 100) : 0;
+                        let colorClass = "bg-primary";
+                        if (type === "Asset") colorClass = "bg-emerald-500";
+                        if (type === "Liability") colorClass = "bg-red-500";
+                        if (type === "Equity") colorClass = "bg-blue-500";
+                        if (type === "Revenue") colorClass = "bg-green-500";
+                        if (type === "Expense") colorClass = "bg-amber-500";
+
+                        return (
+                          <div key={type} className="space-y-1">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="font-medium">{type}</span>
+                              <div className="flex gap-2 text-muted-foreground">
+                                <span>{count}</span>
+                                <span>({percentage}%)</span>
+                              </div>
+                            </div>
+                            <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${percentage}%` }}
+                                className={`h-full ${colorClass}`}
+                              />
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">Mapped</div>
-                        </div>
-                      </div>
+                        )
+                      })}
                     </div>
-                    <div className="mt-6 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-secondary mr-2"></div>
-                          <span className="text-sm text-foreground">Assets</span>
-                        </div>
-                        <span className="text-sm font-semibold text-foreground">30%</span>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Recent Activity (Expanded) */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className="lg:col-span-2"
+              >
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground h-full">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-foreground">Recent Activity</CardTitle>
+                        <CardDescription className="text-muted-foreground">Latest updates across your company</CardDescription>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-accent mr-2"></div>
-                          <span className="text-sm text-foreground">Liabilities</span>
-                        </div>
-                        <span className="text-sm font-semibold text-foreground">35%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                          <span className="text-sm text-foreground">Equity</span>
-                        </div>
-                        <span className="text-sm font-semibold text-foreground">35%</span>
-                      </div>
+                      <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-muted">
+                        View All
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {activities.length === 0 ? (
+                        <div className="text-center text-muted-foreground py-4">No recent activity</div>
+                      ) : (
+                        activities.map((activity) => (
+                          <div
+                            key={activity.id}
+                            className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <div
+                              className={`p-2 rounded-lg ${activity.type === 'mapping'
+                                ? 'bg-primary/10'
+                                : activity.type === 'user'
+                                  ? 'bg-secondary/10'
+                                  : activity.type === 'export'
+                                    ? 'bg-accent/10'
+                                    : 'bg-muted'
+                                }`}
+                            >
+                              {activity.type === 'mapping' && (
+                                <TrendingUp className="h-4 w-4 text-primary" />
+                              )}
+                              {activity.type === 'user' && (
+                                <Users className="h-4 w-4 text-secondary" />
+                              )}
+                              {activity.type === 'export' && (
+                                <Download className="h-4 w-4 text-accent-foreground" />
+                              )}
+                              {activity.type === 'sync' && (
+                                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {activity.type === 'info' && (
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {activity.type === 'success' && (
+                                <TrendingUp className="h-4 w-4 text-green-500" />
+                              )}
+                              {activity.type === 'warning' && (
+                                <Bell className="h-4 w-4 text-amber-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground">
+                                {activity.action}
+                              </p>
+                              <p className="text-sm text-muted-foreground">{activity.user}</p>
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                            </span>
+                          </div>
+                        )))}
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
-
-            {/* Recent Activity */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-foreground">Recent Activity</CardTitle>
-                      <CardDescription className="text-muted-foreground">Latest updates across your company</CardDescription>
-                    </div>
-                    <Button variant="outline" size="sm" className="border-border text-foreground hover:bg-muted">
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mockMetrics.recentActivity.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div
-                          className={`p-2 rounded-lg ${activity.type === 'mapping'
-                            ? 'bg-primary/10'
-                            : activity.type === 'user'
-                              ? 'bg-secondary/10'
-                              : activity.type === 'export'
-                                ? 'bg-accent/10'
-                                : 'bg-muted'
-                            }`}
-                        >
-                          {activity.type === 'mapping' && (
-                            <TrendingUp className="h-4 w-4 text-primary" />
-                          )}
-                          {activity.type === 'user' && (
-                            <Users className="h-4 w-4 text-secondary" />
-                          )}
-                          {activity.type === 'export' && (
-                            <Download className="h-4 w-4 text-accent-foreground" />
-                          )}
-                          {activity.type === 'sync' && (
-                            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {activity.action}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{activity.user}</p>
-                        </div>
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {activity.time}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </>
         )}
       </main>
