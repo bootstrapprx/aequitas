@@ -125,21 +125,22 @@ class OnboardingStatus(str, enum.Enum):
     Company onboarding wizard status.
 
     PostgreSQL enum: onboardingstatus
-    Values: DRAFT, TEMPLATE_SELECTED, CHART_READY, CHART_FINALIZED, ACTIVE
+    Values: NOT_STARTED, MATERIALIZING, ACTIVE
 
-    State machine for Phase 5 onboarding wizard:
-    DRAFT → TEMPLATE_SELECTED → CHART_READY → CHART_FINALIZED → ACTIVE
+    CANONICAL STATE MACHINE:
+    NOT_STARTED → MATERIALIZING → ACTIVE
 
-    - DRAFT: Company exists, accounting not initialized
-    - TEMPLATE_SELECTED: Template chosen, not materialized
-    - CHART_READY: Accounts created from template
-    - CHART_FINALIZED: Accounts reviewed by user
-    - ACTIVE: Accounting live (point of no return reached)
+    - NOT_STARTED: Company exists, onboarding not started
+    - MATERIALIZING: Onboarding in progress (wizard steps 0-5)
+    - ACTIVE: Onboarding complete, accounting active
+
+    Rules:
+    - Dashboard access allowed only if status = ACTIVE
+    - Any other state → redirect to /onboarding/:companyId
+    - State transitions only via onboarding endpoints
     """
-    DRAFT = "DRAFT"
-    TEMPLATE_SELECTED = "TEMPLATE_SELECTED"
-    CHART_READY = "CHART_READY"
-    CHART_FINALIZED = "CHART_FINALIZED"
+    NOT_STARTED = "NOT_STARTED"
+    MATERIALIZING = "MATERIALIZING"
     ACTIVE = "ACTIVE"
 
 

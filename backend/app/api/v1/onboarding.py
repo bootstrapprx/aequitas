@@ -39,6 +39,46 @@ router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
 
 # ============================================================================
+# Destructive Onboarding Reset
+# ============================================================================
+
+@router.post("/{company_id}/reset")
+def reset_onboarding(
+    company_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    DESTRUCTIVE OPERATION: Reset onboarding and delete all chart data.
+
+    This endpoint allows re-running the onboarding wizard by:
+    - Deleting all company chart accounts
+    - Deleting chart mappings
+    - Deleting template usage records
+    - Resetting onboarding_status to NOT_STARTED
+    - Resetting onboarding_current_step to 0
+    - Clearing onboarding timestamps
+
+    CRITICAL RULES:
+    - User must be company admin
+    - Company record is preserved
+    - User relationships are preserved
+    - Fiscal periods are deleted
+    - This operation is irreversible
+    - All accounting data will be lost
+
+    Use this endpoint only to support explicit wizard re-run requests.
+    """
+    try:
+        return onboarding_service.reset_onboarding(db, company_id, current_user)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ============================================================================
 # Onboarding Status & Progress
 # ============================================================================
 

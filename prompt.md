@@ -1,172 +1,138 @@
+PROMPT — FASTAPI CORS & APP LIFECYCLE PATCH (PROD-SAFE)
 
+Role:
+You are a senior FastAPI engineer fixing a CORS and application lifecycle bug in the Aequitas backend.
 
-## 🔴 PROMPT FOR GEMINI — PROD-GRADE BOOTSTRAP (DO NOT DEVIATE)
+This is a backend-only patch.
+Do NOT touch frontend code.
 
-**Role:**
-You are a senior DevOps / Backend engineer working on a FastAPI + SQLAlchemy + Alembic + Docker SaaS application called **Aequitas**.
+CONTEXT (FACTS, NOT THEORY)
 
-You must implement a **production-grade bootstrap mechanism** that guarantees the application **never starts without migrations and required seeds applied**.
+Browser requests from http://localhost:5173 are blocked by CORS.
 
-Do NOT propose alternatives.
-Do NOT ask questions.
-Implement the solution described below exactly.
+Errors show:
+No 'Access-Control-Allow-Origin' header present
 
----
+CORSMiddleware is present but not reliably applied.
 
-## CONTEXT
+The backend performs DB initialization and startup logic before FastAPI() is instantiated.
 
-* The backend runs inside Docker via `make dev` and `docker-compose`.
-* Currently, the application starts **without guaranteeing**:
+There are two routers mounted on /api/v1/companies, one of which is superuser-only.
 
-  * Alembic migrations are applied
-  * Master Chart of Accounts is seeded
-  * Default Fiscal RuleSets are seeded
+OBJECTIVE
 
-This causes logical failures even though the app appears “up”.
+Ensure that every HTTP response, including:
 
-This is unacceptable for a SaaS system.
+401
 
----
+403
 
-## OBJECTIVE (MANDATORY)
+404
 
-Implement a **single bootstrap pipeline** that runs **inside the backend container** and guarantees, on every startup:
+dependency failures
 
-1. Database is reachable
-2. Alembic migrations are applied (`upgrade head`)
-3. Idempotent seeds are executed:
+always includes CORS headers, and that no route bypasses middleware.
 
-   * Master Chart of Accounts
-   * Default Fiscal RuleSet (`2025.1`)
-4. Only after all the above succeed, the FastAPI app starts
+REQUIRED CHANGES (MANDATORY)
+1️⃣ Fix Application Initialization Order
 
-If any step fails, the container must fail fast.
+Refactor app/main.py so that:
 
----
+app = FastAPI(...) is created at the very top
 
-## REQUIRED ARCHITECTURE (NON-NEGOTIABLE)
+CORSMiddleware is attached immediately after
 
-### 1️⃣ Create a bootstrap script
+All DB initialization, startup checks, and side effects are moved into:
 
-Create a new file:
+a @app.on_event("startup") handler
+OR
 
-```
-backend/scripts/bootstrap.py
-```
+a clearly isolated function executed after app creation
 
-This script must:
+Under no circumstances may DB logic execute before middleware attachment.
 
-* Wait for PostgreSQL to be available
-* Run Alembic migrations programmatically
-* Run idempotent seed functions
-* Exit with non-zero code on failure
+2️⃣ Harden CORS Configuration (Dev-Safe)
 
-### Required responsibilities (exact):
+Update the CORS middleware to include:
 
-```text
-- wait_for_db()
-- run_alembic_migrations()
-- seed_master_chart()
-- seed_default_fiscal_ruleset()
-```
+explicit localhost origins
 
-Seeds MUST be idempotent (safe to run multiple times).
+a regex fallback for localhost ports
 
----
+Example (adapt as needed):
 
-### 2️⃣ Alembic integration
+allow_origins=[
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+],
+allow_origin_regex=r"http://localhost:\d+",
+allow_credentials=True,
+allow_methods=["*"],
+allow_headers=["*"],
 
-* Use `alembic.config.Config`
-* Use `alembic.command.upgrade(cfg, "head")`
-* Assume `alembic.ini` already exists
 
-No shell calls (`subprocess`) allowed.
+Do NOT use "*" with credentials.
 
----
+3️⃣ Eliminate Router Shadowing on /api/v1/companies
 
-### 3️⃣ Seed logic
+Currently:
 
-* Master chart seed:
+companies.router is mounted on /api/v1/companies
 
-  * Must NOT reinsert if data already exists
-  * Must log what it did (inserted / skipped)
+companies_su.router is ALSO mounted on /api/v1/companies
 
-* Fiscal ruleset seed:
+This can cause:
 
-  * Ensure a ruleset with:
+unexpected dependency execution
 
-    * version = `"2025.1"`
-    * scope = `"PASS_THROUGH_BASE"`
-  * Create only if missing
+early 401 responses
 
----
+Fix this by ONE of the following (choose the cleanest):
 
-### 4️⃣ Dockerfile modification (MANDATORY)
+Move companies_su to /api/v1/admin/companies
 
-Modify the backend Dockerfile so that:
+OR namespace it clearly as /api/v1/companies-su
 
-```dockerfile
-CMD python backend/scripts/bootstrap.py && uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+Do NOT leave two routers competing on the same prefix.
 
-The application **must not start** if bootstrap fails.
+4️⃣ Guarantee Middleware Coverage
 
----
+Verify that:
 
-### 5️⃣ docker-compose compatibility
+No router returns a raw Response that bypasses middleware
 
-* Do NOT change docker-compose semantics
-* Backend container must depend on DB
-* Assume DB has a healthcheck or basic readiness
+All errors use HTTPException or framework-managed responses
 
----
+OUTPUT REQUIREMENTS
 
-## CONSTRAINTS
+Provide:
 
-You MUST NOT:
+Updated app/main.py (full file)
 
-* Require manual commands after `make dev`
-* Require developers to remember to run migrations
-* Put migration logic inside FastAPI startup events
-* Use shell scripts for migrations
-* Break existing environments
+Explanation of what was moved into startup
 
-This must be **CI-safe**, **prod-safe**, and **idempotent**.
+List of routes whose prefixes changed (if any)
 
----
+Do NOT include frontend changes.
+Do NOT include speculative commentary.
 
-## OUTPUT FORMAT
+ACCEPTANCE CRITERIA
 
-Return:
+After the patch:
 
-1. `backend/scripts/bootstrap.py` (full code)
-2. Dockerfile diff (only the relevant lines)
-3. Any small helper function needed (if applicable)
-4. Short explanation (≤ 10 lines)
+All API responses include:
 
-Do NOT include opinions.
-Do NOT include alternatives.
-Do NOT mention “other approaches”.
+Access-Control-Allow-Origin: http://localhost:5173
+Access-Control-Allow-Credentials: true
 
----
 
-## DEFINITION OF DONE
+No browser request fails due to CORS
 
-After this change:
+GET /api/v1/companies/{id} works from Vite dev server
 
-```bash
-make dev
-```
+Unauthorized requests return JSON with CORS headers
 
-Is sufficient to guarantee:
+OnboardingGuard no longer loops due to Failed to fetch
 
-* DB schema is correct
-* Master Chart exists
-* Fiscal Engine ruleset exists
-* Backend starts in a valid logical state
-
-This is a **production-grade requirement**, not a dev convenience.
-
----
-
-If you want, after Gemini finishes, paste the output here and I’ll **audit it line-by-line** before you apply it.
+Implement now.

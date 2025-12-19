@@ -7,14 +7,16 @@ CANONICAL REFERENCE:
 This service implements the company onboarding wizard state machine
 with atomic operations, validation, and state transitions.
 
-STATE MACHINE:
-DRAFT → TEMPLATE_SELECTED → CHART_READY → CHART_FINALIZED → ACTIVE
+CANONICAL STATE MACHINE:
+NOT_STARTED → MATERIALIZING → ACTIVE
 
 CRITICAL RULES:
 - State transitions are irreversible
+- Dashboard access only allowed when status = ACTIVE
 - Template selection locks after chart materialization
 - Chart materialization is atomic (all or nothing)
 - Activation is the point of no return
+- Only onboarding endpoints may mutate onboarding_status
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -53,6 +55,102 @@ from app.core.exceptions import ValidationError
 # ============================================================================
 
 SESSION_LOCK_TIMEOUT_MINUTES = 30
+
+
+# ============================================================================
+# Destructive Onboarding Reset
+# ============================================================================
+
+def reset_onboarding(db: Session, company_id: UUID, current_user) -> Dict[str, Any]:
+    """
+    DESTRUCTIVE OPERATION: Reset onboarding and delete all chart data.
+
+    This function:
+    - Validates user has admin access to the company
+    - Deletes all company chart accounts (cascades to mappings)
+    - Deletes template usage records
+    - Deletes fiscal periods
+    - Resets onboarding_status to NOT_STARTED
+    - Resets onboarding_current_step to 0
+    - Clears onboarding timestamps
+    - Preserves company record and user relationships
+
+    Args:
+        db: Database session
+        company_id: Company ID to reset
+        current_user: Current authenticated user
+
+    Returns:
+        Dict with success status and message
+
+    Raises:
+        ValidationError: If user lacks permissions or operation fails
+    """
+    from app.db.models.user_company import UserCompany
+
+    # Get company
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise ValidationError("Company not found")
+
+    # Check if user has access to this company (admin permission)
+    user_company = db.query(UserCompany).filter(
+        UserCompany.user_id == current_user.id,
+        UserCompany.company_id == company_id
+    ).first()
+
+    if not user_company and not current_user.is_superuser:
+        raise ValidationError(
+            "You do not have permission to reset onboarding for this company."
+        )
+
+    try:
+        # Begin transaction (wrapped by FastAPI's db session management)
+
+        # 1. Delete all fiscal periods
+        db.query(FiscalPeriod).filter(
+            FiscalPeriod.company_id == company_id
+        ).delete(synchronize_session=False)
+
+        # 2. Delete all company accounts (this cascades to mappings via ORM relationships)
+        db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company_id
+        ).delete(synchronize_session=False)
+
+        # 3. Delete template usage records
+        db.query(CompanyTemplateUsage).filter(
+            CompanyTemplateUsage.company_id == company_id
+        ).delete(synchronize_session=False)
+
+        # 4. Reset company onboarding state
+        company.onboarding_status = OnboardingStatus.NOT_STARTED
+        company.onboarding_current_step = 0
+        company.onboarding_started_at = None
+        company.onboarding_completed_at = None
+        company.onboarding_session_lock = None
+        company.onboarding_session_locked_at = None
+
+        # Commit transaction
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Onboarding reset successfully for company '{company.name}'. All chart data has been deleted.",
+            "company_id": str(company.id),
+            "company_name": company.name,
+            "onboarding_status": company.onboarding_status.value
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise ValidationError(
+            f"Failed to reset onboarding: {str(e)}. All changes have been rolled back."
+        ) from e
+
+
+# ============================================================================
+# Session Lock Management
+# ============================================================================
 
 
 def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> bool:
@@ -118,26 +216,14 @@ def get_onboarding_status(db: Session, company_id: UUID) -> OnboardingStatusResp
             is_locked = True
             locked_by_session = company.onboarding_session_lock
 
-    # Determine step completion flags
-    step_1_complete = bool(company.country and company.currency and company.timezone)
-    step_2_complete = company.onboarding_status in [
-        OnboardingStatus.TEMPLATE_SELECTED,
-        OnboardingStatus.CHART_READY,
-        OnboardingStatus.CHART_FINALIZED,
-        OnboardingStatus.ACTIVE
-    ]
-    step_3_complete = company.onboarding_status in [
-        OnboardingStatus.CHART_READY,
-        OnboardingStatus.CHART_FINALIZED,
-        OnboardingStatus.ACTIVE
-    ]
-    step_4_complete = company.onboarding_status in [
-        OnboardingStatus.CHART_FINALIZED,
-        OnboardingStatus.ACTIVE
-    ]
+    # Determine step completion flags based on current step and status
+    step_1_complete = bool(company.country and company.currency and company.timezone) and company.onboarding_current_step >= 1
+    step_2_complete = company.onboarding_current_step >= 2
+    step_3_complete = company.onboarding_current_step >= 3
+    step_4_complete = company.onboarding_current_step >= 4
     step_5_complete = db.query(FiscalPeriod).filter(
         FiscalPeriod.company_id == company_id
-    ).count() > 0
+    ).count() > 0 and company.onboarding_current_step >= 5
     step_6_complete = company.onboarding_status == OnboardingStatus.ACTIVE
 
     return OnboardingStatusResponse(
@@ -173,32 +259,32 @@ def update_company_details(
     Step 1: Update company details.
 
     VALIDATION RULES:
-    - Can only update in DRAFT or TEMPLATE_SELECTED state
-    - Currency cannot change after template selection
-    - Country cannot change after template selection
+    - Can only update in NOT_STARTED or MATERIALIZING state (before step 3)
+    - Currency cannot change after template selection (step 2+)
+    - Country cannot change after template selection (step 2+)
     """
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation
-    if company.onboarding_status not in [OnboardingStatus.DRAFT, OnboardingStatus.TEMPLATE_SELECTED]:
+    # State validation - allow updates only if not yet activated
+    if company.onboarding_status == OnboardingStatus.ACTIVE:
         raise ValidationError(
-            "Company details can only be changed before chart materialization. "
+            "Company details cannot be changed after activation. "
             "If you need to change these details, please contact support."
         )
 
-    # Currency/country lock after template selection
-    if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED:
+    # Currency/country lock after template selection (step 2+)
+    if company.onboarding_current_step >= 2:
         if company.currency and company.currency != data.currency:
             raise ValidationError(
                 "Currency cannot be changed after template selection. "
-                "If you need to change currency, please go back and select a different template."
+                "If you need to change currency, please re-run onboarding."
             )
         if company.country and company.country != data.country:
             raise ValidationError(
                 "Country cannot be changed after template selection. "
-                "If you need to change country, please go back and select a different template."
+                "If you need to change country, please re-run onboarding."
             )
 
     # Update fields
@@ -213,6 +299,8 @@ def update_company_details(
     # Update onboarding state
     if not company.onboarding_started_at:
         company.onboarding_started_at = datetime.utcnow()
+        # Transition from NOT_STARTED to MATERIALIZING
+        company.onboarding_status = OnboardingStatus.MATERIALIZING
 
     company.onboarding_current_step = max(company.onboarding_current_step, 1)
 
@@ -241,7 +329,7 @@ def select_template(
     Step 2: Select accounting template.
 
     CRITICAL RULES:
-    - Template can only be selected in DRAFT state
+    - Template can only be selected before chart materialization (step < 3)
     - Template selection is irreversible after chart materialization
     - User must explicitly confirm the choice
     """
@@ -249,11 +337,12 @@ def select_template(
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation
-    if company.onboarding_status not in [OnboardingStatus.DRAFT]:
+    # State validation - can only select template if chart not yet materialized
+    if company.onboarding_current_step >= 3:
         raise ValidationError(
-            "Template has already been selected and cannot be changed. "
-            "The accounting structure is now locked to maintain data integrity."
+            "Template has already been selected and chart materialized. "
+            "The accounting structure is now locked to maintain data integrity. "
+            "To change template, please re-run onboarding."
         )
 
     # Validate company details are complete
@@ -289,9 +378,8 @@ def select_template(
     )
     db.add(template_usage)
 
-    # Update company state
-    company.onboarding_status = OnboardingStatus.TEMPLATE_SELECTED
-    company.onboarding_current_step = 2
+    # Update company step (status remains MATERIALIZING)
+    company.onboarding_current_step = max(company.onboarding_current_step, 2)
 
     db.commit()
     db.refresh(template)
@@ -324,25 +412,24 @@ def materialize_chart(
     - Preserves mandatory/optional flags
     - On failure, entire operation rolls back
 
-    STATE TRANSITION:
-    TEMPLATE_SELECTED → CHART_READY
+    Status remains MATERIALIZING throughout.
     """
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation
-    if company.onboarding_status != OnboardingStatus.TEMPLATE_SELECTED:
-        if company.onboarding_status == OnboardingStatus.DRAFT:
-            raise ValidationError(
-                "Please select a template before creating your chart of accounts. "
-                "Go back to Step 2 to choose a template."
-            )
-        else:
-            raise ValidationError(
-                "Chart of accounts has already been created. "
-                "You can review and customize accounts in the next step."
-            )
+    # State validation - must have selected template (step 2) but not materialized yet (step < 3)
+    if company.onboarding_current_step < 2:
+        raise ValidationError(
+            "Please select a template before creating your chart of accounts. "
+            "Go back to Step 2 to choose a template."
+        )
+
+    if company.onboarding_current_step >= 3:
+        raise ValidationError(
+            "Chart of accounts has already been created. "
+            "You can review and customize accounts in the next step."
+        )
 
     # Get template usage
     template_usage = db.query(CompanyTemplateUsage).filter(
@@ -396,9 +483,8 @@ def materialize_chart(
                 if company_account:
                     company_account.parent_id = account_id_map.get(template_account.parent_id)
 
-        # Update company state
-        company.onboarding_status = OnboardingStatus.CHART_READY
-        company.onboarding_current_step = 3
+        # Update company step (status remains MATERIALIZING)
+        company.onboarding_current_step = max(company.onboarding_current_step, 3)
 
         db.commit()
 
@@ -460,20 +546,18 @@ def customize_accounts(
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation
-    if company.onboarding_status != OnboardingStatus.CHART_READY:
-        if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED:
-            raise ValidationError(
-                "Please materialize the chart before customizing accounts. "
-                "Complete Step 3 first."
-            )
-        elif company.onboarding_status == OnboardingStatus.CHART_FINALIZED:
-            raise ValidationError(
-                "Accounts have already been finalized. "
-                "You can proceed to set up fiscal periods."
-            )
-        else:
-            raise ValidationError("Invalid state for account customization.")
+    # State validation - must have materialized chart (step 3+)
+    if company.onboarding_current_step < 3:
+        raise ValidationError(
+            "Please materialize the chart before customizing accounts. "
+            "Complete Step 3 first."
+        )
+
+    if company.onboarding_current_step >= 4 and data.finalized:
+        raise ValidationError(
+            "Accounts have already been finalized. "
+            "You can proceed to set up fiscal periods."
+        )
 
     try:
         # Process account customizations
@@ -539,10 +623,9 @@ def customize_accounts(
             db.add(new_account)
             custom_accounts_created.append(new_account)
 
-        # Update company state if finalized
+        # Update company step if finalized (status remains MATERIALIZING)
         if data.finalized:
-            company.onboarding_status = OnboardingStatus.CHART_FINALIZED
-            company.onboarding_current_step = 4
+            company.onboarding_current_step = max(company.onboarding_current_step, 4)
 
         db.commit()
 
@@ -609,8 +692,8 @@ def setup_fiscal_periods(
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation
-    if company.onboarding_status != OnboardingStatus.CHART_FINALIZED:
+    # State validation - must have finalized chart (step 4+)
+    if company.onboarding_current_step < 4:
         raise ValidationError(
             "Please finalize your chart of accounts before setting up fiscal periods. "
             "Complete Step 4 first."
@@ -653,8 +736,8 @@ def setup_fiscal_periods(
             if period_data.is_open:
                 open_periods += 1
 
-        # Update company state
-        company.onboarding_current_step = 5
+        # Update company step (status remains MATERIALIZING)
+        company.onboarding_current_step = max(company.onboarding_current_step, 5)
 
         db.commit()
 
@@ -695,6 +778,7 @@ def activate_accounting(
 
     CRITICAL OPERATION:
     - This is irreversible
+    - Transitions from MATERIALIZING to ACTIVE
     - Locks the onboarding state machine
     - Enables full accounting functionality
     - Sets onboarding_completed_at timestamp
@@ -713,7 +797,13 @@ def activate_accounting(
         raise ValidationError("Accounting has already been activated for this company.")
 
     # Ensure all prerequisites are met
-    if company.onboarding_status != OnboardingStatus.CHART_FINALIZED:
+    if company.onboarding_status != OnboardingStatus.MATERIALIZING:
+        raise ValidationError(
+            "Invalid onboarding state. Company must be in MATERIALIZING state to activate."
+        )
+
+    # Must have completed all steps (step 5 = fiscal periods)
+    if company.onboarding_current_step < 5:
         raise ValidationError(
             "Please complete all previous steps before activation. "
             "Ensure company details, template selection, chart customization, and fiscal periods are all complete."
@@ -790,6 +880,7 @@ def activate_accounting(
 
 # Export
 __all__ = [
+    "reset_onboarding",
     "acquire_session_lock",
     "release_session_lock",
     "get_onboarding_status",

@@ -1,3 +1,5 @@
+export type OnboardingStatus = 'NOT_STARTED' | 'MATERIALIZING' | 'ACTIVE';
+
 export interface Company {
   id: string;
   name: string;
@@ -16,6 +18,12 @@ export interface Company {
   description?: string | null;
   created_at?: string;
   is_active?: boolean;
+
+  // Onboarding fields
+  onboarding_status: OnboardingStatus;
+  onboarding_current_step?: number;
+  onboarding_started_at?: string | null;
+  onboarding_completed_at?: string | null;
 }
 
 export interface CompanyCreate {

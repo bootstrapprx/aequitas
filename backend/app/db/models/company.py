@@ -49,7 +49,7 @@ class Company(Base):
     # Onboarding State Machine
     onboarding_status = Column(
         Enum(OnboardingStatus),
-        default=OnboardingStatus.DRAFT,
+        default=OnboardingStatus.NOT_STARTED,
         nullable=False,
         index=True
     )

@@ -36,6 +36,9 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCompany } from "@/contexts/CompanyContext";
+import { useNavigate } from "react-router-dom";
+import { api } from "@/lib/api";
 
 const settingsSchema = z.object({
     AI_PROVIDER: z.enum(["ollama", "cloudflare"]),
@@ -52,8 +55,11 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 export default function SettingsPage() {
     const { toast } = useToast();
     const { user } = useAuth();
+    const { selectedCompany, selectedCompanyId } = useCompany();
+    const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isResettingOnboarding, setIsResettingOnboarding] = useState(false);
 
     const form = useForm<SettingsFormValues>({
         resolver: zodResolver(settingsSchema),
@@ -120,6 +126,41 @@ export default function SettingsPage() {
             });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleResetOnboarding = async () => {
+        if (!selectedCompanyId) {
+            toast({
+                title: "Error",
+                description: "No company selected.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsResettingOnboarding(true);
+        try {
+            await api.post(`/onboarding/${selectedCompanyId}/reset`);
+
+            toast({
+                title: "Onboarding Reset",
+                description: "All chart data has been deleted. Redirecting to onboarding wizard...",
+            });
+
+            // Redirect to onboarding wizard
+            setTimeout(() => {
+                navigate(`/onboarding/${selectedCompanyId}`);
+            }, 1500);
+        } catch (error: any) {
+            console.error("Failed to reset onboarding", error);
+            toast({
+                title: "Error",
+                description: error.response?.data?.detail || "Failed to reset onboarding.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsResettingOnboarding(false);
         }
     };
 
@@ -275,6 +316,68 @@ export default function SettingsPage() {
                                         </FormItem>
                                     )}
                                 />
+                            </CardContent>
+                        </Card>
+
+                        <Card className="border-yellow-600">
+                            <CardHeader>
+                                <CardTitle className="text-yellow-600">Company Onboarding</CardTitle>
+                                <CardDescription>
+                                    Re-run the onboarding wizard to start fresh. This will delete all chart of accounts data.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">
+                                        Current company: <span className="font-semibold">{selectedCompany?.name || 'None'}</span>
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Onboarding status: <span className="font-semibold">{selectedCompany?.onboarding_status || 'Unknown'}</span>
+                                    </p>
+                                </div>
+
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="border-yellow-600 text-yellow-600 hover:bg-yellow-50"
+                                            disabled={!selectedCompanyId}
+                                        >
+                                            Re-run Onboarding (Deletes all chart data)
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription className="space-y-2">
+                                                <p>
+                                                    This action <strong>cannot be undone</strong>. This will permanently delete:
+                                                </p>
+                                                <ul className="list-disc list-inside pl-4 space-y-1">
+                                                    <li>All chart of accounts</li>
+                                                    <li>All account mappings</li>
+                                                    <li>All fiscal periods</li>
+                                                    <li>Template selections</li>
+                                                </ul>
+                                                <p className="pt-2">
+                                                    Your company record and user access will be preserved.
+                                                    You will be redirected to the onboarding wizard to set up accounting again.
+                                                </p>
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-yellow-600 text-white hover:bg-yellow-700"
+                                                onClick={handleResetOnboarding}
+                                                disabled={isResettingOnboarding}
+                                            >
+                                                {isResettingOnboarding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Yes, reset onboarding
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </CardContent>
                         </Card>
 

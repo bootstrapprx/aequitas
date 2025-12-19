@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import PasswordResetGuard from "@/components/auth/PasswordResetGuard";
+import OnboardingGuard from "@/components/auth/OnboardingGuard";
 
 // Layouts
 import DashboardLayout from "./components/dashboard/DashboardLayout";
@@ -133,7 +134,9 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PasswordResetGuard>
-                      <DashboardLayout />
+                      <OnboardingGuard>
+                        <DashboardLayout />
+                      </OnboardingGuard>
                     </PasswordResetGuard>
                   </ProtectedRoute>
                 }
