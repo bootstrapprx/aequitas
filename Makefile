@@ -52,7 +52,49 @@ help: ## Show this help message
 	@echo "  Postgres:  localhost:5432"
 	@echo ""
 
-dev: ## Start all Docker services
+# ============================================================
+# Preflight Checks & Contract Enforcement
+# ============================================================
+
+check-ports:
+	@echo "Checking port availability..."
+	@# If containers are already running, we assume ports are fine (re-entrant safe)
+	@if docker ps --format '{{.Names}}' | grep -q 'aequitas-backend'; then \
+		echo "Containers running, skipping strict port validation."; \
+	else \
+		for port in 5432 11435 8000 5173; do \
+			if lsof -i :$$port -t >/dev/null; then \
+				echo "$(YELLOW)Port $$port is busy. Checking if it's Docker...$(RESET)"; \
+				if ! docker ps --format '{{.Ports}}' | grep -q "$$port"; then \
+					echo "$(RED)Error: Port $$port is in use by a non-Docker process.$(RESET)"; \
+					exit 1; \
+				fi; \
+			fi; \
+		done; \
+	fi
+	@echo "$(GREEN)Port checks passed.$(RESET)"
+
+preflight: check-ports
+	@echo "$(GREEN)Preflight checks passed.$(RESET)"
+
+check-dev-running:
+	@echo "Verifying dev stack..."
+	@if ! docker network inspect aequitas-dev-net >/dev/null 2>&1; then \
+		echo "$(RED)Error: Network 'aequitas-dev-net' not found.$(RESET)"; \
+		echo "Shared mode requires dev stack running. Run 'make dev' first."; \
+		exit 1; \
+	fi
+	@if ! docker ps --format '{{.Names}}' | grep -q 'aequitas-backend-dev'; then \
+		echo "$(RED)Error: Backend container is not running.$(RESET)"; \
+		exit 1; \
+	fi
+	@if ! docker ps --format '{{.Names}}' | grep -q 'aequitas-frontend-dev'; then \
+		echo "$(RED)Error: Frontend container is not running.$(RESET)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Dev stack verified.$(RESET)"
+
+dev: preflight ## Start all Docker services
 	@echo "Starting Unified Dev Mode..."
 	@echo "Starting Docker services (Postgres, Ollama, Backend, Frontend)"
 	docker compose -f $(DOCKER_COMPOSE_DEV) up -d --build
@@ -159,7 +201,7 @@ reinstall-deps: clean-deps install-deps
 	@echo "All dependencies reinstalled!"
 	@echo "Tip: Run 'make rebuild' to rebuild containers with fresh dependencies"
 
-shared:
+shared: check-dev-running
 	@echo "Starting Shared Dev Mode..."
 	@echo "Starting Docker services with Tunnel..."
 	docker compose -f $(DOCKER_COMPOSE_DEV) -f docker-compose.shared.yml up -d --build

@@ -7,7 +7,7 @@ services:
       - frontend
       - backend
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
 
   tunnel:
     image: cloudflare/cloudflared:latest
@@ -15,4 +15,9 @@ services:
     depends_on:
       - nginx-proxy
     networks:
-      - chartforge-dev-net
+      - aequitas-dev-net
+
+networks:
+  aequitas-dev-net:
+    external: true
+    # This network MUST already exist (created by docker-compose.dev.yml)
