@@ -27,7 +27,8 @@
       "Bash(alembic current:*)",
       "Bash(cat:*)",
       "Bash(__NEW_LINE__ cat PHASE_3A_VERIFICATION.md)",
-      "Bash(make rebuild:*)"
+      "Bash(make rebuild:*)",
+      "Bash(make logs:*)"
     ],
     "deny": [],
     "ask": []

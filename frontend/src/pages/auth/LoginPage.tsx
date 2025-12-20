@@ -86,7 +86,7 @@ const LoginPage = () => {
 
   const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '');
 
-  const redirectToOAuthProvider = (provider: 'google' | 'microsoft' | 'apple') => {
+  const redirectToOAuthProvider = async (provider: 'google' | 'microsoft' | 'apple') => {
     if (provider === 'google' && !googleEnabled) {
       toast({
         title: 'Google login disabled',
@@ -96,7 +96,29 @@ const LoginPage = () => {
       });
       return;
     }
-    window.location.href = `${apiBaseUrl}/api/v1/auth/oauth/${provider}/start`;
+
+    setIsLoading(true);
+    try {
+      // Fetch the authorization URL from the backend
+      const response = await api.get(`/auth/oauth/${provider}/start`);
+      const { authorization_url } = response.data;
+
+      if (authorization_url) {
+        // Redirect to the provider's consent screen
+        window.location.href = authorization_url;
+      } else {
+        throw new Error('No authorization URL received');
+      }
+    } catch (error: any) {
+      console.error('OAuth start failed:', error);
+      toast({
+        title: 'Authentication Failed',
+        description: error.response?.data?.detail || 'Failed to initiate login. Please try again.',
+        variant: 'destructive',
+        className: 'font-heading',
+      });
+      setIsLoading(false);
+    }
   };
 
   const handleRecoveryLogin = async () => {

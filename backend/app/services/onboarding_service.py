@@ -123,7 +123,7 @@ def reset_onboarding(db: Session, company_id: UUID, current_user) -> Dict[str, A
         ).delete(synchronize_session=False)
 
         # 4. Reset company onboarding state
-        company.onboarding_status = OnboardingStatus.NOT_STARTED
+        company.onboarding_status = OnboardingStatus.DRAFT
         company.onboarding_current_step = 0
         company.onboarding_started_at = None
         company.onboarding_completed_at = None
@@ -259,7 +259,7 @@ def update_company_details(
     Step 1: Update company details.
 
     VALIDATION RULES:
-    - Can only update in NOT_STARTED or MATERIALIZING state (before step 3)
+    - Can only update in DRAFT, TEMPLATE_SELECTED, or CHART_READY state
     - Currency cannot change after template selection (step 2+)
     - Country cannot change after template selection (step 2+)
     """
@@ -299,8 +299,11 @@ def update_company_details(
     # Update onboarding state
     if not company.onboarding_started_at:
         company.onboarding_started_at = datetime.utcnow()
-        # Transition from NOT_STARTED to MATERIALIZING
-        company.onboarding_status = OnboardingStatus.MATERIALIZING
+        # Transition from DRAFT -> DRAFT (no state change needed yet, stays DRAFT until Template Selection?)
+        # Actually, GUIDE says DRAFT is initial. TEMPLATE_SELECTED is next.
+        # We can keep it as DRAFT here.
+        if company.onboarding_status == OnboardingStatus.DRAFT:
+            pass # Stays DRAFT
 
     company.onboarding_current_step = max(company.onboarding_current_step, 1)
 
@@ -378,8 +381,9 @@ def select_template(
     )
     db.add(template_usage)
 
-    # Update company step (status remains MATERIALIZING)
+    # Update company step (status transitions to TEMPLATE_SELECTED)
     company.onboarding_current_step = max(company.onboarding_current_step, 2)
+    company.onboarding_status = OnboardingStatus.TEMPLATE_SELECTED
 
     db.commit()
     db.refresh(template)
@@ -412,7 +416,7 @@ def materialize_chart(
     - Preserves mandatory/optional flags
     - On failure, entire operation rolls back
 
-    Status remains MATERIALIZING throughout.
+    Status transitions: TEMPLATE_SELECTED -> CHART_READY
     """
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
@@ -483,8 +487,9 @@ def materialize_chart(
                 if company_account:
                     company_account.parent_id = account_id_map.get(template_account.parent_id)
 
-        # Update company step (status remains MATERIALIZING)
+        # Update company step (status transitions to CHART_READY)
         company.onboarding_current_step = max(company.onboarding_current_step, 3)
+        company.onboarding_status = OnboardingStatus.CHART_READY
 
         db.commit()
 
@@ -623,9 +628,10 @@ def customize_accounts(
             db.add(new_account)
             custom_accounts_created.append(new_account)
 
-        # Update company step if finalized (status remains MATERIALIZING)
+        # Update company step if finalized (status transitions to CHART_FINALIZED)
         if data.finalized:
             company.onboarding_current_step = max(company.onboarding_current_step, 4)
+            company.onboarding_status = OnboardingStatus.CHART_FINALIZED
 
         db.commit()
 
@@ -736,7 +742,7 @@ def setup_fiscal_periods(
             if period_data.is_open:
                 open_periods += 1
 
-        # Update company step (status remains MATERIALIZING)
+        # Update company step (status remains CHART_FINALIZED until activation)
         company.onboarding_current_step = max(company.onboarding_current_step, 5)
 
         db.commit()
@@ -778,7 +784,7 @@ def activate_accounting(
 
     CRITICAL OPERATION:
     - This is irreversible
-    - Transitions from MATERIALIZING to ACTIVE
+    - Transitions from CHART_FINALIZED to ACTIVE
     - Locks the onboarding state machine
     - Enables full accounting functionality
     - Sets onboarding_completed_at timestamp
@@ -797,7 +803,7 @@ def activate_accounting(
         raise ValidationError("Accounting has already been activated for this company.")
 
     # Ensure all prerequisites are met
-    if company.onboarding_status != OnboardingStatus.MATERIALIZING:
+    if company.onboarding_status != OnboardingStatus.CHART_FINALIZED:
         raise ValidationError(
             "Invalid onboarding state. Company must be in MATERIALIZING state to activate."
         )

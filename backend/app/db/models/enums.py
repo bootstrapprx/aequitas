@@ -120,27 +120,32 @@ class MasterAccountType(str, enum.Enum):
     DETAIL = "D"
 
 
+
 class OnboardingStatus(str, enum.Enum):
     """
     Company onboarding wizard status.
 
     PostgreSQL enum: onboardingstatus
-    Values: NOT_STARTED, MATERIALIZING, ACTIVE
+    Values: DRAFT, TEMPLATE_SELECTED, CHART_READY, CHART_FINALIZED, ACTIVE
 
     CANONICAL STATE MACHINE:
-    NOT_STARTED → MATERIALIZING → ACTIVE
+    DRAFT → TEMPLATE_SELECTED → CHART_READY → CHART_FINALIZED → ACTIVE
 
-    - NOT_STARTED: Company exists, onboarding not started
-    - MATERIALIZING: Onboarding in progress (wizard steps 0-5)
-    - ACTIVE: Onboarding complete, accounting active
+    - DRAFT: Company exists, onboarding in progress (steps 0-1)
+    - TEMPLATE_SELECTED: Template chosen, chart not materialized (step 2)
+    - CHART_READY: Chart materialized, ready for review (step 3)
+    - CHART_FINALIZED: Chart reviewed, fiscal periods setup (step 4-5)
+    - ACTIVE: Onboarding complete, accounting active (step 6)
 
     Rules:
     - Dashboard access allowed only if status = ACTIVE
     - Any other state → redirect to /onboarding/:companyId
     - State transitions only via onboarding endpoints
     """
-    NOT_STARTED = "NOT_STARTED"
-    MATERIALIZING = "MATERIALIZING"
+    DRAFT = "DRAFT"
+    TEMPLATE_SELECTED = "TEMPLATE_SELECTED"
+    CHART_READY = "CHART_READY"
+    CHART_FINALIZED = "CHART_FINALIZED"
     ACTIVE = "ACTIVE"
 
 
