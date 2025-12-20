@@ -149,6 +149,19 @@ class OnboardingStatus(str, enum.Enum):
     ACTIVE = "ACTIVE"
 
 
+class ModuleType(str, enum.Enum):
+    """
+    Optional functional modules for companies.
+    Values: ACCOUNTING, FISCAL, INVOICING, CONTRACTS, INVENTORY, PAYROLL
+    """
+    ACCOUNTING = "ACCOUNTING"
+    FISCAL = "FISCAL"
+    INVOICING = "INVOICING"
+    CONTRACTS = "CONTRACTS"
+    INVENTORY = "INVENTORY"
+    PAYROLL = "PAYROLL"
+
+
 # Export all enums
 __all__ = [
     "AccountType",
@@ -160,4 +173,5 @@ __all__ = [
     "PeriodType",
     "MasterAccountType",
     "OnboardingStatus",
+    "ModuleType",
 ]

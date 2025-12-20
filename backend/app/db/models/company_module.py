@@ -1,18 +1,10 @@
-
 import enum
 from sqlalchemy import Column, String, Boolean, ForeignKey, Enum, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+from app.db.models.enums import ModuleType
 import uuid
-
-class ModuleType(str, enum.Enum):
-    ACCOUNTING = "ACCOUNTING"
-    FISCAL = "FISCAL"
-    INVOICING = "INVOICING"
-    CONTRACTS = "CONTRACTS"
-    INVENTORY = "INVENTORY"
-    PAYROLL = "PAYROLL"
 
 class CompanyModule(Base):
     __tablename__ = "company_modules"

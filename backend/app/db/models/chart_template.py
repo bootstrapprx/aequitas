@@ -8,10 +8,11 @@ TABLES:
 """
 
 import uuid
-from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, ForeignKey, func
+from sqlalchemy import Column, String, Text, DateTime, Boolean, Integer, ForeignKey, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+from app.db.models.enums import ModuleType
 
 
 class ChartTemplate(Base):
@@ -104,6 +105,9 @@ class ChartTemplateAccount(Base):
 
     sort_order = Column(Integer, nullable=False)
     """Display sort order within parent"""
+
+    required_module = Column(Enum(ModuleType), nullable=True)
+    """If set, account is only created if company has this module enabled"""
 
     # Timestamps
     created_at = Column(DateTime, server_default=func.now(), nullable=False)

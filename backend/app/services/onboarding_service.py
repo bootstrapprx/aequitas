@@ -28,6 +28,7 @@ from sqlalchemy import and_
 from app.db.models.company import Company
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount, CompanyTemplateUsage
 from app.db.models.company_account import CompanyAccount
+from app.db.models.company_module import CompanyModule
 from app.db.models.fiscal_period import FiscalPeriod
 from app.db.models.enums import OnboardingStatus, PeriodStatus, AccountType, NormalBalance
 from app.schemas.onboarding import (
@@ -338,8 +339,8 @@ def update_company_type(
     company.legal_nature = data.legal_nature
     company.economic_activity = data.economic_activity
     
-    # Mark Step 2 complete
-    company.onboarding_current_step = max(company.onboarding_current_step, 2)
+    # Mark Step 2 complete -> Step 3 (Template)
+    company.onboarding_current_step = max(company.onboarding_current_step, 3)
     
     db.commit()
     
@@ -415,7 +416,8 @@ def select_template(
     db.add(template_usage)
 
     # Update company step (status transitions to TEMPLATE_SELECTED)
-    company.onboarding_current_step = max(company.onboarding_current_step, 2)
+    # Advance to Step 4 (Modules)
+    company.onboarding_current_step = max(company.onboarding_current_step, 4)
     company.onboarding_status = OnboardingStatus.TEMPLATE_SELECTED
 
     db.commit()
@@ -495,12 +497,24 @@ def materialize_chart(
         )
 
     try:
+        # Get active modules for the company - used to filter optional accounts
+        active_modules = set(
+            m.module_id for m in db.query(CompanyModule).filter(
+                CompanyModule.company_id == company_id,
+                CompanyModule.is_active == True
+            ).all()
+        )
+
         # Map template account IDs to new company account IDs
         account_id_map: Dict[UUID, UUID] = {}
         accounts_created = []
 
         # First pass: Create all accounts without parent relationships
         for template_account in template_accounts:
+            # Module Filtering: Skip account if it requires a module that isn't active
+            if template_account.required_module and template_account.required_module not in active_modules:
+                continue
+
             company_account = CompanyAccount(
                 id=uuid4(),
                 company_id=company_id,
@@ -520,12 +534,17 @@ def materialize_chart(
 
         # Second pass: Set parent relationships
         for template_account in template_accounts:
+            # Skip if account was filtered out
+            if template_account.id not in account_id_map:
+                continue
+
             if template_account.parent_id:
                 company_account_id = account_id_map[template_account.id]
                 company_account = db.query(CompanyAccount).filter(
                     CompanyAccount.id == company_account_id
                 ).first()
                 if company_account:
+                    # If parent was skipped, this stays None (Top Level)
                     company_account.parent_id = account_id_map.get(template_account.parent_id)
 
         # Update company step (status transitions to CHART_READY)
@@ -547,8 +566,9 @@ def materialize_chart(
             accounts_created=len(accounts_created),
             mandatory_accounts=mandatory_count,
             optional_accounts=optional_count,
-            current_step=3,
-            next_step=4
+            optional_accounts=optional_count,
+            current_step=company.onboarding_current_step,
+            next_step=6
         )
 
 
@@ -579,7 +599,8 @@ def select_modules(
             is_active=True
         ))
         
-    company.onboarding_current_step = max(company.onboarding_current_step, 4)
+    # Advance to Step 5 (Scope)
+    company.onboarding_current_step = max(company.onboarding_current_step, 5)
     db.commit()
     
     return {
