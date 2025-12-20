@@ -13,37 +13,37 @@
 
 @layer base {
   :root {
-    /* The Athenaeum Palette - Earthy, Ancient, Refined */
-    --background: 30 15% 8%;
-    --foreground: 40 25% 92%;
+    /* The Athenaeum Palette - Light Mode (Parchment & Ink) */
+    --background: 40 30% 98%;
+    --foreground: 30 15% 10%;
 
-    --card: 30 12% 12%;
-    --card-foreground: 40 25% 92%;
+    --card: 0 0% 100%;
+    --card-foreground: 30 15% 10%;
 
-    --popover: 30 12% 10%;
-    --popover-foreground: 40 25% 92%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 30 15% 10%;
 
     /* Royal Emerald - Actions & Accent */
     --primary: 158 45% 32%;
     --primary-foreground: 40 25% 98%;
 
     /* Stone/Slate - Secondary surfaces */
-    --secondary: 30 8% 18%;
-    --secondary-foreground: 40 25% 92%;
+    --secondary: 40 20% 94%;
+    --secondary-foreground: 30 15% 10%;
 
     /* Weathered Stone - Muted elements */
-    --muted: 30 6% 22%;
-    --muted-foreground: 30 10% 55%;
+    --muted: 40 20% 94%;
+    --muted-foreground: 30 10% 45%;
 
     /* Gold/Bronze - Premium accent */
     --accent: 38 72% 52%;
-    --accent-foreground: 30 15% 8%;
+    --accent-foreground: 30 15% 10%;
 
-    --destructive: 0 55% 45%;
-    --destructive-foreground: 40 25% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 30 10% 20%;
-    --input: 30 10% 20%;
+    --border: 30 10% 90%;
+    --input: 30 10% 90%;
     --ring: 158 45% 32%;
 
     --radius: 0.5rem;
@@ -66,11 +66,62 @@
     /* Gradients */
     --gradient-gold: linear-gradient(135deg, hsl(38 72% 52%), hsl(35 80% 40%));
     --gradient-emerald: linear-gradient(135deg, hsl(158 45% 32%), hsl(160 40% 45%));
+    --gradient-marble: linear-gradient(180deg, hsl(30 20% 95% / 0.5) 0%, hsl(30 20% 95% / 0) 100%);
+    --gradient-stone: linear-gradient(145deg, hsl(40 20% 96%), hsl(40 20% 92%));
+    --gradient-hero: linear-gradient(180deg, hsl(40 30% 98% / 0.2) 0%, hsl(40 30% 98% / 0.98) 100%);
+    
+    /* Shadows */
+    --shadow-gold: 0 0 50px hsl(38 72% 52% / 0.15);
+    --shadow-card: 0 10px 30px hsl(30 15% 3% / 0.05);
+    --shadow-glow: 0 0 80px hsl(158 45% 32% / 0.1);
+    --shadow-inset: inset 0 2px 4px hsl(30 15% 3% / 0.05);
+
+    --sidebar-background: 30 15% 95%;
+    --sidebar-foreground: 30 15% 10%;
+    --sidebar-primary: 158 45% 32%;
+    --sidebar-primary-foreground: 40 25% 98%;
+    --sidebar-accent: 40 20% 90%;
+    --sidebar-accent-foreground: 30 15% 10%;
+    --sidebar-border: 30 10% 90%;
+    --sidebar-ring: 158 45% 32%;
+  }
+
+  .dark {
+    /* The Athenaeum Palette - Dark Mode (Ancient Library) */
+    --background: 30 15% 8%;
+    --foreground: 40 25% 92%;
+
+    --card: 30 12% 12%;
+    --card-foreground: 40 25% 92%;
+
+    --popover: 30 12% 10%;
+    --popover-foreground: 40 25% 92%;
+
+    --primary: 158 45% 32%;
+    --primary-foreground: 40 25% 98%;
+
+    --secondary: 30 8% 18%;
+    --secondary-foreground: 40 25% 92%;
+
+    --muted: 30 6% 22%;
+    --muted-foreground: 30 10% 55%;
+
+    --accent: 38 72% 52%;
+    --accent-foreground: 30 15% 8%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 40 25% 98%;
+
+    --border: 30 10% 20%;
+    --input: 30 10% 20%;
+    --ring: 158 45% 32%;
+
+    /* Gradients - Dark Overrides */
     --gradient-marble: linear-gradient(180deg, hsl(30 20% 95% / 0.08) 0%, hsl(30 15% 8% / 0) 100%);
     --gradient-stone: linear-gradient(145deg, hsl(30 12% 14%), hsl(30 10% 10%));
     --gradient-hero: linear-gradient(180deg, hsl(30 15% 8% / 0.2) 0%, hsl(30 15% 8% / 0.98) 100%);
-    
-    /* Shadows */
+
+    /* Shadows - Dark Overrides */
     --shadow-gold: 0 0 50px hsl(38 72% 52% / 0.2);
     --shadow-card: 0 25px 60px hsl(30 15% 3% / 0.6);
     --shadow-glow: 0 0 80px hsl(158 45% 32% / 0.15);
@@ -84,11 +135,6 @@
     --sidebar-accent-foreground: 40 25% 92%;
     --sidebar-border: 30 10% 20%;
     --sidebar-ring: 158 45% 32%;
-  }
-
-  .dark {
-    --background: 30 15% 8%;
-    --foreground: 40 25% 92%;
   }
 }
 

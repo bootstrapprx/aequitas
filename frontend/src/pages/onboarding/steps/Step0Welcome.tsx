@@ -42,10 +42,10 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
             <Scroll className="h-10 w-10 text-white" />
           </div>
         </motion.div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 embossed-gold">
+        <h1 className="text-3xl font-bold text-foreground mb-2 embossed-gold scale-100">
           Welcome to Aequitas
         </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           We'll guide you through setting up your company's accounting foundation.
           This ensures accuracy, compliance, and future-proof reporting.
         </p>
@@ -72,7 +72,7 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
                 className="flex items-start space-x-3"
               >
                 <Check className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">{item}</span>
+                <span className="text-foreground/80 dark:text-foreground/90">{item}</span>
               </motion.li>
             ))}
           </ul>
@@ -100,7 +100,7 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
                 className="flex items-start space-x-3"
               >
                 <X className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <span className="text-gray-700">{item}</span>
+                <span className="text-foreground/80 dark:text-foreground/90">{item}</span>
               </motion.li>
             ))}
           </ul>
@@ -108,12 +108,12 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
       </AtheneumCard>
 
       {/* Time Estimate */}
-      <AtheneumCard className="bg-gradient-to-br from-stone-50 to-stone-100">
+      <AtheneumCard className="bg-secondary/50 border-none">
         <AtheneumCardContent>
           <div className="text-center py-4">
-            <p className="text-sm text-gray-600 mb-1">Estimated Time</p>
-            <p className="text-2xl font-bold text-emerald-800">10–15 minutes</p>
-            <p className="text-xs text-gray-500 mt-1">You can pause and resume at any time</p>
+            <p className="text-sm text-muted-foreground mb-1">Estimated Time</p>
+            <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">10–15 minutes</p>
+            <p className="text-xs text-muted-foreground mt-1">You can pause and resume at any time</p>
           </div>
         </AtheneumCardContent>
       </AtheneumCard>

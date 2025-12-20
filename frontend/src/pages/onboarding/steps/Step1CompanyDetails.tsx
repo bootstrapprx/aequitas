@@ -19,7 +19,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Building2, AlertCircle, Loader2 } from 'lucide-react';
+import { Building2, AlertCircle, Loader2, Pencil } from 'lucide-react';
 
 import { AtheneumCard, AtheneumCardHeader, AtheneumCardContent } from '@/components/athenaeum';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { api } from '@/lib/api';
 
 interface Step1CompanyDetailsProps {
@@ -91,16 +102,17 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
 }) => {
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isNameUnlocked, setIsNameUnlocked] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<CompanyDetailsForm>({
     defaultValues: {
-      name: '',
-      trade_name: '',
-      country: 'US',
-      currency: 'USD',
-      timezone: 'America/New_York',
-      email: '',
-      phone: ''
+      name: status?.company_name || '',
+      trade_name: status?.trade_name || '',
+      country: status?.country || 'US',
+      currency: status?.currency || 'USD',
+      timezone: status?.timezone || 'America/New_York',
+      email: status?.email || '',
+      phone: status?.phone || ''
     }
   });
 
@@ -178,7 +190,36 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
             <div className="space-y-4">
               {/* Legal Name */}
               <div>
-                <Label htmlFor="name" className="required">Legal Company Name</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label htmlFor="name" className="required">Legal Company Name</Label>
+                  {status?.company_name && !isNameUnlocked && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-emerald-600 dark:text-emerald-400">
+                          <Pencil className="w-3 h-3 mr-1" />
+                          Correct Legal Name
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-card border-border">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-foreground">Edit Legal Entity Name?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-muted-foreground">
+                            Changing the Legal Entity Name effectively resets your organization's legal identity setup.
+                            This is the foundation of your accounting records.
+                            <br /><br />
+                            Are you sure you want to proceed with this reconstruction?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="border-border text-foreground hover:bg-secondary">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => setIsNameUnlocked(true)} className="bg-emerald-700 hover:bg-emerald-800 text-white border-none">
+                            Proceed with Reconstruction
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
                 <Input
                   id="name"
                   {...register('name', {
@@ -186,8 +227,15 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                     minLength: { value: 2, message: 'Name must be at least 2 characters' }
                   })}
                   placeholder="Acme Corporation Inc."
-                  className={errors.name ? 'border-red-500' : ''}
+                  readOnly={!!status?.company_name && !isNameUnlocked}
+                  className={errors.name ? 'border-red-500' : (status?.company_name && !isNameUnlocked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70' : '')}
                 />
+                {!isNameUnlocked && status?.company_name && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Bound to initial registration
+                  </p>
+                )}
                 {errors.name && (
                   <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>
                 )}

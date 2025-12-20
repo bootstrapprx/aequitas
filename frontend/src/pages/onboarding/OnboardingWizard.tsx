@@ -221,7 +221,7 @@ const OnboardingWizard: React.FC = () => {
   const progress = ((currentStep + 1) / 10) * 100;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
+    <div className="relative min-h-screen bg-background text-foreground transition-colors duration-300">
       <div className="fixed top-6 right-6 z-[100] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-full p-2 shadow-lg border border-stone-200 dark:border-slate-700">
         <ThemeToggle />
       </div>
@@ -284,7 +284,7 @@ const OnboardingWizard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-xl p-8 mb-6">
+        <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl p-8 mb-6 transition-all duration-300">
           {currentStep === 0 && <Step0Welcome onNext={handleNext} status={status} />}
           {currentStep === 1 && (
             <Step1CompanyDetails
