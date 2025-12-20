@@ -30,6 +30,7 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
     created_by: Optional[UUID] = None
+    company_ids: list[UUID] = []
 
     class Config:
         from_attributes = True

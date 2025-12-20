@@ -10,6 +10,7 @@ All models MUST match PostgreSQL schema exactly.
 
 from .company import Company
 from .company_account import CompanyAccount
+from .company_module import CompanyModule
 from .master_account import MasterAccount
 from .snapshot import Snapshot
 from .qbo_token import QboToken
@@ -58,6 +59,7 @@ __all__ = [
     # Core models
     "Company",
     "CompanyAccount",
+    "CompanyModule",
     "MasterAccount",
     "Snapshot",
     "QboToken",

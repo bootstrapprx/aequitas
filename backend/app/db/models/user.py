@@ -47,3 +47,7 @@ class User(Base):
         """Get list of company IDs the user has access to."""
         return [uc.company_id for uc in self.user_companies]
 
+    @property
+    def company_ids(self) -> list[uuid.UUID]:
+        return self.get_company_ids()
+

@@ -23,9 +23,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { Feather, CheckCircle2, Circle, Lock } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 import { PageHeader } from '@/components/athenaeum';
 import { Button } from '@/components/ui/button';
@@ -84,6 +86,7 @@ const OnboardingWizard: React.FC = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { logout } = useAuth();
 
   const [sessionId] = useState(() => uuidv4());
   const [currentStep, setCurrentStep] = useState(0);
@@ -183,7 +186,7 @@ const OnboardingWizard: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading onboarding wizard...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading onboarding wizard...</p>
         </div>
       </div>
     );
@@ -218,7 +221,10 @@ const OnboardingWizard: React.FC = () => {
   const progress = ((currentStep + 1) / 10) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100">
+    <div className="relative min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 dark:from-slate-950 dark:to-slate-900 transition-colors duration-300">
+      <div className="fixed top-6 right-6 z-[100] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-full p-2 shadow-lg border border-stone-200 dark:border-slate-700">
+        <ThemeToggle />
+      </div>
       <PageHeader
         title="Company Onboarding"
         subtitle={`Set up accounting for ${status?.company_name || 'your company'}`}
@@ -260,8 +266,8 @@ const OnboardingWizard: React.FC = () => {
                   <div className={`
                     flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all
                     ${isComplete ? 'bg-emerald-600 text-white' : ''}
-                    ${isCurrent && !isComplete ? 'bg-amber-500 text-white ring-4 ring-amber-200' : ''}
-                    ${!isComplete && !isCurrent ? 'bg-gray-200 text-gray-400' : ''}
+                    ${isCurrent && !isComplete ? 'bg-amber-500 text-white ring-4 ring-amber-200 dark:ring-amber-900' : ''}
+                    ${!isComplete && !isCurrent ? 'bg-gray-200 text-gray-400 dark:bg-slate-800 dark:text-gray-500' : ''}
                   `}>
                     {isComplete ? (
                       <CheckCircle2 className="h-5 w-5" />
@@ -269,7 +275,7 @@ const OnboardingWizard: React.FC = () => {
                       <Circle className="h-5 w-5" />
                     )}
                   </div>
-                  <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900' : 'text-gray-600'}`}>
+                  <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>
                     {title}
                   </span>
                 </div>
@@ -349,10 +355,10 @@ const OnboardingWizard: React.FC = () => {
 
         {/* Save & Exit */}
         {currentStep < 6 && (
-          <div className="text-center text-sm text-gray-600">
+          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
             <p>Your progress is automatically saved. You can exit and resume anytime.</p>
-            <Button variant="ghost" onClick={() => navigate('/dashboard')} className="mt-2">
-              Save & Exit
+            <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="mt-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+              Save & Logout
             </Button>
           </div>
         )}

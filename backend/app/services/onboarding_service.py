@@ -19,7 +19,7 @@ CRITICAL RULES:
 - Only onboarding endpoints may mutate onboarding_status
 """
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -212,7 +212,7 @@ def get_onboarding_status(db: Session, company_id: UUID) -> OnboardingStatusResp
     is_locked = False
     locked_by_session = None
     if company.onboarding_session_lock:
-        lock_age = datetime.utcnow() - company.onboarding_session_locked_at
+        lock_age = datetime.now(timezone.utc) - company.onboarding_session_locked_at
         if lock_age < timedelta(minutes=SESSION_LOCK_TIMEOUT_MINUTES):
             is_locked = True
             locked_by_session = company.onboarding_session_lock
@@ -566,10 +566,12 @@ def materialize_chart(
             accounts_created=len(accounts_created),
             mandatory_accounts=mandatory_count,
             optional_accounts=optional_count,
-            optional_accounts=optional_count,
             current_step=company.onboarding_current_step,
             next_step=6
         )
+    except Exception as e:
+        db.rollback()
+        raise e
 
 
 # ============================================================================
@@ -637,18 +639,7 @@ def set_organization_scope(
         "next_step": 6
     }
 
-    except IntegrityError as e:
-        db.rollback()
-        raise ValidationError(
-            "Failed to create chart of accounts due to a database error. "
-            "Please try again or contact support if the problem persists."
-        ) from e
-    except Exception as e:
-        db.rollback()
-        raise ValidationError(
-            "An unexpected error occurred while creating your chart of accounts. "
-            "The operation has been rolled back. Please try again."
-        ) from e
+
 
 
 # ============================================================================
@@ -790,7 +781,7 @@ def customize_accounts(
             mandatory_accounts=mandatory_accounts,
             custom_accounts=len(custom_accounts_created),
             disabled_accounts=disabled_accounts,
-            disabled_accounts=disabled_accounts,
+
             current_step=6,
             next_step=7
         )
@@ -883,7 +874,7 @@ def setup_fiscal_periods(
             message=f"Successfully created {len(periods_created)} fiscal periods. You can now activate accounting.",
             periods_created=len(periods_created),
             open_periods=open_periods,
-            open_periods=open_periods,
+
             current_step=7,
             next_step=8
         )

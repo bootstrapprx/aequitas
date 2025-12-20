@@ -8,6 +8,7 @@ export interface User {
   force_password_reset?: boolean;
   created_at: string;
   updated_at: string;
+  company_ids?: string[];
 }
 
 export interface UserCreate {

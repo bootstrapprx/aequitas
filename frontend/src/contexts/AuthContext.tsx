@@ -51,7 +51,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setToken(storedToken);
           setUser(userResponse.data);
 
-          if (storedCompanyIds) {
+          if (userResponse.data.company_ids && userResponse.data.company_ids.length > 0) {
+            setCompanyIds(userResponse.data.company_ids);
+            localStorage.setItem(COMPANY_IDS_KEY, JSON.stringify(userResponse.data.company_ids));
+          } else if (storedCompanyIds) {
             setCompanyIds(JSON.parse(storedCompanyIds));
           }
 
