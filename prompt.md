@@ -1,174 +1,449 @@
+# 🔷 AEQUITAS — DEXTER-GUIDED ONBOARDING (MASTER PROMPT)
 
+## GLOBAL CONTEXT (ALL AGENTS MUST READ)
 
-# 🔴 PROMPT — SYSTEM BOOTSTRAP & REAL-USER ENABLEMENT (FOR ANTIGRAVITY)
+Aequitas onboarding must evolve into:
 
-> **Objetivo:** obter uma visão geral, identificar lacunas de seed/vinculação e habilitar o uso real do sistema por um superuser atuando como usuário dentro da empresa `aequitas`.
+> **A guided, conversational state machine where Dexter is the narrative layer over a deterministic onboarding engine.**
 
----
+Key principles:
 
-## ROLE
+* Logic is **never conversational**
+* Conversation is **never authoritative**
+* Determinism always wins
+* Dexter *suggests, corrects, explains, and reassures*
+* The Wizard engine *validates, commits, and enforces*
 
-You are acting as a **senior forensic + product engineer** auditing and preparing the Aequitas system for **real data usage by its primary operator**.
+Special constraint (non-negotiable):
 
-This task is **not about adding new features yet**.
-It is about **making the existing system usable end-to-end** by a real user.
-
----
-
-## CONTEXT (KNOWN FACTS)
-
-* The system follows the rule: **superusers must use the system as normal users, inside a company context**.
-* The canonical default company is `aequitas`.
-* The onboarding wizard has already been run by the master user, but:
-
-  * the `aequitas` company was never created or seeded
-  * the master user is not linked to any company
-* As a result:
-
-  * chart does not load
-  * ledger / journals do not produce visible outputs
-  * reports and fiscal modules exist but have no data flow
-* Docker, routing, onboarding logic, and permissions are now structurally correct.
-
-The remaining problem is **missing foundational data and links**.
+> **Capitalization, naming, and formatting must be deterministic and enforced — even if user input is sloppy.**
+> Dexter may correct, but never silently.
 
 ---
 
-## OBJECTIVE
+## 🎭 AGENT 1 — `product-ux-architect` (opus)
 
-Produce a **complete system bootstrap assessment** answering:
+### Responsibility
 
-1. What foundational entities are missing or mislinked?
-2. What exists in code but is unreachable due to missing data?
-3. What must be seeded or created so the system can be used with real data?
-4. What is the minimal path to allow the master user to operate Aequitas like a real accounting/financial system?
+Design the **user experience and narrative flow**, not backend logic.
 
----
+### Tasks
 
-## SCOPE OF INVESTIGATION (MANDATORY)
+1. Redesign onboarding as **micro-steps**:
 
-### 1️⃣ Company & User Foundation
+   * One primary question per screen
+   * Clear progress indicator (Step X of Y)
+2. Define **Dexter’s onboarding persona**:
 
-Determine:
+   * Calm
+   * Professional
+   * Slightly human
+   * No jokes in early steps
+3. Define **two paths**:
 
-* Does a company named `aequitas` exist in the database?
-* Is the master user linked to it via `user_companies`?
-* If not:
+   * Guided (Dexter-led)
+   * Direct (form-driven)
+4. Specify **which steps feel conversational vs transactional**
 
-  * where this should have happened (seed vs onboarding)
-  * what logic currently assumes a company exists
+### Explicit UX Rules
 
-Deliverable:
+* No screen may ask more than **one cognitive decision**
+* Dexter appears as a **side companion**, not modal
+* Dexter explains *why* a field matters
+* Dexter never finalizes decisions
 
-* Clear statement: **“Master user is / is not properly linked to a company”**
-* Identification of missing seed or linking logic
+### Deliverables
 
----
-
-### 2️⃣ Chart of Accounts Pipeline
-
-Trace end-to-end:
-
-* Is a master chart seeded?
-* Is there a company chart generated from it?
-* Where does chart materialization occur?
-* What conditions block chart loading in the UI?
-
-Deliverable:
-
-* Step-by-step chart pipeline:
-
-  * master chart → company chart → UI
-* Exact failure point(s)
+* UX flow map (step-by-step)
+* Dexter dialogue samples per step
+* “Before vs After” onboarding comparison
 
 ---
 
-### 3️⃣ Ledger / Journal Flow
+## 🧠 AGENT 2 — `dexter-orchestrator` (sonnet)
 
-Trace:
+### Responsibility
 
-* Where journal entries are created
-* Where they are stored
-* How (and if) they are queried
-* Which UI components depend on them
+Implement Dexter as a **narrative + preprocessing layer**, not a decision-maker.
 
-Deliverable:
+### Tasks
 
-* Confirmation whether:
+1. Implement Dexter onboarding mode:
 
-  * journals are never created
-  * journals exist but are not queried
-  * journals are queried but not rendered
+   * Context-aware
+   * Step-aware
+   * Non-authoritative
+2. Dexter functions:
 
----
+   * Suggest normalized capitalization
+   * Flag inconsistencies
+   * Pre-fill structured fields from natural language
+3. Implement **explicit correction flow**:
 
-### 4️⃣ Cross-Module Data Flow
+   * “I’ve standardized this to `Acme Holdings LLC`. Is that correct?”
+4. Dexter must surface:
 
-Analyze whether:
+   * Irreversible choices
+   * Editable later choices
 
-* invoices generate journal entries
-* financial actions affect accounting
-* fiscal engine consumes accounting outputs
-* reports read from a unified data source
+### Forbidden
 
-Deliverable:
+* No silent corrections
+* No auto-commits
+* No backend writes
 
-* Diagram or description of actual data flow vs intended data flow
+### Deliverables
 
----
-
-### 5️⃣ Seed Strategy Assessment
-
-Identify:
-
-* What **must** be seeded to enable real usage:
-
-  * company `aequitas`
-  * user-company link
-  * master chart
-  * minimal accounts
-  * fiscal profile defaults
-* What **should not** be seeded (user data, transactions)
-
-Deliverable:
-
-* Proposed **bootstrap seed set** (minimal, safe, idempotent)
+* Dexter onboarding orchestration logic
+* Prompt templates per onboarding step
+* Explicit correction/confirmation patterns
 
 ---
 
-## REFERENCES FOR EXPECTED SYSTEM BEHAVIOR
+## 🧱 AGENT 3 — `backend-architect` (sonnet)
 
-Use these as **conceptual benchmarks**, not feature parity:
+### Responsibility
 
-* **Alterdata** → strong default chart of accounts
-* **Conta Azul** → unified accounting + finance UX
-* **Calima** → payroll and labor-heavy workflows
-* **Invoice-driven systems** → invoices generate accounting entries automatically
+Ensure the **wizard engine remains deterministic and authoritative**.
 
-The goal is to ensure Aequitas can **behave like a real system**, not to clone features.
+### Tasks
+
+1. Maintain onboarding state machine:
+
+   * onboarding_status
+   * onboarding_current_step
+2. Ensure wizard:
+
+   * Controls navigation
+   * Cannot be bypassed
+   * Resumes correctly
+3. Separate:
+
+   * Draft onboarding data
+   * Committed company data
+4. Ensure Dexter input is **validated like any other input**
+
+### Key Rule
+
+Dexter output is treated as **user input**, nothing more.
+
+### Deliverables
+
+* Wizard state enforcement
+* API contracts for step updates
+* Validation pipeline (post-Dexter)
 
 ---
 
-## OUTPUT REQUIREMENTS
+## 🛡️ AGENT 4 — `database-guardian` (sonnet)
 
-Produce a structured report with:
+### Responsibility
 
-1. Current System Reality (what exists vs what doesn’t)
-2. Blocking Gaps (why nothing flows)
-3. Missing Seeds / Links
-4. Minimal Bootstrap Plan (step-by-step)
-5. What Will Work Immediately After Bootstrap
-6. What Can Be Built Safely After Real Data Exists
+Protect data integrity, reversibility, and auditability.
 
-Use:
+### Tasks
 
-* file paths
-* table names
-* services
-* explicit assumptions
+1. Track:
 
-Mark anything uncertain as **UNKNOWN**.
+   * Raw user input
+   * Dexter-suggested normalization
+   * Final committed value
+2. Ensure:
 
-Do NOT implement code yet.
-Do NOT propose UI redesigns.
-This is an **enablement and grounding task**.
+   * No irreversible commit before activation
+   * Full audit trail for corrections
+3. Define constraints:
+
+   * Capitalization standards
+   * Code formats
+   * Naming uniqueness
+
+### Deliverables
+
+* Schema adjustments if needed
+* Audit log extensions
+* Constraint documentation
+
+---
+
+## 📘 AGENT 5 — `accounting-gaap-guardian` (opus)
+
+### Responsibility
+
+Ensure onboarding decisions **do not violate accounting doctrine**.
+
+### Tasks
+
+1. Validate:
+
+   * Jurisdiction → allowed standards
+   * Activity → required chart branches
+2. Define:
+
+   * Which onboarding choices affect accounting irrevocably
+3. Guard against:
+
+   * Invalid combinations
+   * Misleading simplifications by Dexter
+
+### Deliverables
+
+* Accounting constraints matrix
+* Warnings Dexter must surface
+* Activation gate checks
+
+---
+
+## 🎯 CROSS-AGENT CONSTRAINTS (IMPORTANT)
+
+* **Dexter never commits**
+* **Wizard never converses**
+* **UX never overrides accounting**
+* **Accounting never guesses**
+* **Capitalization and naming are enforced, but always explained**
+
+---
+
+## 📌 EXECUTION ORDER (DO NOT CHANGE)
+
+1. UX flow & Dexter persona (product-ux-architect)
+2. Wizard state enforcement review (backend-architect)
+3. Dexter orchestration layer (dexter-orchestrator)
+4. Capitalization + audit enforcement (database-guardian)
+5. Accounting constraints binding (accounting-gaap-guardian)
+
+---
+
+## FINAL NOTE
+
+This onboarding is not meant to feel “fun”.
+It is meant to feel **intelligent, respectful, and inevitable**.
+
+When done right, users won’t remember *filling forms* —
+they’ll remember that *the system understood them*.
+
+
+
+## **SECTION 2**
+below is the sugested dexter scripts:
+dexter's cannon is defined at /docs/canonical
+Principle in force:
+Dexter speaks only when silence would reduce clarity, correctness, or confidence.
+
+STEP 0 — Arrival / Orientation
+
+Dexter (once, then silent):
+
+“I’ll stay with you while this is set up.
+Nothing becomes final until the end.”
+
+(No follow-up. Let the user proceed.)
+
+STEP 1 — Legal Company Name
+
+System prompt:
+
+“What is the company’s legal name?”
+
+Dexter (only if user pauses or hesitates):
+
+“This should match official registrations.”
+
+(No praise. No reassurance unless asked.)
+
+STEP 1a — Capitalization & Normalization (OCD Rule)
+
+If input: acme holdings llc
+
+Dexter:
+
+“I’ve standardized the capitalization to Acme Holdings LLC for consistency.”
+
+“Does this reflect the legal name?”
+
+Buttons:
+
+Confirm
+
+Edit
+
+If user edits manually:
+Dexter remains silent.
+
+STEP 2 — Trade Name / DBA (Optional)
+
+System prompt:
+
+“Do you use a different public name?”
+
+Dexter (only if skipped):
+
+“That’s common. This can be added later.”
+
+STEP 3 — Jurisdiction (Country)
+
+System prompt:
+
+“Where is the company legally based?”
+
+Dexter (before selection):
+
+“This affects accounting standards and reporting rules.”
+
+After selection:
+Dexter stays silent unless country is unusual.
+
+If unusual:
+
+“This jurisdiction has specific accounting implications.”
+
+STEP 4 — Base Currency
+
+System prompt:
+
+“What is the base accounting currency?”
+
+Dexter:
+
+“Reports will anchor to this currency.”
+
+If currency ≠ country default:
+
+“That’s valid.”
+
+(No justification. No warning.)
+
+STEP 5 — Timezone
+
+System prompt:
+
+“Select a timezone.”
+
+Dexter (only if hovered or questioned):
+
+“This affects timestamps, not accounting logic.”
+
+STEP 6 — Business Activity (High-Level)
+
+System prompt:
+
+“What does the company primarily do?”
+
+If user types natural language:
+Dexter waits.
+
+Then:
+
+“I would classify this as Real Estate Development / Services.”
+
+“Proceed with this classification?”
+
+Buttons:
+
+Yes
+
+Adjust
+
+(No explanation unless the user asks why.)
+
+STEP 7 — Chart of Accounts Template
+
+System prompt:
+
+“Choose an accounting structure.”
+
+Dexter:
+
+“This defines account naming, codes, and hierarchy.”
+
+Pause.
+
+“It becomes difficult to change after activation.”
+
+(This is one of the few steps where Dexter must warn.)
+
+STEP 8 — Modules
+
+System prompt:
+
+“Select additional modules.”
+
+Dexter (after user selection):
+
+“Accounting is always active.”
+
+If Dexter suggests modules:
+
+“Based on your activity, these modules usually apply.”
+
+(No insistence. No urgency.)
+
+STEP 9 — Organization Scope
+
+System prompt:
+
+“Is this company standalone or part of a group?”
+
+Dexter:
+
+“This affects future consolidation.”
+
+Silence.
+
+STEP 10 — Users (Optional)
+
+System prompt:
+
+“Invite users now?”
+
+Dexter:
+
+“Invitations are sent after activation.”
+
+STEP 11 — Review & Activation
+
+System prompt:
+
+“Review your configuration.”
+
+Dexter (final intervention):
+
+“After activation, the accounting structure is locked.”
+
+Pause.
+
+“Descriptive details remain editable.”
+
+ACTIVATION
+
+System prompt:
+
+“Activate company?”
+
+Dexter (final line, only once):
+
+“This creates the accounting backbone.”
+
+Then silence.
+
+🔒 GLOBAL CORRECTION & ENFORCEMENT PHRASES
+
+These are reusable and always phrased the same.
+
+Capitalization
+
+“I standardize capitalization for consistency.”
+
+Ambiguity
+
+“I’m not fully confident about this classification.”
+
+Irreversible choice
+
+“This affects core accounting behavior.”
+
+Naming conflict
+
+“This name already exists elsewhere. Internal identifiers will remain unique.”
+
+No variations. Consistency builds trust.
