@@ -142,7 +142,7 @@ const PostAuthSetupPage = () => {
 
     try {
       // Create company
-      const response = await api.post('/companies', {
+      const response = await api.post<{ id: string; name: string }>('/companies', {
         name: companyName.trim(),
       });
 
@@ -152,8 +152,8 @@ const PostAuthSetupPage = () => {
         className: 'bg-background border-gold text-gold font-heading',
       });
 
-      // Redirect to dashboard
-      navigate('/dashboard');
+      // Redirect to onboarding wizard
+      navigate(`/onboarding/${response.id}`);
     } catch (error: any) {
       console.error('Company creation error:', error);
       toast({

@@ -128,104 +128,113 @@ const App = () => (
                   }
                 />
 
-              {/* Protected Dashboard Routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <PasswordResetGuard>
-                      <OnboardingGuard>
-                        <DashboardLayout />
-                      </OnboardingGuard>
-                    </PasswordResetGuard>
-                  </ProtectedRoute>
-                }
-              >
-                {/* Main Dashboard */}
-                <Route path="dashboard" element={<CompanyDashboard />} />
-                <Route path="dashboard/overview" element={<CompanyDashboard />} />
-                <Route path="dashboard/old" element={<DashboardPage />} />
+                {/* Phase 5 - Onboarding Wizard (Outside Dashboard Layout) */}
+                <Route
+                  path="/onboarding/:companyId"
+                  element={
+                    <ProtectedRoute>
+                      <OnboardingWizard />
+                    </ProtectedRoute>
+                  }
+                />
 
-                {/* Registration Module */}
-                <Route path="companies" element={<Companies />} />
-                <Route path="companies/register" element={<CompanyRegistration />} />
-                <Route path="registration/users" element={<UsersListPage />} />
+                {/* Protected Dashboard Routes */}
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <PasswordResetGuard>
+                        <OnboardingGuard>
+                          <DashboardLayout />
+                        </OnboardingGuard>
+                      </PasswordResetGuard>
+                    </ProtectedRoute>
+                  }
+                >
+                  {/* Main Dashboard */}
+                  <Route path="dashboard" element={<CompanyDashboard />} />
+                  <Route path="dashboard/overview" element={<CompanyDashboard />} />
+                  <Route path="dashboard/old" element={<DashboardPage />} />
 
-                {/* Phase 5 - Onboarding Wizard */}
-                <Route path="onboarding/:companyId" element={<OnboardingWizard />} />
+                  {/* Registration Module */}
+                  <Route path="companies" element={<Companies />} />
+                  <Route path="companies/register" element={<CompanyRegistration />} />
+                  <Route path="registration/users" element={<UsersListPage />} />
 
-                {/* Chart of Accounts Module (Unified) */}
-                <Route path="chartofaccounts" element={<CompanyChartPage />} />
-                <Route path="chartofaccounts/master" element={<MasterChartDashboard />} />
-                <Route path="chartofaccounts/master/tree" element={<MasterChartTreePage />} />
-                <Route path="chartofaccounts/master/interactive" element={<MasterChartInteractivePage />} />
-                <Route path="chartofaccounts/mapping" element={<Mappings />} />
-                <Route path="chartofaccounts/import" element={<MasterChartImportPage />} />
-                <Route path="chartofaccounts/export" element={<MasterChartExportPage />} />
-                <Route path="chartofaccounts/organizer" element={<OrganizerPage />} />
-                <Route path="chartofaccounts/organizer/review" element={<OrganizerReviewPage />} />
 
-                {/* Legacy ChartForge Routes (redirect to new paths) */}
-                <Route path="chartforge/masterchart" element={<CompanyChartPage />} />
-                <Route path="chartforge/masterchart/tree" element={<MasterChartTreePage />} />
-                <Route path="chartforge/masterchart/interactive" element={<MasterChartInteractivePage />} />
-                <Route path="chartforge/masterchart/import" element={<MasterChartImportPage />} />
-                <Route path="chartforge/masterchart/export" element={<MasterChartExportPage />} />
-                <Route path="chartforge/mapping" element={<Mappings />} />
-                <Route path="chartforge/import" element={<MasterChartImportPage />} />
-                <Route path="chartforge/organizer" element={<OrganizerPage />} />
-                <Route path="chartforge/organizer/review" element={<OrganizerReviewPage />} />
-                <Route path="registration/coa" element={<CompanyChartPage />} />
 
-                {/* Accountancy Module */}
-                <Route path="accountancy/ledger" element={<DailyLedgerPage />} />
-                <Route path="accountancy/journal" element={<JournalEntriesPage />} />
-                <Route path="accountancy/trial-balance" element={<TrialBalancePage />} />
-                <Route path="accountancy/fiscal-periods" element={<FiscalPeriodsPage />} />
+                  {/* Chart of Accounts Module (Unified) */}
+                  <Route path="chartofaccounts" element={<CompanyChartPage />} />
+                  <Route path="chartofaccounts/master" element={<MasterChartDashboard />} />
+                  <Route path="chartofaccounts/master/tree" element={<MasterChartTreePage />} />
+                  <Route path="chartofaccounts/master/interactive" element={<MasterChartInteractivePage />} />
+                  <Route path="chartofaccounts/mapping" element={<Mappings />} />
+                  <Route path="chartofaccounts/import" element={<MasterChartImportPage />} />
+                  <Route path="chartofaccounts/export" element={<MasterChartExportPage />} />
+                  <Route path="chartofaccounts/organizer" element={<OrganizerPage />} />
+                  <Route path="chartofaccounts/organizer/review" element={<OrganizerReviewPage />} />
 
-                {/* Reports Module */}
-                <Route path="reports/statements" element={<FinancialStatementsPage />} />
-                <Route path="reports/custom" element={<CustomReportsPage />} />
-                <Route path="reports/export" element={<ExportCenterPage />} />
+                  {/* Legacy ChartForge Routes (redirect to new paths) */}
+                  <Route path="chartforge/masterchart" element={<CompanyChartPage />} />
+                  <Route path="chartforge/masterchart/tree" element={<MasterChartTreePage />} />
+                  <Route path="chartforge/masterchart/interactive" element={<MasterChartInteractivePage />} />
+                  <Route path="chartforge/masterchart/import" element={<MasterChartImportPage />} />
+                  <Route path="chartforge/masterchart/export" element={<MasterChartExportPage />} />
+                  <Route path="chartforge/mapping" element={<Mappings />} />
+                  <Route path="chartforge/import" element={<MasterChartImportPage />} />
+                  <Route path="chartforge/organizer" element={<OrganizerPage />} />
+                  <Route path="chartforge/organizer/review" element={<OrganizerReviewPage />} />
+                  <Route path="registration/coa" element={<CompanyChartPage />} />
 
-                {/* Administration Module */}
-                <Route path="admin/superuser" element={<SuperuserPanel />} />
-                <Route path="admin/system" element={<SystemSettingsPage />} />
-                <Route path="admin/integrations" element={<IntegrationsPage />} />
-                <Route path="admin/audit" element={<AuditLogPage />} />
-                <Route path="admin/requests" element={<AdminRequests />} />
+                  {/* Accountancy Module */}
+                  <Route path="accountancy/ledger" element={<DailyLedgerPage />} />
+                  <Route path="accountancy/journal" element={<JournalEntriesPage />} />
+                  <Route path="accountancy/trial-balance" element={<TrialBalancePage />} />
+                  <Route path="accountancy/fiscal-periods" element={<FiscalPeriodsPage />} />
 
-                {/* Groups Module */}
-                <Route path="groups" element={<GroupsList />} />
-                <Route path="groups/:groupId" element={<GroupDetail />} />
+                  {/* Reports Module */}
+                  <Route path="reports/statements" element={<FinancialStatementsPage />} />
+                  <Route path="reports/custom" element={<CustomReportsPage />} />
+                  <Route path="reports/export" element={<ExportCenterPage />} />
 
-                {/* Legacy Routes (backward compatibility) */}
-                <Route path="masterchart" element={<MasterChartDashboard />} />
-                <Route path="masterchart/tree" element={<MasterChartTreePage />} />
-                <Route path="masterchart/interactive" element={<MasterChartInteractivePage />} />
-                <Route path="masterchart/import" element={<MasterChartImportPage />} />
-                <Route path="masterchart/export" element={<MasterChartExportPage />} />
-                <Route path="organizer" element={<OrganizerPage />} />
-                <Route path="organizer/review" element={<OrganizerReviewPage />} />
-                <Route path="mappings" element={<Mappings />} />
-                <Route path="snapshots" element={<SnapshotsPage />} />
-                <Route path="sync/quickbooks" element={<QuickBooksSyncPage />} />
-                <Route path="upload" element={<UploadPage />} />
-                <Route path="templates" element={<TemplatesPage />} />
-                <Route path="users" element={<UsersPage />} />
-                <Route path="permissions" element={<PermissionsPage />} />
+                  {/* Administration Module */}
+                  <Route path="admin/superuser" element={<SuperuserPanel />} />
+                  <Route path="admin/system" element={<SystemSettingsPage />} />
+                  <Route path="admin/integrations" element={<IntegrationsPage />} />
+                  <Route path="admin/audit" element={<AuditLogPage />} />
+                  <Route path="admin/requests" element={<AdminRequests />} />
 
-                {/* Settings */}
-                <Route path="settings" element={<SettingsPage />} />
+                  {/* Groups Module */}
+                  <Route path="groups" element={<GroupsList />} />
+                  <Route path="groups/:groupId" element={<GroupDetail />} />
 
-                {/* Documentation */}
-                <Route path="docs" element={<DocumentationPage />} />
-              </Route>
+                  {/* Legacy Routes (backward compatibility) */}
+                  <Route path="masterchart" element={<MasterChartDashboard />} />
+                  <Route path="masterchart/tree" element={<MasterChartTreePage />} />
+                  <Route path="masterchart/interactive" element={<MasterChartInteractivePage />} />
+                  <Route path="masterchart/import" element={<MasterChartImportPage />} />
+                  <Route path="masterchart/export" element={<MasterChartExportPage />} />
+                  <Route path="organizer" element={<OrganizerPage />} />
+                  <Route path="organizer/review" element={<OrganizerReviewPage />} />
+                  <Route path="mappings" element={<Mappings />} />
+                  <Route path="snapshots" element={<SnapshotsPage />} />
+                  <Route path="sync/quickbooks" element={<QuickBooksSyncPage />} />
+                  <Route path="upload" element={<UploadPage />} />
+                  <Route path="templates" element={<TemplatesPage />} />
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="permissions" element={<PermissionsPage />} />
 
-              {/* Catch-all */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+                  {/* Settings */}
+                  <Route path="settings" element={<SettingsPage />} />
+
+                  {/* Documentation */}
+                  <Route path="docs" element={<DocumentationPage />} />
+                </Route>
+
+                {/* Catch-all */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
           </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>

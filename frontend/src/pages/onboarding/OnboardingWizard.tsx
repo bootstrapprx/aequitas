@@ -36,11 +36,13 @@ import { api } from '@/lib/api';
 // Step components
 import Step0Welcome from './steps/Step0Welcome';
 import Step1CompanyDetails from './steps/Step1CompanyDetails';
-import Step2TemplateSelection from './steps/Step2TemplateSelection';
-import Step3ChartMaterialization from './steps/Step3ChartMaterialization';
-import Step4AccountReview from './steps/Step4AccountReview';
-import Step5FiscalPeriods from './steps/Step5FiscalPeriods';
-import Step6Activation from './steps/Step6Activation';
+import Step2CompanyType from './steps/Step2CompanyType';
+import Step3TemplateSelection from './steps/Step2TemplateSelection'; // Alias for legacy file
+import Step4ModuleSelection from './steps/Step4ModuleSelection';
+import Step5OrganizationScope from './steps/Step5OrganizationScope';
+import Step6AccountReview from './steps/Step4AccountReview'; // Alias
+import Step7FiscalPeriods from './steps/Step5FiscalPeriods'; // Alias
+import Step8Activation from './steps/Step6Activation'; // Alias
 import StepCompletion from './steps/StepCompletion';
 
 // Types
@@ -56,21 +58,25 @@ interface OnboardingStatus {
   completed_at: string | null;
   step_0_welcome_seen: boolean;
   step_1_company_details_complete: boolean;
-  step_2_template_selected: boolean;
-  step_3_chart_materialized: boolean;
-  step_4_chart_finalized: boolean;
-  step_5_fiscal_periods_complete: boolean;
-  step_6_activated: boolean;
+  step_2_company_type_complete: boolean;
+  step_3_template_selected: boolean;
+  step_4_modules_complete: boolean;
+  step_5_scope_complete: boolean;
+  step_6_account_review_complete: boolean;
+  step_7_fiscal_periods_complete: boolean;
+  step_8_activated: boolean;
 }
 
 const STEP_TITLES = [
   'Welcome',
   'Company Details',
+  'Type & Activity',
   'Choose Template',
-  'Build Chart',
+  'Modules',
+  'Scope',
   'Review Accounts',
   'Fiscal Periods',
-  'Activate Accounting',
+  'Activate',
   'Complete'
 ];
 
@@ -90,7 +96,7 @@ const OnboardingWizard: React.FC = () => {
       const response = await api.get(`/onboarding/status/${companyId}`);
       return response as any;
     },
-    refetchInterval: 10000, // Refetch every 10 seconds to check lock status
+    refetchInterval: 10000,
   });
 
   // Acquire session lock on mount
@@ -115,7 +121,9 @@ const OnboardingWizard: React.FC = () => {
     lockMutation.mutate();
 
     return () => {
+      // Release lock on unmount
       api.delete(`/onboarding/lock/${companyId}`, {
+        // @ts-ignore - API wrapper types mismatch for DELETE body
         data: { session_id: sessionId }
       }).catch(() => {
         // Ignore errors on cleanup
@@ -129,15 +137,15 @@ const OnboardingWizard: React.FC = () => {
       setCurrentStep(status.current_step);
 
       // If already completed, redirect to completion
-      if (status.step_6_activated) {
-        setCurrentStep(7); // Completion screen
+      if (status.step_8_activated) {
+        setCurrentStep(9); // Completion screen
       }
     }
   }, [status]);
 
   // Handle step navigation
   const handleNext = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 7));
+    setCurrentStep(prev => Math.min(prev + 1, 9));
     refetch();
   };
 
@@ -147,8 +155,12 @@ const OnboardingWizard: React.FC = () => {
       if (status.onboarding_status === 'ACTIVE') {
         return; // No going back after activation
       }
-      if (status.step_3_chart_materialized && currentStep <= 3) {
-        // Cannot go back before chart materialization
+      // If chart materialized (Step 3 complete?), cannot go back to Template (Step 3) or Type (2)?
+      // Actually materialization happens after Step 3. 
+      // If step_3_template_selected is true (implies materialization in old logic? No, template selected is prep for materialization).
+      // Let's use status flags.
+      // If CHART_READY (Step 6? No, Step 3+), cannot go back to Template.
+      if (status.onboarding_status === 'CHART_READY' && currentStep <= 3) {
         return;
       }
     }
@@ -156,15 +168,12 @@ const OnboardingWizard: React.FC = () => {
   };
 
   const handleStepClick = (stepIndex: number) => {
-    // Only allow clicking on completed or current step
     if (!status) return;
-
-    // Cannot skip ahead
     if (stepIndex > currentStep) return;
 
-    // Cannot go back past irreversible steps
-    if (status.step_3_chart_materialized && stepIndex < 3) return;
-    if (status.step_6_activated && stepIndex < 7) return;
+    // Irreversible checks
+    if (status.onboarding_status === 'CHART_READY' && stepIndex < 3) return;
+    if (status.step_8_activated && stepIndex < 9) return;
 
     setCurrentStep(stepIndex);
   };
@@ -206,44 +215,47 @@ const OnboardingWizard: React.FC = () => {
     );
   }
 
-  // Calculate progress
-  const progress = ((currentStep + 1) / 8) * 100;
+  const progress = ((currentStep + 1) / 10) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100">
-      {/* Header */}
       <PageHeader
         title="Company Onboarding"
         subtitle={`Set up accounting for ${status?.company_name || 'your company'}`}
         icon={Feather}
       />
 
-      {/* Progress Indicator */}
       <div className="max-w-6xl mx-auto px-10 py-6">
         <div className="mb-8">
           <Progress value={progress} className="h-2 mb-4" />
           <div className="flex justify-between items-start">
             {STEP_TITLES.map((title, index) => {
-              const isComplete = status && (
-                (index === 0 && status.step_0_welcome_seen) ||
-                (index === 1 && status.step_1_company_details_complete) ||
-                (index === 2 && status.step_2_template_selected) ||
-                (index === 3 && status.step_3_chart_materialized) ||
-                (index === 4 && status.step_4_chart_finalized) ||
-                (index === 5 && status.step_5_fiscal_periods_complete) ||
-                (index === 6 && status.step_6_activated) ||
-                (index === 7 && status.step_6_activated)
-              );
+              // Map index to status flag
+              let isComplete = false;
+              if (status) {
+                if (index === 0) isComplete = status.step_0_welcome_seen;
+                if (index === 1) isComplete = status.step_1_company_details_complete;
+                if (index === 2) isComplete = status.step_2_company_type_complete;
+                if (index === 3) isComplete = status.step_3_template_selected;
+                if (index === 4) isComplete = status.step_4_modules_complete;
+                if (index === 5) isComplete = status.step_5_scope_complete;
+                if (index === 6) isComplete = status.step_6_account_review_complete;
+                if (index === 7) isComplete = status.step_7_fiscal_periods_complete;
+                if (index === 8) isComplete = status.step_8_activated;
+                if (index === 9) isComplete = status.step_8_activated;
+              }
+
               const isCurrent = index === currentStep;
+              // Clickable logic: Can execute if <= currentStep AND not blocked by irreversibility
               const isClickable = index <= currentStep &&
-                !(status?.step_3_chart_materialized && index < 3) &&
-                !(status?.step_6_activated && index < 7);
+                !(status?.onboarding_status === 'CHART_READY' && index < 3) &&
+                !(status?.step_8_activated && index < 9);
 
               return (
                 <div
                   key={index}
                   className={`flex flex-col items-center flex-1 ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                  onClick={() => handleStepClick(index)}
+                  onClick={() => isClickable && handleStepClick(index)}
                 >
                   <div className={`
                     flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all
@@ -257,7 +269,7 @@ const OnboardingWizard: React.FC = () => {
                       <Circle className="h-5 w-5" />
                     )}
                   </div>
-                  <span className={`text-xs text-center ${isCurrent ? 'font-semibold text-emerald-900' : 'text-gray-600'}`}>
+                  <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900' : 'text-gray-600'}`}>
                     {title}
                   </span>
                 </div>
@@ -266,7 +278,6 @@ const OnboardingWizard: React.FC = () => {
           </div>
         </div>
 
-        {/* Step Content */}
         <div className="bg-white rounded-lg shadow-xl p-8 mb-6">
           {currentStep === 0 && <Step0Welcome onNext={handleNext} status={status} />}
           {currentStep === 1 && (
@@ -278,7 +289,7 @@ const OnboardingWizard: React.FC = () => {
             />
           )}
           {currentStep === 2 && (
-            <Step2TemplateSelection
+            <Step2CompanyType
               companyId={companyId!}
               onNext={handleNext}
               onBack={handleBack}
@@ -286,7 +297,7 @@ const OnboardingWizard: React.FC = () => {
             />
           )}
           {currentStep === 3 && (
-            <Step3ChartMaterialization
+            <Step3TemplateSelection
               companyId={companyId!}
               onNext={handleNext}
               onBack={handleBack}
@@ -294,7 +305,7 @@ const OnboardingWizard: React.FC = () => {
             />
           )}
           {currentStep === 4 && (
-            <Step4AccountReview
+            <Step4ModuleSelection
               companyId={companyId!}
               onNext={handleNext}
               onBack={handleBack}
@@ -302,7 +313,7 @@ const OnboardingWizard: React.FC = () => {
             />
           )}
           {currentStep === 5 && (
-            <Step5FiscalPeriods
+            <Step5OrganizationScope
               companyId={companyId!}
               onNext={handleNext}
               onBack={handleBack}
@@ -310,14 +321,30 @@ const OnboardingWizard: React.FC = () => {
             />
           )}
           {currentStep === 6 && (
-            <Step6Activation
+            <Step6AccountReview
               companyId={companyId!}
               onNext={handleNext}
               onBack={handleBack}
               status={status}
             />
           )}
-          {currentStep === 7 && <StepCompletion companyId={companyId!} status={status} />}
+          {currentStep === 7 && (
+            <Step7FiscalPeriods
+              companyId={companyId!}
+              onNext={handleNext}
+              onBack={handleBack}
+              status={status}
+            />
+          )}
+          {currentStep === 8 && (
+            <Step8Activation
+              companyId={companyId!}
+              onNext={handleNext}
+              onBack={handleBack}
+              status={status}
+            />
+          )}
+          {currentStep === 9 && <StepCompletion companyId={companyId!} status={status} />}
         </div>
 
         {/* Save & Exit */}

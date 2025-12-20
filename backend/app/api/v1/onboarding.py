@@ -21,10 +21,16 @@ from app.schemas.onboarding import (
     OnboardingStatusResponse,
     CompanyDetailsRequest,
     CompanyDetailsResponse,
+    CompanyTypeRequest,
+    CompanyTypeResponse,
     TemplateSelectionRequest,
     TemplateSelectionResponse,
     ChartMaterializationRequest,
     ChartMaterializationResponse,
+    ModuleSelectionRequest,
+    ModuleSelectionResponse,
+    OrganizationScopeRequest,
+    OrganizationScopeResponse,
     AccountReviewRequest,
     AccountReviewResponse,
     FiscalPeriodSetupRequest,
@@ -232,7 +238,28 @@ def update_company_details(
 
 
 # ============================================================================
-# Step 2: Template Selection
+# Step 2: Company Type & Activity
+# ============================================================================
+
+@router.post("/{company_id}/step-2", response_model=CompanyTypeResponse)
+def update_company_type(
+    company_id: UUID,
+    request: CompanyTypeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Step 2: Company Type & Activity."""
+    try:
+        return onboarding_service.update_company_type(db, company_id, request)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ============================================================================
+# Step 3: Template Selection
 # ============================================================================
 
 @router.post("/{company_id}/select-template", response_model=TemplateSelectionResponse)
@@ -243,7 +270,7 @@ def select_template(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Step 2: Select accounting template.
+    Step 3: Select accounting template.
 
     CRITICAL OPERATION:
     - This choice is irreversible after chart materialization
@@ -305,7 +332,49 @@ def materialize_chart(
 
 
 # ============================================================================
-# Step 4: Account Review & Customization
+# Step 4: Module Selection
+# ============================================================================
+
+@router.post("/{company_id}/step-4", response_model=ModuleSelectionResponse)
+def select_modules(
+    company_id: UUID,
+    request: ModuleSelectionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Step 4: Select optional modules."""
+    try:
+        return onboarding_service.select_modules(db, company_id, request)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ============================================================================
+# Step 5: Organization Scope
+# ============================================================================
+
+@router.post("/{company_id}/step-5", response_model=OrganizationScopeResponse)
+def set_organization_scope(
+    company_id: UUID,
+    request: OrganizationScopeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Step 5: Set organization scope (Standalone vs Group)."""
+    try:
+        return onboarding_service.set_organization_scope(db, company_id, request)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ============================================================================
+# Step 6: Account Review & Customization
 # ============================================================================
 
 @router.post("/{company_id}/customize-accounts", response_model=AccountReviewResponse)
@@ -316,7 +385,7 @@ def customize_accounts(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Step 4: Review and customize accounts.
+    Step 6: Review and customize accounts.
 
     ALLOWED ACTIONS:
     - Rename accounts
@@ -346,7 +415,7 @@ def customize_accounts(
 
 
 # ============================================================================
-# Step 5: Fiscal Periods
+# Step 7: Fiscal Periods
 # ============================================================================
 
 @router.post("/{company_id}/fiscal-periods", response_model=FiscalPeriodSetupResponse)
@@ -357,7 +426,7 @@ def setup_fiscal_periods(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Step 5: Set up fiscal periods.
+    Step 7: Set up fiscal periods.
 
     VALIDATION RULES:
     - At least one period must be OPEN
@@ -386,7 +455,7 @@ def setup_fiscal_periods(
 
 
 # ============================================================================
-# Step 6: Activation (Point of No Return)
+# Step 8: Activation (Point of No Return)
 # ============================================================================
 
 @router.post("/{company_id}/activate", response_model=ActivationResponse)
@@ -397,7 +466,7 @@ def activate_accounting(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Step 6: Activate accounting (POINT OF NO RETURN).
+    Step 8: Activate accounting (POINT OF NO RETURN).
 
     CRITICAL OPERATION:
     - This is irreversible

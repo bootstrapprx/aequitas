@@ -34,11 +34,13 @@ class OnboardingStatusResponse(BaseModel):
     # Step completion flags
     step_0_welcome_seen: bool = False
     step_1_company_details_complete: bool = False
-    step_2_template_selected: bool = False
-    step_3_chart_materialized: bool = False
-    step_4_chart_finalized: bool = False
-    step_5_fiscal_periods_complete: bool = False
-    step_6_activated: bool = False
+    step_2_company_type_complete: bool = False
+    step_3_template_selected: bool = False
+    step_4_modules_complete: bool = False
+    step_5_scope_complete: bool = False
+    step_6_account_review_complete: bool = False
+    step_7_fiscal_periods_complete: bool = False
+    step_8_activated: bool = False
 
     class Config:
         from_attributes = True
@@ -56,6 +58,9 @@ class CompanyDetailsRequest(BaseModel):
     country: str = Field(..., min_length=2, max_length=2)  # ISO 3166-1 alpha-2
     currency: str = Field(..., min_length=3, max_length=3)  # ISO 4217
     timezone: str = Field(..., min_length=1)  # IANA timezone
+
+    legal_nature: Optional[str] = None
+    economic_activity: Optional[str] = None
 
     # Optional contact info
     email: Optional[str] = None
@@ -86,6 +91,28 @@ class CompanyDetailsResponse(BaseModel):
     company_id: UUID
     current_step: int
     next_step: int
+
+
+# ============================================================================
+# Step 2: Company Type & Activity (New Step)
+# ============================================================================
+
+class CompanyTypeRequest(BaseModel):
+    """Step 2: Define company legal nature and activity."""
+    
+    legal_nature: str = Field(..., description="LLC, Corporation, etc.")
+    economic_activity: str = Field(..., description="Commerce, Services, etc.")
+
+class CompanyTypeResponse(BaseModel):
+    success: bool
+    message: str
+    current_step: int
+    next_step: int
+
+
+# ============================================================================
+# Step 2b/3 (Legacy 2): Template Selection
+# ============================================================================
 
 
 # ============================================================================
@@ -151,7 +178,40 @@ class ChartMaterializationResponse(BaseModel):
 
 
 # ============================================================================
-# Step 4: Account Review & Customization
+# Step 4: Module Selection (New Step)
+# ============================================================================
+
+class ModuleSelectionRequest(BaseModel):
+    """Step 4: Select active modules."""
+    
+    modules: List[str] = Field(..., description="List of module IDs (e.g., ['INVOICING', 'PAYROLL'])")
+
+class ModuleSelectionResponse(BaseModel):
+    success: bool
+    message: str
+    current_step: int
+    next_step: int
+
+
+# ============================================================================
+# Step 5: Organization Scope (New Step)
+# ============================================================================
+
+class OrganizationScopeRequest(BaseModel):
+    """Step 5: Define organization structure."""
+    
+    is_standalone: bool = Field(..., description="True if standalone, False if part of a group")
+    # Future: Parent company ID, etc.
+
+class OrganizationScopeResponse(BaseModel):
+    success: bool
+    message: str
+    current_step: int
+    next_step: int
+
+
+# ============================================================================
+# Step 6: Account Review & Customization (Legacy 4)
 # ============================================================================
 
 class AccountCustomization(BaseModel):
@@ -194,7 +254,7 @@ class AccountReviewResponse(BaseModel):
 
 
 # ============================================================================
-# Step 5: Fiscal Periods
+# Step 7: Fiscal Periods
 # ============================================================================
 
 class FiscalPeriodCreate(BaseModel):
@@ -216,7 +276,7 @@ class FiscalPeriodCreate(BaseModel):
 
 
 class FiscalPeriodSetupRequest(BaseModel):
-    """Step 5: Fiscal periods setup."""
+    """Step 7: Fiscal periods setup."""
 
     fiscal_year_start: str = Field(..., pattern="^(01|02|03|04|05|06|07|08|09|10|11|12)-01$")  # MM-DD format
     periods: List[FiscalPeriodCreate] = Field(..., min_length=1)
@@ -238,7 +298,7 @@ class FiscalPeriodSetupRequest(BaseModel):
 
 
 class FiscalPeriodSetupResponse(BaseModel):
-    """Step 5 completion response."""
+    """Step 7 completion response."""
 
     success: bool
     message: str
@@ -249,11 +309,11 @@ class FiscalPeriodSetupResponse(BaseModel):
 
 
 # ============================================================================
-# Step 6: Activation
+# Step 8: Activation
 # ============================================================================
 
 class ActivationRequest(BaseModel):
-    """Step 6: Final activation (point of no return)."""
+    """Step 8: Final activation (point of no return)."""
 
     confirmed: bool = Field(..., description="User confirms activation")
     acknowledgment_text: str = Field(
@@ -280,7 +340,7 @@ class ActivationRequest(BaseModel):
 
 
 class ActivationResponse(BaseModel):
-    """Step 6 completion response."""
+    """Step 8 completion response."""
 
     success: bool
     message: str

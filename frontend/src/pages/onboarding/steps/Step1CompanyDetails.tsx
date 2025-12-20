@@ -109,7 +109,8 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
   const selectedTimezone = watch('timezone');
 
   // Check if fields are locked (after template selection)
-  const isLocked = status?.onboarding_status === 'TEMPLATE_SELECTED';
+  // Lock if template has been selected (Step 3 completed)
+  const isLocked = status?.step_3_template_selected;
 
   // Mutation to save company details
   const saveMutation = useMutation({

@@ -45,6 +45,9 @@ class Company(Base):
     trade_name = Column(String, nullable=True)  # Trade name (DBA)
     timezone = Column(String, nullable=True)  # Timezone (e.g., 'America/New_York')
     currency = Column(String(3), nullable=True)  # ISO 4217 currency code (e.g., 'USD')
+    legal_nature = Column(String, nullable=True) # LLC, Corp, etc.
+    economic_activity = Column(String, nullable=True) # Commerce, Services, etc.
+    is_standalone = Column(Boolean, default=True, nullable=False) # True if not part of a group
 
     # Onboarding State Machine
     onboarding_status = Column(
@@ -58,7 +61,8 @@ class Company(Base):
     onboarding_completed_at = Column(DateTime(timezone=True), nullable=True)
     onboarding_session_lock = Column(UUID(as_uuid=True), nullable=True)  # Session lock UUID
     onboarding_session_locked_at = Column(DateTime(timezone=True), nullable=True)
-
+    
+    modules = relationship("CompanyModule", back_populates="company", cascade="all, delete-orphan")
     accounts = relationship("CompanyAccount", back_populates="company", cascade="all, delete-orphan")
 
     # Relationship to users (many-to-many through UserCompany)
