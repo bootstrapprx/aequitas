@@ -66,25 +66,15 @@ class CompanyService:
         db.commit()
         db.refresh(db_company)
 
-        # Auto-initialize chart of accounts from master chart
-        from app.services.companychart_service import CompanyChartService
+        # Phase 5: Onboarding wizard will handle chart initialization
+        # Company starts in DRAFT state (default) and must complete wizard
+        # to materialize chart, setup fiscal periods, and activate accounting.
         import logging
         logger = logging.getLogger(__name__)
-
-        chart_service = CompanyChartService(db)
-        try:
-            logger.info(f"Initializing chart of accounts for company {db_company.ucid}...")
-            result = chart_service.initialize_from_master_chart(db_company.id)
-            logger.info(f"✓ Chart of accounts initialized: {result['accounts_created']} accounts created")
-            print(f"✓ Company {db_company.ucid}: Chart of accounts initialized with {result['accounts_created']} accounts")
-        except Exception as e:
-            # Log the error but don't fail company creation
-            logger.error(f"Failed to initialize chart of accounts for company {db_company.ucid}: {str(e)}")
-            print(f"❌ Warning: Failed to initialize chart of accounts for company {db_company.ucid}")
-            print(f"   Error: {str(e)}")
-            print(f"   This company will need to have its chart initialized manually.")
-            import traceback
-            traceback.print_exc()
+        logger.info(
+            f"Company {db_company.ucid} created with onboarding_status={db_company.onboarding_status.value}. "
+            f"User must complete onboarding wizard to activate accounting."
+        )
 
         return db_company
 

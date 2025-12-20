@@ -849,6 +849,21 @@ def activate_accounting(
         db.commit()
         db.refresh(company)
 
+        # Emit audit event for company initialization
+        from app.services.audit_service import AuditService
+        AuditService.log_event(
+            db=db,
+            action="COMPANY_INITIALIZED",
+            entity_type="company",
+            entity_id=str(company.id),
+            user_id=None,  # TODO: Pass current user ID when available
+            payload={
+                "company_name": company.name,
+                "ucid": company.ucid,
+                "onboarding_completed_at": company.onboarding_completed_at.isoformat()
+            }
+        )
+
         # Get final statistics
         total_accounts = db.query(CompanyAccount).filter(
             CompanyAccount.company_id == company_id,

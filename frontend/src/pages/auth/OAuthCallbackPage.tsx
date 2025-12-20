@@ -10,7 +10,7 @@ const OAuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const { provider } = useParams<{ provider: string }>();
   const navigate = useNavigate();
-  const { login: authLogin } = useAuth();
+  const { login: authLogin, setToken, setUser } = useAuth();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +60,28 @@ const OAuthCallbackPage = () => {
         const data = await response.json();
 
         if (data.status === 'success' || data.status === 'setup_required') {
-          // Successful login - store token
-          localStorage.setItem('token', data.access_token);
+          // Successful login - update Context State
+          setToken(data.access_token);
+
+          // Optionally fetch full user object if not provided in callback (usually callback just gives token)
+          // We can call /auth/me or just set what we have if we had the user object.
+          // Since we assume the token is valid, we can let AuthContext fetch the user or do it here.
+          // For now, let's fetch the user to be safe and ensure context is Hydrated.
+          try {
+            const userRes = await fetch(
+              `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/me`,
+              {
+                headers: { 'Authorization': `Bearer ${data.access_token}` }
+              }
+            );
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              setUser(userData);
+            }
+          } catch (e) {
+            console.error("Failed to fetch user details", e);
+          }
+
 
           // Check user context to determine routing
           const contextResponse = await fetch(
@@ -144,8 +164,19 @@ const OAuthCallbackPage = () => {
 
       const data = await response.json();
 
-      // Store token
-      localStorage.setItem('token', data.access_token);
+      // Store token in context
+      setToken(data.access_token);
+
+      // Fetch user to hydrate context
+      try {
+        const userRes = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/me`,
+          { headers: { 'Authorization': `Bearer ${data.access_token}` } }
+        );
+        if (userRes.ok) {
+          setUser(await userRes.json());
+        }
+      } catch (e) { }
 
       toast({
         title: 'Accounts Linked',
@@ -193,8 +224,8 @@ const OAuthCallbackPage = () => {
             {isProcessing
               ? 'Processing OAuth...'
               : error
-              ? 'Authentication Error'
-              : 'Link Accounts'}
+                ? 'Authentication Error'
+                : 'Link Accounts'}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-8">

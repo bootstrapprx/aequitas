@@ -15,6 +15,8 @@ interface AuthContextType {
   logout: () => void;
   switchCompany: (companyId: string) => void;
   isAuthenticated: boolean;
+  setToken: (token: string) => void;
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -166,6 +168,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     switchCompany,
     isAuthenticated: !!token && !!user,
+    // Expose setters for OAuth flow
+    setToken: (token: string) => {
+      setToken(token);
+      localStorage.setItem(TOKEN_KEY, token);
+      // Update axios header immediately
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    },
+    setUser: (user: User) => {
+      setUser(user);
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
