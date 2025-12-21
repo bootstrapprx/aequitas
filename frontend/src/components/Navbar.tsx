@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navItems = [
   { label: "Chambers", href: "#features" },
@@ -43,6 +44,7 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
             <Link to="/login">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 Enter
@@ -79,6 +81,10 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-3 pt-4 mt-4 border-t border-border/50 px-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="justify-start w-full">
                     Enter

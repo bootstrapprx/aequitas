@@ -86,7 +86,12 @@ import OnboardingWizard from "./pages/onboarding/OnboardingWizard";
 
 const App = () => (
   <ErrorBoundary>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      storageKey="aequitas-theme"
+    >
       <TooltipProvider>
         <AuthProvider>
           <CompanyProvider>

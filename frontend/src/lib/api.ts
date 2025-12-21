@@ -31,7 +31,9 @@ async function baseRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   options: BodyApiOptions = {}
 ): Promise<T> {
-  const { params, body } = options;
+  const { params } = options;
+  // Support both "body" and legacy "data" keys (some DELETE calls passed data)
+  const resolvedBody = options.body ?? (options as any).data;
   // Separate headers to avoid mutation
   const headers = { ...options.headers };
 
@@ -59,12 +61,12 @@ async function baseRequest<T>(
     },
   };
 
-  if (body) {
-    if (body instanceof FormData) {
+  if (resolvedBody) {
+    if (resolvedBody instanceof FormData) {
       delete (config.headers as Record<string, string>)['Content-Type'];
-      config.body = body;
+      config.body = resolvedBody;
     } else {
-      config.body = JSON.stringify(body);
+      config.body = JSON.stringify(resolvedBody);
     }
   }
 
@@ -102,7 +104,7 @@ export const api = {
   get: <T>(endpoint: string, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'GET', options),
   post: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'POST', { ...options, body }),
   put: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'PUT', { ...options, body }),
-  delete: <T>(endpoint: string, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'DELETE', options),
+  delete: <T>(endpoint: string, options?: BodyApiOptions) => baseRequest<T>(endpoint, 'DELETE', options),
   patch: <T>(endpoint: string, body: any, options?: BaseApiOptions) => baseRequest<T>(endpoint, 'PATCH', { ...options, body }),
 };
 

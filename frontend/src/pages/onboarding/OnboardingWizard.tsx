@@ -143,8 +143,7 @@ const OnboardingWizard: React.FC = () => {
     return () => {
       // Release lock on unmount
       api.delete(`/onboarding/lock/${companyId}`, {
-        // @ts-ignore - API wrapper types mismatch for DELETE body
-        data: { session_id: sessionId }
+        body: { session_id: sessionId }
       }).catch(() => {
         // Ignore errors on cleanup
       });

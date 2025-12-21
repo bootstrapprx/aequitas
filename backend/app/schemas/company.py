@@ -1,8 +1,16 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from app.db.models.company import SubscriptionType
+
+def _normalize_optional_email(value):
+    """Convert empty/whitespace-only email strings to None to satisfy EmailStr."""
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip() == "":
+        return None
+    return value
 
 class CompanyBase(BaseModel):
     name: str
@@ -18,6 +26,11 @@ class CompanyBase(BaseModel):
     tax_id: Optional[str] = None
     industry: Optional[str] = None
     description: Optional[str] = None
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def set_empty_email_to_none(cls, v):
+        return _normalize_optional_email(v)
 
 class CompanyCreate(CompanyBase):
     subscription_type: Optional[SubscriptionType] = SubscriptionType.STRIPE
@@ -39,6 +52,11 @@ class CompanyUpdate(BaseModel):
     tax_id: Optional[str] = None
     industry: Optional[str] = None
     description: Optional[str] = None
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def set_empty_email_to_none(cls, v):
+        return _normalize_optional_email(v)
 
 class CompanyResponse(CompanyBase):
     id: UUID

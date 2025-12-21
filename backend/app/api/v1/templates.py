@@ -4,18 +4,30 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.schemas.template import Template, TemplateValidationResult
+from app.schemas.template import Template, TemplateValidationResult, ChartTemplateSummary
 from app.services.template_service import TemplateService
+from app.db.models.chart_template import ChartTemplate
 
 router = APIRouter()
 
-@router.get("", response_model=List[str], summary="List Available Templates")
+@router.get("", response_model=List[ChartTemplateSummary], summary="List Available Templates")
 def list_available_templates(db: Session = Depends(get_db)):
     """
     Lists all predefined Chart of Accounts templates available on the server.
     """
-    service = TemplateService(db)
-    return service.list_templates()
+    templates = db.query(ChartTemplate).filter(ChartTemplate.is_active == True).all()
+    return [
+        ChartTemplateSummary(
+            id=template.id,
+            name=template.name,
+            jurisdiction=template.jurisdiction,
+            version=template.version,
+            description=template.description,
+            is_active=template.is_active,
+            account_count=len(template.accounts) if template.accounts is not None else 0
+        )
+        for template in templates
+    ]
 
 @router.get("/{template_name}", response_model=Dict[str, Any], summary="Get Template Preview")
 def get_template_preview(template_name: str, db: Session = Depends(get_db)):
