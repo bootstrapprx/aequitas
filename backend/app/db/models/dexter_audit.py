@@ -2,7 +2,7 @@ from sqlalchemy import Column, String, Boolean, Text, DateTime, Numeric, Foreign
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from app.db.base_class import Base
+from app.db.base import Base
 
 class NormalizationAudit(Base):
     __tablename__ = "normalization_audit"

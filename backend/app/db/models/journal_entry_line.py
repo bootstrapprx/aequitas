@@ -30,7 +30,7 @@ class JournalEntryLine(Base):
 
     # Relationships
     journal_entry = relationship("JournalEntry", back_populates="lines")
-    company_account = relationship("CompanyAccount")
+    company_account = relationship("CompanyAccount", back_populates="journal_entry_lines")
 
     def __repr__(self):
         return f"<JournalEntryLine(entry_id='{self.journal_entry_id}', account='{self.company_account_id}', debit={self.debit_amount}, credit={self.credit_amount})>"

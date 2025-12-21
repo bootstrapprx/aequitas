@@ -15,7 +15,7 @@ async def preprocess_onboarding_step(
     company_id: UUID,
     request: OnboardingPreprocessRequest,
     db: Session = Depends(deps.get_db),
-    current_user: Any = Depends(deps.get_current_active_user),
+    current_user: Any = Depends(deps.get_current_user),
 ) -> OnboardingPreprocessResponse:
     """
     Preprocess user input for a specific onboarding step using Dexter.
