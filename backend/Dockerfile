@@ -15,16 +15,20 @@ WORKDIR /app
 # - libffi-dev: for cffi-based packages
 # - curl: for general purpose URL transfers (e.g., health checks)
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    libpq-dev \
-    python3-dev \
-    libffi-dev \
-    curl \
+  build-essential \
+  gcc \
+  libpq-dev \
+  python3-dev \
+  libffi-dev \
+  curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip
 RUN python -m pip install --upgrade pip
+
+# Copy and install ML dependencies (cached separately)
+COPY ./requirements-ml.txt .
+RUN pip install --default-timeout=1000 --no-cache-dir -r requirements-ml.txt
 
 # Copy and install Python dependencies
 COPY ./requirements.txt .
