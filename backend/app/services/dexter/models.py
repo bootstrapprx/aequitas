@@ -27,3 +27,17 @@ class AccountSuggestion(BaseModel):
     account_name: str
     confidence: float
     reasoning: str
+
+class OnboardingPreprocessRequest(BaseModel):
+    step: str
+    field: str
+    user_input: str
+    context: Optional[Dict[str, Any]] = None
+
+class OnboardingPreprocessResponse(BaseModel):
+    suggested_value: str
+    confidence: float
+    correction_type: Optional[str] = None
+    explanation: Optional[str] = None
+    requires_confirmation: bool
+

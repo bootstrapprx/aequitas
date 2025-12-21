@@ -45,6 +45,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { api } from '@/lib/api';
+import { useDexter } from '@/contexts/DexterContext';
 
 interface Step1CompanyDetailsProps {
   companyId: string;
@@ -103,6 +104,7 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isNameUnlocked, setIsNameUnlocked] = useState(false);
+  const { analyzeInput } = useDexter();
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<CompanyDetailsForm>({
     defaultValues: {
@@ -224,7 +226,10 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                   id="name"
                   {...register('name', {
                     required: 'Legal name is required',
-                    minLength: { value: 2, message: 'Name must be at least 2 characters' }
+                    minLength: { value: 2, message: 'Name must be at least 2 characters' },
+                    onBlur: (e) => {
+                      analyzeInput(companyId, 'company_details', 'name', e.target.value);
+                    }
                   })}
                   placeholder="Acme Corporation Inc."
                   readOnly={!!status?.company_name && !isNameUnlocked}

@@ -46,6 +46,9 @@ import Step6AccountReview from './steps/Step4AccountReview'; // Alias
 import Step7FiscalPeriods from './steps/Step5FiscalPeriods'; // Alias
 import Step8Activation from './steps/Step6Activation'; // Alias
 import StepCompletion from './steps/StepCompletion';
+import { DexterSidebar } from '@/components/dexter/DexterSidebar';
+import { DexterProvider } from '@/contexts/DexterContext';
+
 
 // Types
 interface OnboardingStatus {
@@ -81,6 +84,20 @@ const STEP_TITLES = [
   'Activate',
   'Complete'
 ];
+
+const STEP_KEYS = [
+  'welcome',
+  'company_details',
+  'company_type',
+  'template_selection',
+  'modules',
+  'scope',
+  'account_review',
+  'fiscal_periods',
+  'activation',
+  'completion'
+];
+
 
 const OnboardingWizard: React.FC = () => {
   const { companyId } = useParams<{ companyId: string }>();
@@ -221,150 +238,165 @@ const OnboardingWizard: React.FC = () => {
   const progress = ((currentStep + 1) / 10) * 100;
 
   return (
-    <div className="relative min-h-screen bg-background text-foreground transition-colors duration-300">
-      <div className="fixed top-6 right-6 z-[100] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-full p-2 shadow-lg border border-stone-200 dark:border-slate-700">
-        <ThemeToggle />
-      </div>
-      <PageHeader
-        title="Company Onboarding"
-        subtitle={`Set up accounting for ${status?.company_name || 'your company'}`}
-        icon={Feather}
-      />
+    <DexterProvider>
+      <div className="relative min-h-screen bg-background text-foreground transition-colors duration-300">
+        <div className="fixed top-6 right-6 z-[100] bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-full p-2 shadow-lg border border-stone-200 dark:border-slate-700">
+          <ThemeToggle />
+        </div>
+        <PageHeader
+          title="Company Onboarding"
+          subtitle={`Set up accounting for ${status?.company_name || 'your company'}`}
+          icon={Feather}
+        />
 
-      <div className="max-w-6xl mx-auto px-10 py-6">
-        <div className="mb-8">
-          <Progress value={progress} className="h-2 mb-4" />
-          <div className="flex justify-between items-start">
-            {STEP_TITLES.map((title, index) => {
-              // Map index to status flag
-              let isComplete = false;
-              if (status) {
-                if (index === 0) isComplete = status.step_0_welcome_seen;
-                if (index === 1) isComplete = status.step_1_company_details_complete;
-                if (index === 2) isComplete = status.step_2_company_type_complete;
-                if (index === 3) isComplete = status.step_3_template_selected;
-                if (index === 4) isComplete = status.step_4_modules_complete;
-                if (index === 5) isComplete = status.step_5_scope_complete;
-                if (index === 6) isComplete = status.step_6_account_review_complete;
-                if (index === 7) isComplete = status.step_7_fiscal_periods_complete;
-                if (index === 8) isComplete = status.step_8_activated;
-                if (index === 9) isComplete = status.step_8_activated;
-              }
+        <div className="flex flex-1 h-[calc(100vh-80px)] overflow-hidden">
+          <main className="flex-1 overflow-y-auto">
+            <div className="max-w-5xl mx-auto px-10 py-6">
 
-              const isCurrent = index === currentStep;
-              // Clickable logic: Can execute if <= currentStep AND not blocked by irreversibility
-              const isClickable = index <= currentStep &&
-                !(status?.onboarding_status === 'CHART_READY' && index < 3) &&
-                !(status?.step_8_activated && index < 9);
+              <div className="mb-8">
+                <Progress value={progress} className="h-2 mb-4" />
+                <div className="flex justify-between items-start">
+                  {STEP_TITLES.map((title, index) => {
+                    // Map index to status flag
+                    let isComplete = false;
+                    if (status) {
+                      if (index === 0) isComplete = status.step_0_welcome_seen;
+                      if (index === 1) isComplete = status.step_1_company_details_complete;
+                      if (index === 2) isComplete = status.step_2_company_type_complete;
+                      if (index === 3) isComplete = status.step_3_template_selected;
+                      if (index === 4) isComplete = status.step_4_modules_complete;
+                      if (index === 5) isComplete = status.step_5_scope_complete;
+                      if (index === 6) isComplete = status.step_6_account_review_complete;
+                      if (index === 7) isComplete = status.step_7_fiscal_periods_complete;
+                      if (index === 8) isComplete = status.step_8_activated;
+                      if (index === 9) isComplete = status.step_8_activated;
+                    }
 
-              return (
-                <div
-                  key={index}
-                  className={`flex flex-col items-center flex-1 ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                  onClick={() => isClickable && handleStepClick(index)}
-                >
-                  <div className={`
+                    const isCurrent = index === currentStep;
+                    // Clickable logic: Can execute if <= currentStep AND not blocked by irreversibility
+                    const isClickable = index <= currentStep &&
+                      !(status?.onboarding_status === 'CHART_READY' && index < 3) &&
+                      !(status?.step_8_activated && index < 9);
+
+                    return (
+                      <div
+                        key={index}
+                        className={`flex flex-col items-center flex-1 ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                        onClick={() => isClickable && handleStepClick(index)}
+                      >
+                        <div className={`
                     flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all
                     ${isComplete ? 'bg-emerald-600 text-white' : ''}
                     ${isCurrent && !isComplete ? 'bg-amber-500 text-white ring-4 ring-amber-200 dark:ring-amber-900' : ''}
                     ${!isComplete && !isCurrent ? 'bg-gray-200 text-gray-400 dark:bg-slate-800 dark:text-gray-500' : ''}
                   `}>
-                    {isComplete ? (
-                      <CheckCircle2 className="h-5 w-5" />
-                    ) : (
-                      <Circle className="h-5 w-5" />
-                    )}
-                  </div>
-                  <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                    {title}
-                  </span>
+                          {isComplete ? (
+                            <CheckCircle2 className="h-5 w-5" />
+                          ) : (
+                            <Circle className="h-5 w-5" />
+                          )}
+                        </div>
+                        <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                          {title}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
 
-        <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl p-8 mb-6 transition-all duration-300">
-          {currentStep === 0 && <Step0Welcome onNext={handleNext} status={status} />}
-          {currentStep === 1 && (
-            <Step1CompanyDetails
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 2 && (
-            <Step2CompanyType
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 3 && (
-            <Step3TemplateSelection
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 4 && (
-            <Step4ModuleSelection
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 5 && (
-            <Step5OrganizationScope
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 6 && (
-            <Step6AccountReview
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 7 && (
-            <Step7FiscalPeriods
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 8 && (
-            <Step8Activation
-              companyId={companyId!}
-              onNext={handleNext}
-              onBack={handleBack}
-              status={status}
-            />
-          )}
-          {currentStep === 9 && <StepCompletion companyId={companyId!} status={status} />}
-        </div>
+              <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl p-8 mb-6 transition-all duration-300">
+                {currentStep === 0 && <Step0Welcome onNext={handleNext} status={status} />}
+                {currentStep === 1 && (
+                  <Step1CompanyDetails
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 2 && (
+                  <Step2CompanyType
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 3 && (
+                  <Step3TemplateSelection
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 4 && (
+                  <Step4ModuleSelection
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 5 && (
+                  <Step5OrganizationScope
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 6 && (
+                  <Step6AccountReview
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 7 && (
+                  <Step7FiscalPeriods
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 8 && (
+                  <Step8Activation
+                    companyId={companyId!}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    status={status}
+                  />
+                )}
+                {currentStep === 9 && <StepCompletion companyId={companyId!} status={status} />}
+              </div>
 
-        {/* Save & Exit */}
-        {currentStep < 6 && (
-          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            <p>Your progress is automatically saved. You can exit and resume anytime.</p>
-            <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="mt-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
-              Save & Logout
-            </Button>
-          </div>
-        )}
+              {/* Save & Exit */}
+              {currentStep < 6 && (
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  <p>Your progress is automatically saved. You can exit and resume anytime.</p>
+                  <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="mt-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+                    Save & Logout
+                  </Button>
+                </div>
+              )}
+            </div>
+          </main>
+
+          <aside className="hidden xl:block w-80 h-full border-l bg-muted/10">
+            <DexterSidebar
+              step={STEP_KEYS[currentStep]}
+              context={{ companyId }}
+            />
+          </aside>
+        </div>
       </div>
-    </div>
+    </DexterProvider>
   );
 };
+
 
 export default OnboardingWizard;

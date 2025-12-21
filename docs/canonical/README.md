@@ -28,7 +28,85 @@ The documents in this folder are **authoritative contracts** that govern the beh
 
 ## Canonical Documents
 
-### 1. [DATA_DICTIONARY.md](DATA_DICTIONARY.md)
+### 1. [DEXTER_CANON.md](DEXTER_CANON.md)
+
+**Purpose:** Dexter AI identity, authority, tone, and behavioral rules
+
+**Authority:** Dexter architecture and OCD rules
+
+**Contents:**
+- Dexter's identity and purpose
+- Authority hierarchy and boundaries
+- The Seven OCD Rules (tone, voice, intervention principles)
+- Canonical phrases (corrections, warnings, reassurances)
+- Dexter Intervention Matrix (when to speak/correct/warn)
+- Technical integration contracts
+- Governance and testing standards
+
+**When to consult:**
+- Implementing Dexter onboarding mode
+- Designing Dexter prompts or responses
+- Building preprocessing/normalization logic
+- Ensuring tone consistency
+- Understanding when Dexter intervenes vs. stays silent
+
+**Key principle:** Dexter suggests, never commits. Form is corrected, meaning is sacred.
+
+---
+
+### 2. [ONBOARDING_CANON.md](ONBOARDING_CANON.md)
+
+**Purpose:** Onboarding as deterministic state machine with narrative layer
+
+**Authority:** Phase 5 onboarding architecture
+
+**Contents:**
+- State machine (DRAFT → TEMPLATE_SELECTED → CHART_READY → CHART_FINALIZED → ACTIVE)
+- Step-by-step Dexter behavior and scripts
+- Field Classification Matrix (EDITABLE / STRUCTURAL / IRREVERSIBLE / ACCOUNTING-CRITICAL)
+- Session management and locking rules
+- Error handling standards
+- Audit trail requirements
+- Testing and acceptance criteria
+
+**When to consult:**
+- Implementing onboarding wizard backend
+- Designing onboarding UI flows
+- Understanding field mutability rules
+- Building Dexter onboarding integration
+- Validating state transitions
+
+**Key principle:** Logic is never conversational. Conversation is never authoritative.
+
+---
+
+### 3. [NORMALIZATION_CANON.md](NORMALIZATION_CANON.md)
+
+**Purpose:** Capitalization, formatting, and normalization rules
+
+**Authority:** Data standardization requirements
+
+**Contents:**
+- Capitalization rules (company names, legal suffixes, user names)
+- Geographic/jurisdictional normalization (country codes, currencies, timezones)
+- Economic activity classification taxonomy
+- Whitespace and special character handling
+- Audit trail for all normalizations
+- Confidence scoring and thresholds
+- Internationalization standards
+
+**When to consult:**
+- Building normalization service
+- Implementing Dexter preprocessing
+- Validating user input formats
+- Understanding when to suggest vs. enforce
+- Ensuring audit trail compliance
+
+**Key principle:** Form is standardized. Meaning is sacred. Every correction is announced.
+
+---
+
+### 4. [DATA_DICTIONARY.md](DATA_DICTIONARY.md)
 
 **Purpose:** Database schema reference (Phase 1-2)
 
@@ -244,10 +322,14 @@ These contracts exist to ensure:
 
 | Document | Version | Last Updated | Status |
 |----------|---------|--------------|--------|
+| DEXTER_CANON.md | 1.1 | 2025-12-20 | Frozen |
+| ONBOARDING_CANON.md | 1.1 | 2025-12-20 | Frozen |
+| NORMALIZATION_CANON.md | 1.0 | 2025-12-20 | Frozen |
 | DATA_DICTIONARY.md | 1.0 | 2025-12-14 | Canonical |
 | API_BOUNDARIES.md | 1.0 | 2025-12-16 | Frozen |
 | PHASE_3C1_DTO_SPECIFICATION.md | 1.0 | 2025-12-16 | Canonical |
 | PHASE_3C2_WRITE_APIS.md | 1.0 | 2025-12-16 | Canonical |
+| PHASE_5_ONBOARDING_GUIDE.md | 1.0 | 2025-12-14 | Canonical |
 
 ---
 

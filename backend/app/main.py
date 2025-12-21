@@ -30,6 +30,7 @@ from app.api.v1 import (
     upload,
     users,
     users_management,
+    dexter_onboarding,
 )
 from app.core.startup import startup_checks
 from app.db.base import Base
@@ -152,6 +153,7 @@ app.include_router(mappings.router, prefix="/api/v1/mappings", tags=["Mappings"]
 
 # Phase 5 - Onboarding router
 app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
+app.include_router(dexter_onboarding.router, prefix="/api/v1", tags=["Dexter Onboarding"])
 
 # Fiscal Engine router
 app.include_router(fiscal.router, prefix="/api/v1/fiscal", tags=["Fiscal Engine"])

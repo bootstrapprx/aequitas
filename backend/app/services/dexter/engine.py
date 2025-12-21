@@ -3,8 +3,12 @@ import re
 from typing import Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
-from .models import ChatRequest, ChatResponse, IngestRequest, SuggestionRequest, AccountSuggestion
+from .models import (
+    ChatRequest, ChatResponse, IngestRequest, SuggestionRequest, AccountSuggestion,
+    OnboardingPreprocessRequest, OnboardingPreprocessResponse
+)
 from .fiscal_adapter import FiscalAdapter
+from app.services.normalization_service import normalization_service
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +230,79 @@ Response (JSON only):"""
                     confidence=0.0,
                     reasoning="Failed to parse AI response"
                 )
+
+    async def preprocess_onboarding(self, request: OnboardingPreprocessRequest) -> OnboardingPreprocessResponse:
+        """
+        Active Mode: Preprocess user input during onboarding.
+        Delegates to NormalizationService for deterministic checks.
+        """
+        logger.info(f"Dexter Preprocess Request: {request.field}='{request.user_input}' (Step: {request.step})")
+        
+        # 1. Company Name Normalization
+        if request.field == "name" or request.field == "company_name":
+            normalized, confidence, changes = normalization_service.normalize_company_name(request.user_input)
+            
+            if normalized != request.user_input:
+                explanation = "I've standardized the capitalization for consistency."
+                if any("suffix" in c for c in changes):
+                    explanation += " I also updated the legal suffix."
+                
+                return OnboardingPreprocessResponse(
+                    suggested_value=normalized,
+                    confidence=confidence,
+                    correction_type="capitalization",
+                    explanation=explanation,
+                    requires_confirmation=True
+                )
+        
+        # 2. Country Code Normalization
+        elif request.field == "country":
+            res = normalization_service.normalize_country_code(request.user_input)
+            if res:
+                code, confidence = res
+                if code != request.user_input:
+                    return OnboardingPreprocessResponse(
+                        suggested_value=code,
+                        confidence=confidence,
+                        correction_type="standardization",
+                        explanation=f"I've set the country code to {code}.",
+                        requires_confirmation=True
+                    )
+
+        # 3. Currency Code Normalization
+        elif request.field == "currency":
+             res = normalization_service.normalize_currency_code(request.user_input)
+             if res:
+                code, confidence = res
+                if code != request.user_input:
+                    return OnboardingPreprocessResponse(
+                        suggested_value=code,
+                        confidence=confidence,
+                        correction_type="standardization",
+                        explanation=f"I've set the currency code to {code}.",
+                        requires_confirmation=True
+                    )
+
+        # 4. Economic Activity (Heuristic/AI)
+        elif request.field == "description" and request.step == "company_details":
+            # Implementation of NLP classification
+            matches = normalization_service.classify_economic_activity(request.user_input)
+            if matches:
+                 top_cat, conf = matches[0]
+                 return OnboardingPreprocessResponse(
+                     suggested_value=top_cat,
+                     confidence=conf,
+                     correction_type="classification",
+                     explanation=f"Based on your description, I suggest classifying this as {top_cat}.",
+                     requires_confirmation=True
+                 )
+
+        # Default: No suggestion
+        return OnboardingPreprocessResponse(
+            suggested_value=request.user_input,
+            confidence=1.0,
+            requires_confirmation=False
+        )
 
 # Global instance
 dexter_engine = DexterEngine()

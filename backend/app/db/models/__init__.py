@@ -43,6 +43,9 @@ from .tax_fact import TaxFact
 from .tax_adjustment import TaxAdjustment
 from .tax_position import TaxPosition
 
+# Dexter Audit models
+from .dexter_audit import NormalizationAudit, OnboardingCorrection
+
 # Centralized enums (aligned with PostgreSQL enum types)
 from .enums import (
     AccountType,
@@ -90,6 +93,9 @@ __all__ = [
     "TaxFact",
     "TaxAdjustment",
     "TaxPosition",
+    # Dexter Audit models
+    "NormalizationAudit",
+    "OnboardingCorrection",
     # Enums
     "AccountType",
     "NormalBalance",
