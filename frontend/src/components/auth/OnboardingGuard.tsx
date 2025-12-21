@@ -24,11 +24,11 @@ interface OnboardingGuardProps {
 const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedCompany, selectedCompanyId, companies, isLoadingCompanies } = useCompany();
+  const { selectedCompany, selectedCompanyId, companies, isLoadingCompanies, isInitialized } = useCompany();
 
   useEffect(() => {
-    // Don't redirect while loading companies
-    if (isLoadingCompanies) {
+    // Don't redirect while loading companies or initializing
+    if (isLoadingCompanies || !isInitialized) {
       return;
     }
 
@@ -82,7 +82,7 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
   ]);
 
   // Show loading state while determining route
-  if (isLoadingCompanies) {
+  if (isLoadingCompanies || !isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">

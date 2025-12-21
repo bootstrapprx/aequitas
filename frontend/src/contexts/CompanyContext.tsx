@@ -9,6 +9,7 @@ interface CompanyContextType {
   selectedCompany: Company | null;
   companies: Company[];
   isLoadingCompanies: boolean;
+  isInitialized: boolean;
   setSelectedCompanyId: (companyId: string | null) => void;
   refreshCompanies: () => Promise<void>;
 }
@@ -24,11 +25,13 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Fetch companies when authenticated
   const fetchCompanies = async () => {
     if (!isAuthenticated || !companyIds || companyIds.length === 0) {
       setCompanies([]);
+      setIsInitialized(true);
       return;
     }
 
@@ -53,6 +56,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
       setCompanies([]);
     } finally {
       setIsLoadingCompanies(false);
+      setIsInitialized(true);
     }
   };
 
@@ -134,6 +138,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
     selectedCompany,
     companies,
     isLoadingCompanies,
+    isInitialized,
     setSelectedCompanyId,
     refreshCompanies: fetchCompanies,
   };
