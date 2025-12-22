@@ -5,7 +5,7 @@ All Council Member actions, user creations, permission changes,
 and security events are logged for compliance and security auditing.
 """
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any, Dict
 from uuid import UUID
 import logging
@@ -77,7 +77,7 @@ class AuditService:
         safe_payload = self._sanitize_payload(payload or {})
 
         audit_log = AuditLog(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             user_id=str(user_id) if user_id else None,
             action=action,
             entity_type=entity_type,

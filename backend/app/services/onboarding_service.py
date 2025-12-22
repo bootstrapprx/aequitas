@@ -172,7 +172,7 @@ def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> boo
 
     # Check existing lock
     if company.onboarding_session_lock:
-        lock_age = datetime.utcnow() - company.onboarding_session_locked_at
+        lock_age = datetime.now(timezone.utc) - company.onboarding_session_locked_at
         if lock_age < timedelta(minutes=SESSION_LOCK_TIMEOUT_MINUTES):
             # Lock is still valid
             if company.onboarding_session_lock != session_id:
@@ -180,7 +180,7 @@ def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> boo
 
     # Acquire or renew lock
     company.onboarding_session_lock = session_id
-    company.onboarding_session_locked_at = datetime.utcnow()
+    company.onboarding_session_locked_at = datetime.now(timezone.utc)
     db.commit()
     return True
 

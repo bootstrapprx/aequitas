@@ -12,7 +12,7 @@ SECURITY:
 """
 import secrets
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple, Dict, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -153,8 +153,8 @@ class OAuthService:
             # Existing OAuth user - update tokens and login
             oauth_account.access_token = access_token
             oauth_account.refresh_token = refresh_token
-            oauth_account.expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-            oauth_account.last_login_at = datetime.utcnow()
+            oauth_account.expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+            oauth_account.last_login_at = datetime.now(timezone.utc)
             self.db.commit()
 
             user = oauth_account.user
@@ -181,7 +181,7 @@ class OAuthService:
 
             return "link_required", {
                 "link_token": link_token,
-                "link_token_expires_at": datetime.utcnow() + timedelta(minutes=15),
+                "link_token_expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
                 "provider_email": claims.email,
                 "existing_user_email": existing_user.email,
             }
@@ -205,7 +205,7 @@ class OAuthService:
             email_verified=claims.email_verified,
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
             profile_picture_url=claims.picture,
             raw_claims={
                 "sub": claims.sub,
@@ -213,7 +213,7 @@ class OAuthService:
                 "name": claims.name,
                 "picture": claims.picture,
             },
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.now(timezone.utc)
         )
         self.db.add(new_oauth_account)
         self.db.commit()
@@ -300,7 +300,7 @@ class OAuthService:
             provider_account_id=provider_account_id,
             email_at_provider=email,
             email_verified=True,  # Already verified by provider
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.now(timezone.utc)
         )
         self.db.add(oauth_account)
         self.db.commit()
@@ -437,8 +437,8 @@ class OAuthService:
             # Existing OAuth user - update tokens and login
             oauth_account.access_token = access_token
             oauth_account.refresh_token = refresh_token
-            oauth_account.expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-            oauth_account.last_login_at = datetime.utcnow()
+            oauth_account.expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+            oauth_account.last_login_at = datetime.now(timezone.utc)
             self.db.commit()
 
             user = oauth_account.user
@@ -465,7 +465,7 @@ class OAuthService:
 
             return "link_required", {
                 "link_token": link_token,
-                "link_token_expires_at": datetime.utcnow() + timedelta(minutes=15),
+                "link_token_expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
                 "provider_email": email,
                 "existing_user_email": existing_user.email,
             }
@@ -489,14 +489,14 @@ class OAuthService:
             email_verified=True,  # Microsoft verifies emails
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
             raw_claims={
                 "sub": provider_account_id,
                 "email": email,
                 "name": claims.get("name"),
                 "tid": tenant_id,
             },
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.now(timezone.utc)
         )
         self.db.add(new_oauth_account)
         self.db.commit()
@@ -627,8 +627,8 @@ class OAuthService:
             # Existing OAuth user - update tokens and login
             oauth_account.access_token = access_token
             oauth_account.refresh_token = refresh_token
-            oauth_account.expires_at = datetime.utcnow() + timedelta(seconds=expires_in)
-            oauth_account.last_login_at = datetime.utcnow()
+            oauth_account.expires_at = datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+            oauth_account.last_login_at = datetime.now(timezone.utc)
             self.db.commit()
 
             user = oauth_account.user
@@ -662,7 +662,7 @@ class OAuthService:
 
             return "link_required", {
                 "link_token": link_token,
-                "link_token_expires_at": datetime.utcnow() + timedelta(minutes=15),
+                "link_token_expires_at": datetime.now(timezone.utc) + timedelta(minutes=15),
                 "provider_email": email,
                 "existing_user_email": existing_user.email,
             }
@@ -694,14 +694,14 @@ class OAuthService:
             email_verified=True,  # Apple verifies emails
             access_token=access_token,
             refresh_token=refresh_token,
-            expires_at=datetime.utcnow() + timedelta(seconds=expires_in),
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=expires_in),
             raw_claims={
                 "sub": provider_account_id,
                 "email": email,
                 "name": name,
                 "is_private_email": claims.get("is_private_email"),
             },
-            last_login_at=datetime.utcnow()
+            last_login_at=datetime.now(timezone.utc)
         )
         self.db.add(new_oauth_account)
         self.db.commit()
@@ -725,7 +725,7 @@ class OAuthService:
         random_state = secrets.token_urlsafe(32)
         payload = {
             "state": random_state,
-            "exp": datetime.utcnow() + timedelta(minutes=10)
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
         }
         signed = jwt.encode(payload, settings.OAUTH_STATE_SECRET_KEY, algorithm="HS256")
         return signed
@@ -817,7 +817,7 @@ class OAuthService:
             "email": email,
             "provider": provider,
             "purpose": "link",
-            "exp": datetime.utcnow() + timedelta(minutes=15)
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
         }
         return jwt.encode(payload, settings.OAUTH_STATE_SECRET_KEY, algorithm="HS256")
 
