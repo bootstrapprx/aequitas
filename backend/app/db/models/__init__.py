@@ -46,6 +46,9 @@ from .tax_position import TaxPosition
 # Dexter Audit models
 from .dexter_audit import NormalizationAudit, OnboardingCorrection
 
+# Idempotency models
+from .idempotency_key import IdempotencyKey, IdempotencyStatus
+
 # Centralized enums (aligned with PostgreSQL enum types)
 from .enums import (
     AccountType,
@@ -96,6 +99,9 @@ __all__ = [
     # Dexter Audit models
     "NormalizationAudit",
     "OnboardingCorrection",
+    # Idempotency
+    "IdempotencyKey",
+    "IdempotencyStatus",
     # Enums
     "AccountType",
     "NormalBalance",
@@ -106,4 +112,3 @@ __all__ = [
     "PeriodType",
     "MasterAccountType",
 ]
-

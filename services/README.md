@@ -10,10 +10,10 @@ Each service should be in its own subdirectory. For example:
 
 ```
 /services
-|--/my_cpp_service
-|  |-- main.cpp
-|--/my_go_service
+|--/example_go_service
 |  |-- main.go
+|--/example_rust_service
+|  |-- main.rs
 ```
 
 ## Makefile Integration

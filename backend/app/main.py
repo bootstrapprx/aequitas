@@ -1,6 +1,8 @@
+import logging
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app.api.v1 import (
@@ -39,6 +41,14 @@ from app.db.session import SessionLocal, engine
 from app.services.code_generator import router as code_generator_router
 from app.services.dexter.router import router as dexter_router
 from app.services.organizer_ai.router import router as organizer_router
+from app.core.errors import (
+    AequitasError,
+    http_exception_to_aequitas_error,
+    make_error_envelope,
+)
+from app.core.logging_config import configure_logging
+from app.core.middleware.request_ids import RequestIdMiddleware
+from app.core.request_context import ensure_request_ids
 
 # 1. Application Initialization Order: FastAPI app is created at the very top.
 app = FastAPI(
@@ -46,6 +56,7 @@ app = FastAPI(
     description="Backend for Aequitas - Integrated Accounting System.",
     version="1.0.0",
 )
+configure_logging()
 
 # 2. Harden CORS Configuration: CORSMiddleware is attached immediately after.
 # Dev-safe origins
@@ -68,6 +79,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RequestIdMiddleware)
+logger = logging.getLogger(__name__)
+
+
+def _trace_headers():
+    request_id, correlation_id = ensure_request_ids()
+    return {
+        "X-Aequitas-Request-Id": request_id,
+        "X-Aequitas-Correlation-Id": correlation_id,
+    }
+
 
 # 3. DB initialization, startup checks, and side effects are moved into a startup handler.
 @app.on_event("startup")
@@ -161,3 +184,29 @@ app.include_router(fiscal.router, prefix="/api/v1/fiscal", tags=["Fiscal Engine"
 @app.get("/health", tags=["Health"])
 def health_check():
     return {"status": "ok"}
+
+
+@app.exception_handler(AequitasError)
+async def handle_aequitas_error(request: Request, exc: AequitasError):
+    envelope = make_error_envelope(exc.code, exc.message, details=exc.details)
+    return JSONResponse(status_code=exc.http_status, content=envelope, headers=_trace_headers())
+
+
+@app.exception_handler(HTTPException)
+async def handle_http_exception(request: Request, exc: HTTPException):
+    canonical_exc = http_exception_to_aequitas_error(exc)
+    envelope = make_error_envelope(
+        canonical_exc.code, canonical_exc.message, details=canonical_exc.details
+    )
+    return JSONResponse(status_code=canonical_exc.http_status, content=envelope, headers=_trace_headers())
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_exception(request: Request, exc: Exception):
+    logger.exception("Unhandled exception", exc_info=exc)
+    envelope = make_error_envelope(
+        "AEQ_INTERNAL_SERVER_ERROR",
+        "An unexpected error occurred.",
+        details={"error": str(exc)},
+    )
+    return JSONResponse(status_code=500, content=envelope, headers=_trace_headers())
