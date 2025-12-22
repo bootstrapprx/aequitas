@@ -21,6 +21,7 @@ class AccountMapping(Base):
     # Storing the master_code directly as requested, for simplicity.
     # For higher normalization, this could be a ForeignKey to master_accounts.id
     master_code = Column(String, index=True, nullable=True)
+    master_account_id = Column(UUID(as_uuid=True), ForeignKey("master_accounts.id"), nullable=True, index=True)
     
     confidence = Column(Float, nullable=False)
     # Status can be 'suggested', 'confirmed', 'rejected', 'manual_review' or AUTO_MAPPED/NEEDS_REVIEW/UNMAPPED for staging pipeline
@@ -30,6 +31,11 @@ class AccountMapping(Base):
     notes = Column(String, nullable=True)
     decision_reason = Column(Text, nullable=True)
     source = Column(String, nullable=False, default="quickbooks")
+
+    decision_status = Column(String, nullable=False, default="PENDING", index=True, comment="PENDING|ACCEPTED|OVERRIDDEN|REJECTED")
+    decided_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    previous_master_account_id = Column(UUID(as_uuid=True), ForeignKey("master_accounts.id"), nullable=True)
 
     # For group propagation: tracks the source company if this mapping was propagated
     propagated_from = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=True)

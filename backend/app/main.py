@@ -37,6 +37,7 @@ from app.api.v1 import (
 )
 from app.api.v1.integrations import staging as integrations_staging
 from app.api.v1.integrations import mappings as integrations_mappings
+from app.api.v1.integrations import mapping_review as integrations_mapping_review
 from app.core.startup import startup_checks
 from app.db.base import Base
 from app.db.init_db import init_db
@@ -182,6 +183,7 @@ app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
 app.include_router(dexter_onboarding.router, prefix="/api/v1", tags=["Dexter Onboarding"])
 app.include_router(integrations_staging.router, prefix="/api/v1/integrations")
 app.include_router(integrations_mappings.router, prefix="/api/v1/integrations")
+app.include_router(integrations_mapping_review.router, prefix="/api/v1/integrations")
 
 # Fiscal Engine router
 app.include_router(fiscal.router, prefix="/api/v1/fiscal", tags=["Fiscal Engine"])

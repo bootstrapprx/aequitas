@@ -97,11 +97,13 @@ class MappingEngineV1:
             company_account_id=company_account_id,
             staging_account_id=staging_id,
             master_code=decision.master_account.code if decision.master_account else None,
+            master_account_id=decision.master_account.id if decision.master_account else None,
             confidence=decision.confidence,
             status=decision.status,
             mapping_status=decision.status,
             decision_reason=decision.reason,
             source="quickbooks",
+            decision_status="PENDING",
         )
         self.db.add(mapping)
         self.db.commit()

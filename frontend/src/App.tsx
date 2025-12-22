@@ -38,6 +38,7 @@ import MasterChartExportPage from "./components/integrations/masterchart/MasterC
 import Mappings from "./pages/Mappings";
 import OrganizerPage from "./pages/organizer/OrganizerPage";
 import OrganizerReviewPage from "./pages/organizer/OrganizerReviewPage";
+import MappingReviewPage from "./pages/integrations/MappingReviewPage";
 
 // Accountancy Module
 import DailyLedgerPage from "./pages/accountancy/ledger/DailyLedgerPage";
@@ -178,6 +179,7 @@ const App = () => (
                   <Route path="chartofaccounts/export" element={<MasterChartExportPage />} />
                   <Route path="chartofaccounts/organizer" element={<OrganizerPage />} />
                   <Route path="chartofaccounts/organizer/review" element={<OrganizerReviewPage />} />
+                  <Route path="integrations/mapping-review" element={<MappingReviewPage />} />
 
                   {/* Legacy ChartForge Routes (redirect to new paths) */}
                   <Route path="chartforge/masterchart" element={<CompanyChartPage />} />
