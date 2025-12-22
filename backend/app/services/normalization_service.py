@@ -225,3 +225,55 @@ class NormalizationService:
         return sorted(matches, key=lambda x: x[1], reverse=True)
 
 normalization_service = NormalizationService()
+
+
+class QBOAccountNormalizationService:
+    """
+    Deterministic normalization for staging QBO accounts.
+
+    Scope:
+    - Trim/standardize strings
+    - Canonicalize account type/subtype into coarse categories
+    - Do NOT infer accounting semantics beyond simple category mapping
+    """
+
+    TYPE_MAP = {
+        "asset": "ASSET",
+        "liability": "LIABILITY",
+        "equity": "EQUITY",
+        "income": "REVENUE",
+        "revenue": "REVENUE",
+        "expense": "EXPENSE",
+        "cogs": "COGS",
+    }
+
+    def normalize_account(self, staging_row) -> Dict[str, Any]:
+        """
+        Normalize a staging row into a neutral payload.
+        """
+        name = (staging_row.name or "").strip()
+        account_type = (staging_row.account_type or "").strip()
+        account_subtype = (staging_row.account_subtype or "").strip()
+        currency = (staging_row.currency or "").strip().upper() or "USD"
+
+        canonical_category = self._map_category(account_type, account_subtype)
+
+        normalized = {
+            "source_account_id": staging_row.source_account_id,
+            "name": name,
+            "account_type": account_type,
+            "account_subtype": account_subtype,
+            "canonical_category": canonical_category,
+            "active": bool(staging_row.active),
+            "currency": currency,
+        }
+        return normalized
+
+    def _map_category(self, account_type: str, account_subtype: str) -> Optional[str]:
+        lowered = account_type.lower()
+        subtype_lower = account_subtype.lower()
+
+        for key, value in self.TYPE_MAP.items():
+            if key in lowered or key in subtype_lower:
+                return value
+        return None

@@ -49,6 +49,9 @@ from .dexter_audit import NormalizationAudit, OnboardingCorrection
 # Idempotency models
 from .idempotency_key import IdempotencyKey, IdempotencyStatus
 
+# Staging models (Phase 1.5: Operational Extraction)
+from .staging_qbo_account import StagingQBOAccount
+
 # Centralized enums (aligned with PostgreSQL enum types)
 from .enums import (
     AccountType,
@@ -102,6 +105,8 @@ __all__ = [
     # Idempotency
     "IdempotencyKey",
     "IdempotencyStatus",
+    # Staging models
+    "StagingQBOAccount",
     # Enums
     "AccountType",
     "NormalBalance",

@@ -16,6 +16,7 @@ from app.api.v1 import (
     elevation,
     fiscal,
     groups,
+    integration_jobs,
     invitations,
     journal_entries,
     mappings,
@@ -34,6 +35,8 @@ from app.api.v1 import (
     users_management,
     dexter_onboarding,
 )
+from app.api.v1.integrations import staging as integrations_staging
+from app.api.v1.integrations import mappings as integrations_mappings
 from app.core.startup import startup_checks
 from app.db.base import Base
 from app.db.init_db import init_db
@@ -177,9 +180,14 @@ app.include_router(mappings.router, prefix="/api/v1/mappings", tags=["Mappings"]
 # Phase 5 - Onboarding router
 app.include_router(onboarding.router, prefix="/api/v1", tags=["Onboarding"])
 app.include_router(dexter_onboarding.router, prefix="/api/v1", tags=["Dexter Onboarding"])
+app.include_router(integrations_staging.router, prefix="/api/v1/integrations")
+app.include_router(integrations_mappings.router, prefix="/api/v1/integrations")
 
 # Fiscal Engine router
 app.include_router(fiscal.router, prefix="/api/v1/fiscal", tags=["Fiscal Engine"])
+
+# Integration Jobs router (Phase 1.5: Operational Extraction)
+app.include_router(integration_jobs.router, prefix="/api/v1/integrations", tags=["Integration Jobs"])
 
 @app.get("/health", tags=["Health"])
 def health_check():

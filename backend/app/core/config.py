@@ -84,7 +84,10 @@ class Settings(BaseSettings):
     CODE_SEGMENT_PAD: str = "0"
     CODE_SEPARATOR: str = "."
     CODE_MAX_LEVEL: int = 5
-    
+
+    # --- Integration Worker Service (Go) ---
+    AEQUITAS_WORKER_URL: str = "http://localhost:8080"  # Go worker service URL
+
     # Pydantic-Settings configuration
     model_config = SettingsConfigDict(
         env_file=env_file,
@@ -147,3 +150,11 @@ class Settings(BaseSettings):
 
 # Instantiate the settings object
 settings = Settings()
+
+
+def get_settings() -> Settings:
+    """
+    FastAPI dependency to inject settings.
+    Returns the global settings instance.
+    """
+    return settings
