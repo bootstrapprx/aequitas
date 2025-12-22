@@ -104,6 +104,7 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isNameUnlocked, setIsNameUnlocked] = useState(false);
+  const [isEmailUnlocked, setIsEmailUnlocked] = useState(false);
   const { analyzeInput } = useDexter();
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<CompanyDetailsForm>({
@@ -351,7 +352,36 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
           <AtheneumCardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <div className="flex justify-between items-center mb-2">
+                  <Label htmlFor="email">Email</Label>
+                  {status?.email && !isEmailUnlocked && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="link" size="sm" className="h-auto p-0 text-emerald-600 dark:text-emerald-400">
+                          <Pencil className="w-3 h-3 mr-1" />
+                          Correct Email
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-card border-border">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-foreground">Edit Company Email?</AlertDialogTitle>
+                          <AlertDialogDescription className="text-muted-foreground">
+                            Changing the company email affects receiving important communications, invoices, and alerts.
+                            This email is bound to your organization's identity.
+                            <br /><br />
+                            Are you sure you want to proceed with this change?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel className="border-border text-foreground hover:bg-secondary">Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => setIsEmailUnlocked(true)} className="bg-emerald-700 hover:bg-emerald-800 text-white border-none">
+                            Proceed with Change
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
                 <Input
                   id="email"
                   type="email"
@@ -362,8 +392,15 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                     }
                   })}
                   placeholder="contact@acme.com"
-                  className={errors.email ? 'border-red-500' : ''}
+                  readOnly={!!status?.email && !isEmailUnlocked}
+                  className={errors.email ? 'border-red-500' : (status?.email && !isEmailUnlocked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70' : '')}
                 />
+                {!isEmailUnlocked && status?.email && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Bound to initial registration
+                  </p>
+                )}
                 {errors.email && (
                   <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>
                 )}

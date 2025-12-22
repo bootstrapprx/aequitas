@@ -1,0 +1,74 @@
+{
+  "template": {
+    "name": "US GAAP Simplified",
+    "jurisdiction": "US",
+    "version": "2025.1",
+    "description": "Simplified Chart of Accounts for small businesses, startups, and sole proprietors. Contains essential accounts for basic bookkeeping and financial reporting. Ideal for businesses with straightforward transactions.",
+    "is_active": true
+  },
+  "accounts": [
+    {
+      "code": "1.10.10.10",
+      "name": "Cash",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 1
+    },
+    {
+      "code": "1.10.20.10",
+      "name": "Accounts Receivable",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 2
+    },
+    {
+      "code": "2.10.10.10",
+      "name": "Accounts Payable",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 10
+    },
+    {
+      "code": "3.10.10.10",
+      "name": "Common Stock",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 20
+    },
+    {
+      "code": "3.10.20.10",
+      "name": "Retained Earnings",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 21
+    },
+    {
+      "code": "4.10.10.10",
+      "name": "Sales Revenue",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 30
+    },
+    {
+      "code": "5.20.10.10",
+      "name": "Salaries and Wages",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 40
+    },
+    {
+      "code": "5.20.20.10",
+      "name": "Rent Expense",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 41
+    },
+    {
+      "code": "5.30.20.10",
+      "name": "Office Supplies",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 42
+    }
+  ]
+}

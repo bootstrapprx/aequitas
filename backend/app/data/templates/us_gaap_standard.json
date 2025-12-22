@@ -1,0 +1,137 @@
+{
+  "template": {
+    "name": "US GAAP Standard",
+    "jurisdiction": "US",
+    "version": "2025.1",
+    "description": "Standard Chart of Accounts for US businesses following Generally Accepted Accounting Principles (GAAP). Includes comprehensive account structure for balance sheet and income statement reporting. Suitable for small to medium-sized businesses across various industries.",
+    "is_active": true
+  },
+  "accounts": [
+    {
+      "code": "1.10.10.10",
+      "name": "Cash",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 1
+    },
+    {
+      "code": "1.10.20.10",
+      "name": "Accounts Receivable",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 2
+    },
+    {
+      "code": "1.10.30.10",
+      "name": "Inventory",
+      "is_mandatory": false,
+      "allow_custom_children": true,
+      "sort_order": 3
+    },
+    {
+      "code": "1.10.40.10",
+      "name": "Prepaid Expenses",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 4
+    },
+    {
+      "code": "1.20.10.10",
+      "name": "Property, Plant & Equipment",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 10
+    },
+    {
+      "code": "1.20.20.10",
+      "name": "Accumulated Depreciation",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 11
+    },
+    {
+      "code": "2.10.10.10",
+      "name": "Accounts Payable",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 20
+    },
+    {
+      "code": "2.10.20.10",
+      "name": "Accrued Expenses",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 21
+    },
+    {
+      "code": "3.10.10.10",
+      "name": "Common Stock",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 40
+    },
+    {
+      "code": "3.10.20.10",
+      "name": "Retained Earnings",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 41
+    },
+    {
+      "code": "4.10.10.10",
+      "name": "Sales Revenue",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 50
+    },
+    {
+      "code": "4.10.20.10",
+      "name": "Service Revenue",
+      "is_mandatory": false,
+      "allow_custom_children": true,
+      "sort_order": 51
+    },
+    {
+      "code": "5.10.10.10",
+      "name": "Cost of Goods Sold",
+      "is_mandatory": false,
+      "allow_custom_children": true,
+      "sort_order": 60
+    },
+    {
+      "code": "5.20.10.10",
+      "name": "Salaries and Wages",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 70
+    },
+    {
+      "code": "5.20.20.10",
+      "name": "Rent Expense",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 71
+    },
+    {
+      "code": "5.20.30.10",
+      "name": "Utilities Expense",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 72
+    },
+    {
+      "code": "5.20.50.10",
+      "name": "Depreciation Expense",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 74
+    },
+    {
+      "code": "5.30.20.10",
+      "name": "Office Supplies",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 81
+    }
+  ]
+}

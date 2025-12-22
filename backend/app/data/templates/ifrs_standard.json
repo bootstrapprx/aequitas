@@ -1,0 +1,109 @@
+{
+  "template": {
+    "name": "IFRS Standard",
+    "jurisdiction": "INTL",
+    "version": "2025.1",
+    "description": "International Financial Reporting Standards (IFRS) compliant Chart of Accounts. Suitable for businesses operating in jurisdictions that follow IFRS, including the UK, EU, Australia, Canada, and many other countries.",
+    "is_active": true
+  },
+  "accounts": [
+    {
+      "code": "1.10.10.10",
+      "name": "Cash",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 1
+    },
+    {
+      "code": "1.10.20.10",
+      "name": "Trade Receivables",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 2
+    },
+    {
+      "code": "1.10.40.10",
+      "name": "Prepaid Expenses",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 4
+    },
+    {
+      "code": "1.20.10.10",
+      "name": "Property, Plant & Equipment",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 10
+    },
+    {
+      "code": "1.20.20.10",
+      "name": "Accumulated Depreciation",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 11
+    },
+    {
+      "code": "2.10.10.10",
+      "name": "Trade Payables",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 20
+    },
+    {
+      "code": "2.10.20.10",
+      "name": "Accrued Expenses",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 21
+    },
+    {
+      "code": "3.10.10.10",
+      "name": "Share Capital",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 40
+    },
+    {
+      "code": "3.10.20.10",
+      "name": "Retained Earnings",
+      "is_mandatory": true,
+      "allow_custom_children": false,
+      "sort_order": 41
+    },
+    {
+      "code": "4.10.10.10",
+      "name": "Revenue from Contracts",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 50
+    },
+    {
+      "code": "5.20.10.10",
+      "name": "Employee Benefits",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 70
+    },
+    {
+      "code": "5.20.20.10",
+      "name": "Occupancy Costs",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 71
+    },
+    {
+      "code": "5.20.50.10",
+      "name": "Depreciation Expense",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 74
+    },
+    {
+      "code": "5.30.20.10",
+      "name": "Administrative Expenses",
+      "is_mandatory": true,
+      "allow_custom_children": true,
+      "sort_order": 81
+    }
+  ]
+}

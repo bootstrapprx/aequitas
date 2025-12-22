@@ -29,7 +29,8 @@
       "Bash(__NEW_LINE__ cat PHASE_3A_VERIFICATION.md)",
       "Bash(make rebuild:*)",
       "Bash(make logs:*)",
-      "Bash(flatpak list:*)"
+      "Bash(flatpak list:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
