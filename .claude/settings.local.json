@@ -30,7 +30,13 @@
       "Bash(make rebuild:*)",
       "Bash(make logs:*)",
       "Bash(flatpak list:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(go build:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker rm:*)"
     ],
     "deny": [],
     "ask": []

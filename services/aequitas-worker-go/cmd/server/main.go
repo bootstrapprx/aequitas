@@ -13,7 +13,7 @@ import (
 func main() {
 	cfg := appconfig.Load()
 	logger := logging.NewLogger(cfg.LogLevel, "aequitas-worker-go")
-	dispatcher := jobs.NewDispatcher(logger)
+	dispatcher := jobs.NewDispatcher(logger, &cfg)
 
 	handler := httpserver.NewRouter(logger, dispatcher)
 
@@ -24,8 +24,9 @@ func main() {
 	}
 
 	logger.Info(context.Background(), "server_starting", logging.Fields{
-		"addr":    addr,
+		"addr":     addr,
 		"loglevel": cfg.LogLevel,
+		"qbo_env":  cfg.QBO.Environment,
 	})
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

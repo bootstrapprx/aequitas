@@ -133,6 +133,16 @@ func correlationIDFromContext(ctx context.Context) string {
 	return ""
 }
 
+// RequestIDFromContext retrieves the request ID from context (exported).
+func RequestIDFromContext(ctx context.Context) string {
+	return requestIDFromContext(ctx)
+}
+
+// CorrelationIDFromContext retrieves the correlation ID from context (exported).
+func CorrelationIDFromContext(ctx context.Context) string {
+	return correlationIDFromContext(ctx)
+}
+
 // GenerateUUID returns a RFC 4122 version 4 UUID string.
 func GenerateUUID() string {
 	b := make([]byte, 16)
