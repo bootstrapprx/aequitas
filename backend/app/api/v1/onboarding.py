@@ -146,7 +146,7 @@ def acquire_session_lock(
         from app.services.onboarding_service import SESSION_LOCK_TIMEOUT_MINUTES
 
         locked = onboarding_service.acquire_session_lock(
-            db, company_id, lock_request.session_id
+            db, company_id, lock_request.session_id, force=lock_request.force
         )
 
         if locked:

@@ -107,7 +107,40 @@ const OAuthCallbackPage = () => {
               });
               navigate('/auth/setup');
             } else {
-              // User has companies - go to dashboard
+              // User has companies - check if onboarding is complete
+              try {
+                // Fetch user to get company ID
+                const userRes = await fetch(
+                  `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/me`,
+                  { headers: { 'Authorization': `Bearer ${data.access_token}` } }
+                );
+                const user = await userRes.json();
+                const companyId = user.preferred_company_id || (user.company_ids && user.company_ids[0]);
+
+                if (companyId) {
+                  const statusRes = await fetch(
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/onboarding/status/${companyId}`,
+                    { headers: { 'Authorization': `Bearer ${data.access_token}` } }
+                  );
+
+                  if (statusRes.ok) {
+                    const statusData = await statusRes.json();
+                    if (statusData.onboarding_status !== 'ACTIVE') {
+                      toast({
+                        title: 'Resuming Onboarding',
+                        description: 'Continuing configuration...',
+                        className: 'bg-background border-gold text-gold font-heading',
+                      });
+                      navigate(`/onboarding/${companyId}`);
+                      return;
+                    }
+                  }
+                }
+              } catch (e) {
+                console.warn("Failed to check onboarding status in OAuth callback", e);
+              }
+
+              // Proceed to dashboard if active or check failed
               toast({
                 title: 'Access Granted',
                 description: 'Welcome to the Athenaeum.',

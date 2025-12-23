@@ -154,7 +154,7 @@ def reset_onboarding(db: Session, company_id: UUID, current_user) -> Dict[str, A
 # ============================================================================
 
 
-def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> bool:
+def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID, force: bool = False) -> bool:
     """
     Acquire session lock for onboarding wizard.
 
@@ -162,6 +162,7 @@ def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> boo
         db: Database session
         company_id: Company ID
         session_id: Session UUID from client
+        force: If True, override existing lock (session takeover)
 
     Returns:
         True if lock acquired, False if locked by another session
@@ -176,7 +177,9 @@ def acquire_session_lock(db: Session, company_id: UUID, session_id: UUID) -> boo
         if lock_age < timedelta(minutes=SESSION_LOCK_TIMEOUT_MINUTES):
             # Lock is still valid
             if company.onboarding_session_lock != session_id:
-                return False  # Locked by another session
+                if not force:
+                    return False  # Locked by another session, takeover refused
+                # If force=True, we proceed to overwrite the lock
 
     # Acquire or renew lock
     company.onboarding_session_lock = session_id
@@ -375,7 +378,7 @@ def select_template(
         raise ValidationError("Company not found")
 
     # State validation - can only select template if chart not yet materialized
-    if company.onboarding_current_step >= 3:
+    if company.onboarding_current_step >= 4:
         raise ValidationError(
             "Template has already been selected and chart materialized. "
             "The accounting structure is now locked to maintain data integrity. "
@@ -468,14 +471,34 @@ def materialize_chart(
             "Go back to Step 3 to choose a template."
         )
 
+    # Explicit Check: Verify if accounts actually exist to ensure idempotency.
+    # This safeguards against status desync or retries where DB committed but response failed.
+    existing_accounts_count = db.query(CompanyAccount).filter(
+        CompanyAccount.company_id == company_id
+    ).count()
+
     if company.onboarding_status in [
         OnboardingStatus.CHART_READY,
         OnboardingStatus.CHART_FINALIZED,
         OnboardingStatus.ACTIVE
-    ]:
-        raise ValidationError(
-            "Chart of accounts has already been created. "
-            "You can review and customize accounts in the next step."
+    ] or existing_accounts_count > 0:
+        
+        # State Integrity: If chart exists but status lags, fast-forward status
+        if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED and existing_accounts_count > 0:
+            company.onboarding_status = OnboardingStatus.CHART_READY
+            
+        # Ensure we are at least on Step 6 (Review)
+        company.onboarding_current_step = max(company.onboarding_current_step, 6)
+        db.commit()
+
+        return ChartMaterializationResponse(
+            success=True,
+            message="Chart of accounts already materialized.",
+            accounts_created=0,
+            mandatory_accounts=existing_accounts_count, # Use actual count
+            optional_accounts=0,
+            current_step=company.onboarding_current_step,
+            next_step=6
         )
 
     # Get template usage

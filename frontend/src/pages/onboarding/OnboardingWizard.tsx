@@ -121,15 +121,16 @@ const OnboardingWizard: React.FC = () => {
 
   // Acquire session lock on mount
   const lockMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (vars: { force?: boolean } = {}) => {
       const response = await api.post(`/onboarding/lock/${companyId}`, {
-        session_id: sessionId
+        session_id: sessionId,
+        force: vars.force || false
       });
       return response as any;
     },
     onSuccess: (data) => {
       if (!data.locked) {
-        setLockError('Another user is currently editing this company onboarding. Please wait and try again.');
+        setLockError('One active session at a time. Continuing will invalidate your other session.');
       } else {
         setLockError(null);
       }
@@ -227,8 +228,8 @@ const OnboardingWizard: React.FC = () => {
           <Lock className="h-4 w-4" />
           <AlertDescription>{lockError}</AlertDescription>
         </Alert>
-        <Button onClick={() => lockMutation.mutate()} className="mt-4">
-          Try Again
+        <Button onClick={() => lockMutation.mutate({ force: true })} className="mt-4">
+          Take Over Session
         </Button>
       </div>
     );

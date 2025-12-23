@@ -59,68 +59,42 @@ def seed_us_gaap_standard_template(db: Session) -> ChartTemplate:
 
     if existing:
         print(f"✓ Template 'US GAAP Standard' already exists (ID: {existing.id})")
-        return existing
+        template = existing
+    else:
+        # Create template
+        template = ChartTemplate(
+            id=uuid.uuid4(),
+            name="US GAAP Standard",
+            jurisdiction="US",
+            version="2025.1",
+            description="Standard Chart of Accounts for US businesses following Generally Accepted Accounting Principles (GAAP). "
+                        "Includes comprehensive account structure for balance sheet and income statement reporting. "
+                        "Suitable for small to medium-sized businesses across various industries.",
+            is_active=True
+        )
 
-    # Create template
-    template = ChartTemplate(
-        id=uuid.uuid4(),
-        name="US GAAP Standard",
-        jurisdiction="US",
-        version="2025.1",
-        description="Standard Chart of Accounts for US businesses following Generally Accepted Accounting Principles (GAAP). "
-                    "Includes comprehensive account structure for balance sheet and income statement reporting. "
-                    "Suitable for small to medium-sized businesses across various industries.",
-        is_active=True
-    )
+        db.add(template)
+        db.flush()  # Get the template ID
 
-    db.add(template)
-    db.flush()  # Get the template ID
-
-    print(f"✓ Created template: {template.name} (ID: {template.id})")
+        print(f"✓ Created template: {template.name} (ID: {template.id})")
 
     # Define template accounts structure
     # Structure: (code, name, is_mandatory, allow_custom_children, sort_order, required_module)
 
     account_definitions = [
-        # ASSETS (1.x.x.x) - All mandatory with custom children allowed
-        ("1.10.10.10", "Cash", True, True, 1, None),
-        ("1.10.20.10", "Accounts Receivable", True, True, 2, None),
-        ("1.10.30.10", "Inventory", False, True, 3, None),  # Optional (not all businesses have inventory)
-        ("1.10.40.10", "Prepaid Expenses", True, True, 4, None),
+        # ASSETS
+        ("10069", "Cash", True, True, 1, None),  # Mapped to 'Payments to deposit'
+        ("16900", "Accounts Receivable", True, True, 2, None),
 
-        ("1.20.10.10", "Property, Plant & Equipment", True, True, 10, None),
-        ("1.20.20.10", "Accumulated Depreciation", True, False, 11, None),  # No custom children for contra accounts
-        ("1.20.30.10", "Intangible Assets", False, True, 12, None),
+        # LIABILITIES
+        ("20001", "Accounts Payable", True, True, 20, None),
 
-        # LIABILITIES (2.x.x.x)
-        ("2.10.10.10", "Accounts Payable", True, True, 20, None),
-        ("2.10.20.10", "Accrued Expenses", True, True, 21, None),
-        ("2.10.30.10", "Short-term Debt", False, True, 22, None),
-        ("2.10.40.10", "Deferred Revenue", False, True, 23, None),
+        # REVENUE
+        ("42307", "Sales Revenue", True, True, 50, None),
 
-        ("2.20.10.10", "Long-term Debt", False, True, 30, None),
-        ("2.20.20.10", "Deferred Tax Liability", False, True, 31, None),
-
-        # EQUITY (3.x.x.x)
-        ("3.10.10.10", "Common Stock", True, False, 40, None),  # Mandatory, no custom children
-        ("3.10.20.10", "Retained Earnings", True, False, 41, None),  # Mandatory, system-managed
-        ("3.10.30.10", "Additional Paid-in Capital", False, True, 42, None),
-
-        # REVENUE (4.x.x.x)
-        ("4.10.10.10", "Sales Revenue", True, True, 50, None),
-        ("4.10.20.10", "Service Revenue", False, True, 51, None),
-        ("4.20.10.10", "Sales Returns and Allowances", True, False, 52, None),  # Contra-revenue
-
-        # EXPENSES (5.x.x.x)
-        ("5.10.10.10", "Cost of Goods Sold", False, True, 60, None),  # Optional if service-based
-        ("5.20.10.10", "Salaries and Wages", True, True, 70, None),
-        ("5.20.20.10", "Rent Expense", True, True, 71, None),
-        ("5.20.30.10", "Utilities Expense", True, True, 72, None),
-        ("5.20.40.10", "Insurance Expense", True, True, 73, None),
-        ("5.20.50.10", "Depreciation Expense", True, True, 74, None),
-        ("5.30.10.10", "Marketing and Advertising", False, True, 80, None),
-        ("5.30.20.10", "Office Supplies", True, True, 81, None),
-        ("5.30.30.10", "Professional Fees", True, True, 82, None),
+        # EXPENSES
+        ("50001", "Cost of Goods Sold", False, True, 60, None),
+        ("67138", "Utilities Expense", True, True, 72, None),
     ]
 
     created_count = 0
@@ -167,39 +141,34 @@ def seed_us_gaap_simplified_template(db: Session) -> ChartTemplate:
 
     if existing:
         print(f"✓ Template 'US GAAP Simplified' already exists (ID: {existing.id})")
-        return existing
+        template = existing
+    else:
+        template = ChartTemplate(
+            id=uuid.uuid4(),
+            name="US GAAP Simplified",
+            jurisdiction="US",
+            version="2025.1",
+            description="Simplified Chart of Accounts for small businesses, startups, and sole proprietors. "
+                        "Contains essential accounts for basic bookkeeping and financial reporting. "
+                        "Ideal for businesses with straightforward transactions.",
+            is_active=True
+        )
 
-    template = ChartTemplate(
-        id=uuid.uuid4(),
-        name="US GAAP Simplified",
-        jurisdiction="US",
-        version="2025.1",
-        description="Simplified Chart of Accounts for small businesses, startups, and sole proprietors. "
-                    "Contains essential accounts for basic bookkeeping and financial reporting. "
-                    "Ideal for businesses with straightforward transactions.",
-        is_active=True
-    )
+        db.add(template)
+        db.flush()
 
-    db.add(template)
-    db.flush()
-
-    print(f"✓ Created template: {template.name} (ID: {template.id})")
+        print(f"✓ Created template: {template.name} (ID: {template.id})")
 
     # Simplified account list - fewer accounts, all with custom children allowed
     account_definitions = [
-        ("1.10.10.10", "Cash", True, True, 1, None),
-        ("1.10.20.10", "Accounts Receivable", True, True, 2, None),
+        ("10069", "Cash", True, True, 1, None),
+        ("16900", "Accounts Receivable", True, True, 2, None),
 
-        ("2.10.10.10", "Accounts Payable", True, True, 10, None),
+        ("20001", "Accounts Payable", True, True, 10, None),
 
-        ("3.10.10.10", "Common Stock", True, False, 20, None),
-        ("3.10.20.10", "Retained Earnings", True, False, 21, None),
+        ("42307", "Sales Revenue", True, True, 30, None),
 
-        ("4.10.10.10", "Sales Revenue", True, True, 30, None),
-
-        ("5.20.10.10", "Salaries and Wages", True, True, 40, None),
-        ("5.20.20.10", "Rent Expense", True, True, 41, None),
-        ("5.30.20.10", "Office Supplies", True, True, 42, None),
+        ("67138", "Utilities Expense", True, True, 42, None),
     ]
 
     created_count = 0

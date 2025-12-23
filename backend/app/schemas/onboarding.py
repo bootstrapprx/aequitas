@@ -360,6 +360,7 @@ class SessionLockRequest(BaseModel):
     """Request to acquire session lock."""
 
     session_id: UUID
+    force: bool = False
 
 
 class SessionLockResponse(BaseModel):

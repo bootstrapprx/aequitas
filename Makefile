@@ -1,4 +1,4 @@
-.PHONY: help dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend shared services
+.PHONY: help up dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend shared services
 
 # Default target
 .DEFAULT_GOAL := help
@@ -24,6 +24,7 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(CYAN)Docker Commands:$(RESET)"
 	@echo "  $(GREEN)make dev$(RESET)              Start all Docker services (frontend, backend, postgres, ollama)"
+	@echo "  $(GREEN)make up$(RESET)               Alias for make dev"
 	@echo "  $(GREEN)make stop$(RESET)             Stop all Docker services"
 	@echo "  $(GREEN)make logs$(RESET)             Follow Docker container logs"
 	@echo "  $(GREEN)make reset$(RESET)            Full reset: stop, remove volumes, rebuild and start"
@@ -93,6 +94,8 @@ check-dev-running:
 		exit 1; \
 	fi
 	@echo "$(GREEN)Dev stack verified.$(RESET)"
+
+up: dev ## Alias for dev
 
 dev: preflight ## Start all Docker services
 	@echo "Starting Unified Dev Mode..."

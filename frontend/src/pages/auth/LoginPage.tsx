@@ -69,7 +69,40 @@ const LoginPage = () => {
         }
         navigate('/auth/setup');
       } else {
-        // User has companies - proceed to dashboard
+        // User has companies - check if onboarding is complete for preferred company
+        try {
+          // We need the user from the login response or context (which is async updating)
+          // But contextResponse.data doesn't give us company ID.
+          // Let's rely on AuthContext user if updated, or fetch /auth/me again?
+          // Actually, we can assume the first company or preferred one.
+
+          // Let's try to fetch user details to get preferred company
+          const userRes = await api.get('/auth/me');
+          const user = userRes.data;
+          const companyId = user.preferred_company_id || (user.company_ids && user.company_ids[0]);
+
+          if (companyId) {
+            // Check onboarding status
+            try {
+              const statusRes = await api.get(`/onboarding/status/${companyId}`);
+              if (statusRes.data.onboarding_status !== 'ACTIVE') {
+                toast({
+                  title: 'Resuming Onboarding',
+                  description: 'Continuing form where you left off...',
+                  className: 'bg-background border-gold text-gold font-heading',
+                });
+                navigate(`/onboarding/${companyId}`);
+                return;
+              }
+            } catch (ignore) {
+              // If status check fails, fall back to dashboard and let OnboardingGuard handle it
+            }
+          }
+        } catch (e) {
+          console.error("Failed to check onboarding status", e);
+        }
+
+        // Proceed to dashboard if active or check failed
         navigate('/dashboard');
       }
     } catch (error: any) {

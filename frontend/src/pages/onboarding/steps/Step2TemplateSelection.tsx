@@ -239,7 +239,12 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
               <Shield className="h-5 w-5 text-amber-600" />
               <span>Confirm Template Selection</span>
             </DialogTitle>
-            <DialogDescription className="space-y-4 pt-4">
+            <DialogDescription>
+              Please confirm your template selection.
+            </DialogDescription>
+
+
+            <div className="space-y-4 pt-4">
               <p>
                 You are about to select <strong>{selectedTemplate?.name}</strong>.
               </p>
@@ -276,7 +281,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
                   I understand that this choice cannot be changed after chart creation
                 </label>
               </div>
-            </DialogDescription>
+            </div>
           </DialogHeader>
           <DialogFooter>
             <Button
@@ -322,7 +327,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
           Select a template to continue
         </div>
       </div>
-    </motion.div>
+    </motion.div >
   );
 };
 

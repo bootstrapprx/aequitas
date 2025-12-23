@@ -10,6 +10,20 @@ class RequestContextFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         record.request_id = get_request_id() or "-"
         record.correlation_id = get_correlation_id() or "-"
+        
+        # Inject Uvicorn attributes if missing
+        if not hasattr(record, "levelprefix"):
+            record.levelprefix = ""
+        if not hasattr(record, "client_addr"):
+            record.client_addr = "-"
+
+        # Handle Uvicorn Access Log attributes (client_addr, request_line, status_code)
+        if record.name == "uvicorn.access" and len(record.args) == 5:
+            # Uvicorn passes: (client_addr, method, full_path, http_version, status_code)
+            record.client_addr = record.args[0]
+            record.request_line = f"{record.args[1]} {record.args[2]} HTTP/{record.args[3]}"
+            record.status_code = record.args[4]
+            
         return True
 
 
