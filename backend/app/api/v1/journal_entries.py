@@ -20,6 +20,8 @@ from app.schemas.journal_entry import (
 from app.services.journal_entry_service import JournalEntryService
 from app.services.ledger_service import LedgerService
 from app.services.permission_service import PermissionService
+from app.core.exceptions import ValidationError, MultipleValidationErrors
+from app.core.errors import AequitasError
 
 router = APIRouter()
 
@@ -62,8 +64,26 @@ def create_journal_entry(
 
         return response
 
+    except MultipleValidationErrors as e:
+        raise AequitasError(
+            code="AEQ_JOURNAL_VALIDATION_ERRORS",
+            message=e.message,
+            details=e.to_dict(),
+            http_status=400
+        )
+    except ValidationError as e:
+        raise AequitasError(
+            code=f"AEQ_{e.code.value}" if e.code else "AEQ_VALIDATION_ERROR",
+            message=e.message,
+            details=e.details,
+            http_status=400
+        )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise AequitasError(
+            code="AEQ_JOURNAL_ENTRY_ERROR",
+            message=str(e),
+            http_status=400
+        )
 
 
 @router.get("/", response_model=JournalEntryList)
@@ -204,8 +224,26 @@ def update_journal_entry(
             total_credit=total_credit
         )
 
+    except MultipleValidationErrors as e:
+        raise AequitasError(
+            code="AEQ_JOURNAL_VALIDATION_ERRORS",
+            message=e.message,
+            details=e.to_dict(),
+            http_status=400
+        )
+    except ValidationError as e:
+        raise AequitasError(
+            code=f"AEQ_{e.code.value}" if e.code else "AEQ_VALIDATION_ERROR",
+            message=e.message,
+            details=e.details,
+            http_status=400
+        )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise AequitasError(
+            code="AEQ_JOURNAL_ENTRY_ERROR",
+            message=str(e),
+            http_status=400
+        )
 
 
 @router.post("/{entry_id}/post", response_model=JournalEntryResponse)
@@ -251,8 +289,26 @@ def post_journal_entry(
             total_credit=total_credit
         )
 
+    except MultipleValidationErrors as e:
+        raise AequitasError(
+            code="AEQ_JOURNAL_VALIDATION_ERRORS",
+            message=e.message,
+            details=e.to_dict(),
+            http_status=400
+        )
+    except ValidationError as e:
+        raise AequitasError(
+            code=f"AEQ_{e.code.value}" if e.code else "AEQ_VALIDATION_ERROR",
+            message=e.message,
+            details=e.details,
+            http_status=400
+        )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise AequitasError(
+            code="AEQ_JOURNAL_ENTRY_ERROR",
+            message=str(e),
+            http_status=400
+        )
 
 
 @router.post("/{entry_id}/void", response_model=JournalEntryResponse)
@@ -295,8 +351,26 @@ def void_journal_entry(
             total_credit=total_credit
         )
 
+    except MultipleValidationErrors as e:
+        raise AequitasError(
+            code="AEQ_JOURNAL_VALIDATION_ERRORS",
+            message=e.message,
+            details=e.to_dict(),
+            http_status=400
+        )
+    except ValidationError as e:
+        raise AequitasError(
+            code=f"AEQ_{e.code.value}" if e.code else "AEQ_VALIDATION_ERROR",
+            message=e.message,
+            details=e.details,
+            http_status=400
+        )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise AequitasError(
+            code="AEQ_JOURNAL_ENTRY_ERROR",
+            message=str(e),
+            http_status=400
+        )
 
 
 @router.delete("/{entry_id}", status_code=204)
@@ -325,5 +399,23 @@ def delete_journal_entry(
         service.delete_journal_entry(entry_id)
         return None
 
+    except MultipleValidationErrors as e:
+        raise AequitasError(
+            code="AEQ_JOURNAL_VALIDATION_ERRORS",
+            message=e.message,
+            details=e.to_dict(),
+            http_status=400
+        )
+    except ValidationError as e:
+        raise AequitasError(
+            code=f"AEQ_{e.code.value}" if e.code else "AEQ_VALIDATION_ERROR",
+            message=e.message,
+            details=e.details,
+            http_status=400
+        )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise AequitasError(
+            code="AEQ_JOURNAL_ENTRY_ERROR",
+            message=str(e),
+            http_status=400
+        )

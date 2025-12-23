@@ -14,15 +14,66 @@ type BodyApiOptions = BaseApiOptions & {
   body?: any;
 };
 
+/**
+ * Canonical API Error
+ *
+ * Extracts error information from AEQ error envelope:
+ * {
+ *   "error": {
+ *     "code": "AEQ_JOURNAL_IMBALANCE",
+ *     "message": "Journal entry is not balanced...",
+ *     "details": {...},
+ *     "request_id": "...",
+ *     "correlation_id": "..."
+ *   }
+ * }
+ */
 class ApiError extends Error {
   status: number;
+  code: string;
   details: any;
+  requestId?: string;
+  correlationId?: string;
 
-  constructor(message: string, status: number, details: any) {
-    super(message);
+  constructor(message: string, status: number, errorData: any) {
+    // If errorData has canonical error envelope, extract it
+    if (errorData && typeof errorData === 'object' && errorData.error) {
+      const error = errorData.error;
+      super(error.message || message);
+      this.code = error.code || `HTTP_${status}`;
+      this.details = error.details || {};
+      this.requestId = error.request_id;
+      this.correlationId = error.correlation_id;
+    } else {
+      // Fallback for non-canonical errors
+      super(message);
+      this.code = `HTTP_${status}`;
+      this.details = errorData || {};
+    }
+
     this.name = 'ApiError';
     this.status = status;
-    this.details = details;
+  }
+
+  /**
+   * Get a user-friendly error message
+   */
+  getUserMessage(): string {
+    return this.message || 'An unexpected error occurred';
+  }
+
+  /**
+   * Get detailed error message with request IDs (for debugging)
+   */
+  getDetailedMessage(): string {
+    let msg = this.message;
+    if (this.requestId) {
+      msg += `\n\nRequest ID: ${this.requestId}`;
+    }
+    if (this.correlationId) {
+      msg += `\nCorrelation ID: ${this.correlationId}`;
+    }
+    return msg;
   }
 }
 
