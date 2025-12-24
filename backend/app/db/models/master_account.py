@@ -91,16 +91,13 @@ class MasterAccount(Base):
     """Cash flow category: 'Operating', 'Investing', 'Financing'"""
 
     # ========================================================================
-    # AI & CLASSIFICATION FIELDS
+    # REGULATORY & COMPLIANCE FIELDS
     # ========================================================================
-    tags = Column(ARRAY(String), nullable=True)
-    """AI-friendly keywords for classification and search"""
-
-    default_vendors = Column(ARRAY(String), nullable=True)
-    """Common vendor associations for auto-suggestion"""
-
     regulatory_mapping = Column(JSONB, nullable=True)
     """IFRS/IAS/ASC regulatory references (e.g., {"ASC": "310-10-45-2"})"""
+
+    # NOTE: tags and default_vendors relocated to master_account_intelligence table
+    # (Migration 032 - Canon IV: Intelligence Boundary)
 
     cost_center = Column(String, nullable=True)
     """Default cost center assignment (optional)"""
@@ -158,6 +155,15 @@ class MasterAccount(Base):
     )
     """Company accounts mapped to this master account"""
 
+    # Intelligence layer (Zone C - Advisory metadata)
+    intelligence = relationship(
+        "MasterAccountIntelligence",
+        back_populates="master_account",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+    """Advisory intelligence and suggestions (Canon IV: Zone C)"""
+
     # ========================================================================
     # HELPER METHODS
     # ========================================================================
@@ -173,15 +179,22 @@ class MasterAccount(Base):
         """
         Return a simplified dict optimized for AI (DEXTER) interaction.
         Includes all relevant fields for intelligent account classification.
+
+        NOTE: tags and default_vendors now accessed via self.intelligence relationship
+        (Migration 032 - Canon IV: Intelligence Boundary)
         """
+        # Get intelligence data if available
+        tags = self.intelligence.tags if self.intelligence else []
+        default_vendors = self.intelligence.default_vendors if self.intelligence else []
+
         return {
             "code": self.code,
             "description": self.description,
             "long_description": self.long_description,
             "category": self.category,
             "type": self.type,
-            "tags": self.tags or [],
-            "default_vendors": self.default_vendors or [],
+            "tags": tags,
+            "default_vendors": default_vendors,
             "fs_mapping": self.fs_mapping,
             "normal_balance": self.normal_balance,
             "regulatory_mapping": self.regulatory_mapping or {},
@@ -199,18 +212,26 @@ class MasterAccount(Base):
 
         Returns:
             True if any keyword matches, False otherwise
+
+        NOTE: Now delegates to intelligence layer for tag matching
         """
         if not keywords:
             return False
 
+        # Search in core truth fields
         searchable_text = " ".join([
             self.description.lower(),
             self.long_description.lower() if self.long_description else "",
-            " ".join(self.tags).lower() if self.tags else "",
-            " ".join(self.default_vendors).lower() if self.default_vendors else "",
         ])
 
-        return any(keyword.lower() in searchable_text for keyword in keywords)
+        if any(keyword.lower() in searchable_text for keyword in keywords):
+            return True
+
+        # Delegate to intelligence layer if available
+        if self.intelligence:
+            return self.intelligence.matches_keywords(keywords)
+
+        return False
 
     def matches_vendor(self, vendor_name: str) -> bool:
         """
@@ -222,57 +243,14 @@ class MasterAccount(Base):
 
         Returns:
             True if vendor is associated with this account, False otherwise
+
+        NOTE: Now delegates to intelligence layer
         """
-        if not self.default_vendors or not vendor_name:
+        if not vendor_name:
             return False
 
-        vendor_lower = vendor_name.lower()
-        return any(vendor_lower in v.lower() for v in self.default_vendors)
-    
-    def to_ai_context(self):
-        """
-        Return a simplified dict optimized for AI (DEXTER) interaction.
-        Includes all relevant fields for intelligent account classification.
-        """
-        return {
-            "code": self.code,
-            "description": self.description,
-            "long_description": self.long_description,
-            "category": self.category,
-            "type": self.type,
-            "tags": self.tags or [],
-            "default_vendors": self.default_vendors or [],
-            "fs_mapping": self.fs_mapping,
-            "normal_balance": self.normal_balance,
-            "regulatory_mapping": self.regulatory_mapping or {},
-            "parent_code": self.parent_code,
-            "level": self.level,
-        }
-    
-    def matches_keywords(self, keywords: list[str]) -> bool:
-        """
-        Check if this account matches any of the given keywords.
-        Useful for AI-powered search and classification.
-        """
-        if not keywords:
-            return False
-        
-        searchable_text = " ".join([
-            self.description.lower(),
-            self.long_description.lower() if self.long_description else "",
-            " ".join(self.tags).lower() if self.tags else "",
-            " ".join(self.default_vendors).lower() if self.default_vendors else "",
-        ])
-        
-        return any(keyword.lower() in searchable_text for keyword in keywords)
-    
-    def matches_vendor(self, vendor_name: str) -> bool:
-        """
-        Check if this account is associated with a given vendor.
-        Useful for automatic account suggestion based on vendor.
-        """
-        if not self.default_vendors or not vendor_name:
-            return False
-        
-        vendor_lower = vendor_name.lower()
-        return any(vendor_lower in v.lower() for v in self.default_vendors)
+        # Delegate to intelligence layer if available
+        if self.intelligence:
+            return self.intelligence.matches_vendor(vendor_name)
+
+        return False

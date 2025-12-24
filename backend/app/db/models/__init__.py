@@ -12,6 +12,7 @@ from .company import Company
 from .company_account import CompanyAccount
 from .company_module import CompanyModule
 from .master_account import MasterAccount
+from .master_account_intelligence import MasterAccountIntelligence
 from .snapshot import Snapshot
 from .qbo_token import QboToken
 from .organizer_memory import OrganizerMemory
@@ -70,6 +71,7 @@ __all__ = [
     "CompanyAccount",
     "CompanyModule",
     "MasterAccount",
+    "MasterAccountIntelligence",
     "Snapshot",
     "QboToken",
     "OrganizerMemory",
