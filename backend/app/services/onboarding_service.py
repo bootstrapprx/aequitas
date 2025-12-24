@@ -94,6 +94,15 @@ def reset_onboarding(db: Session, company_id: UUID, current_user) -> Dict[str, A
     if not company:
         raise ValidationError("Company not found")
 
+    # CANONICAL GUARD: PROHIBIT RESET OF ACTIVE COMPANIES
+    # Canon II & III: Activation is a Point of No Return. History is immutable.
+    if company.onboarding_status == OnboardingStatus.ACTIVE:
+        raise ValidationError(
+            "Onboarding reset is forbidden for ACTIVE companies. "
+            "Accounting history is immutable after activation.",
+            code="ONBOARDING_RESET_FORBIDDEN"
+        )
+
     # Check if user has access to this company (admin permission)
     user_company = db.query(UserCompany).filter(
         UserCompany.user_id == current_user.id,
