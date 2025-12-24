@@ -16,7 +16,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, AlertTriangle, Check, Loader2, Shield } from 'lucide-react';
+import { FileText, AlertTriangle, Check, Loader2, Shield, Book, BookOpen, CheckCircle2, XCircle } from 'lucide-react';
 
 import { AtheneumCard, AtheneumCardHeader, AtheneumCardContent, WaxSealBadge } from '@/components/athenaeum';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,60 @@ interface ChartTemplate {
   is_active: boolean;
   account_count?: number;
 }
+
+// Template metadata for enhanced display
+const TEMPLATE_DISPLAY_INFO: Record<string, {
+  title: string;
+  subtitle: string;
+  badge: string;
+  description: string;
+  features: { label: string; supported: boolean }[];
+  footerHint?: string;
+  buttonText: string;
+  icon: 'standard' | 'simplified' | 'disabled';
+}> = {
+  'US GAAP Standard': {
+    title: 'US GAAP — Standard',
+    subtitle: 'United States · Full Canonical Kernel',
+    badge: '≈ 150 Accounts · Complete GAAP Structure',
+    description: 'A complete, canon-aligned Chart of Accounts following US GAAP. Includes all core assets, liabilities, equity, revenue, expenses, taxes, and closing accounts required for full double-entry bookkeeping, period closing, and financial reporting.\n\nDesigned for companies that need accuracy, auditability, and long-term scalability.',
+    features: [
+      { label: 'Journaling', supported: true },
+      { label: 'Period Closing', supported: true },
+      { label: 'Reporting', supported: true },
+      { label: 'Account Detail', supported: true },
+      { label: 'Future Extensions', supported: true },
+    ],
+    footerHint: 'Includes retained earnings & system closing accounts',
+    buttonText: 'Use Standard Kernel',
+    icon: 'standard',
+  },
+  'US GAAP Simplified': {
+    title: 'US GAAP — Simplified',
+    subtitle: 'United States · Pruned Canonical Kernel',
+    badge: '≈ 50 Accounts · Simplified but Complete',
+    description: 'A simplified version of the US GAAP kernel with collapsed categories. Maintains full accounting integrity while reducing chart complexity.\n\nBest for small teams and straightforward operations that still require correct journaling, closing, and reporting.',
+    features: [
+      { label: 'Journaling', supported: true },
+      { label: 'Period Closing', supported: true },
+      { label: 'Reporting', supported: true },
+      { label: 'Account Detail', supported: false },
+      { label: 'Future Extensions', supported: false },
+    ],
+    footerHint: 'No loss of accounting integrity',
+    buttonText: 'Use Simplified Kernel',
+    icon: 'simplified',
+  },
+  'IFRS Standard': {
+    title: 'IFRS — Standard',
+    subtitle: 'International · Mapping Pending',
+    badge: 'Unavailable',
+    description: 'IFRS support requires a regulatory mapping layer that is not yet implemented. This template is intentionally disabled to prevent incomplete or misleading accounting setups.\n\nComing after master chart regulatory mapping is introduced.',
+    features: [],
+    buttonText: 'Disabled',
+    icon: 'disabled',
+  },
+};
 
 const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
   companyId,
@@ -92,6 +146,10 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
   });
 
   const handleTemplateClick = (template: ChartTemplate) => {
+    // Prevent selection of disabled templates
+    if (!template.is_active) {
+      return;
+    }
     setSelectedTemplate(template);
     setShowConfirmModal(true);
     setConfirmationChecked(false);
@@ -146,79 +204,140 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
 
       {/* Template Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:col-span-2 text-sm text-gray-600">
+          All templates create a complete, working accounting system. You can customize accounts later.
+        </div>
         <AnimatePresence>
-          {templates?.map((template, index) => (
-            <motion.div
-              key={template.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <AtheneumCard
-                hover
-                className={`cursor-pointer transition-all ${selectedTemplate?.id === template.id
-                  ? 'ring-2 ring-emerald-500 shadow-lg'
-                  : ''
-                  }`}
-                onClick={() => handleTemplateClick(template)}
+          {templates?.map((template, index) => {
+            const displayInfo = TEMPLATE_DISPLAY_INFO[template.name];
+            const isDisabled = !template.is_active;
+
+            // Icon selection
+            const IconComponent = displayInfo?.icon === 'standard'
+              ? Book
+              : displayInfo?.icon === 'simplified'
+              ? BookOpen
+              : FileText;
+
+            return (
+              <motion.div
+                key={template.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
               >
-                <AtheneumCardHeader
-                  icon={<FileText className="h-5 w-5 text-emerald-600" />}
-                  embossed
+                <AtheneumCard
+                  hover={!isDisabled}
+                  className={`transition-all ${
+                    isDisabled
+                      ? 'opacity-60 cursor-not-allowed bg-gray-50'
+                      : 'cursor-pointer hover:shadow-xl'
+                  } ${
+                    selectedTemplate?.id === template.id
+                      ? 'ring-2 ring-emerald-500 shadow-lg'
+                      : 'shadow-md'
+                  }`}
+                  onClick={() => handleTemplateClick(template)}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{template.name}</span>
-                    {template.is_active && (
-                      <WaxSealBadge type="approved" size="sm" />
-                    )}
-                  </div>
-                </AtheneumCardHeader>
-                <AtheneumCardContent>
-                  <div className="space-y-3">
-                    {/* Jurisdiction */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Jurisdiction</p>
-                      <p className="text-sm text-gray-900">{template.jurisdiction}</p>
-                    </div>
-
-                    {/* Version */}
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Version</p>
-                      <p className="text-sm text-gray-900">{template.version}</p>
-                    </div>
-
-                    {/* Description */}
-                    {template.description && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase">Description</p>
-                        <p className="text-sm text-gray-700">{template.description}</p>
-                      </div>
-                    )}
-
-                    {/* Account Count */}
-                    {template.account_count && (
-                      <div className="pt-3 border-t border-gray-200">
-                        <p className="text-xs text-gray-600">
-                          <strong>{template.account_count}</strong> accounts included
+                  <AtheneumCardHeader
+                    icon={<IconComponent className={`h-5 w-5 ${isDisabled ? 'text-gray-400' : 'text-emerald-600'}`} />}
+                    embossed={!isDisabled}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex-1">
+                        <h3 className={`text-lg font-bold ${isDisabled ? 'text-gray-600' : 'text-gray-900'}`}>
+                          {displayInfo?.title || template.name}
+                        </h3>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">
+                          {displayInfo?.subtitle || `${template.jurisdiction} · ${template.version}`}
                         </p>
                       </div>
-                    )}
+                      {!isDisabled && (
+                        <WaxSealBadge type="approved" size="sm" />
+                      )}
+                    </div>
+                  </AtheneumCardHeader>
 
-                    {/* Select Button */}
-                    <Button
-                      className="w-full mt-4 shadow-gold"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTemplateClick(template);
-                      }}
-                    >
-                      Use This Template
-                    </Button>
-                  </div>
-                </AtheneumCardContent>
-              </AtheneumCard>
-            </motion.div>
-          ))}
+                  <AtheneumCardContent>
+                    <div className="space-y-4">
+                      {/* Kernel Size Badge */}
+                      <div className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-sm ${
+                        isDisabled
+                          ? 'bg-gray-200 text-gray-600'
+                          : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                      }`}>
+                        {displayInfo?.badge || `${template.account_count || 0} accounts`}
+                      </div>
+
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <p className={`text-sm leading-relaxed whitespace-pre-line ${
+                          isDisabled ? 'text-gray-600' : 'text-gray-700'
+                        }`}>
+                          {displayInfo?.description || template.description}
+                        </p>
+                        {template.name === 'US GAAP Simplified' && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Simplified reduces chart complexity without removing required accounting structure.
+                          </p>
+                        )}
+                        {template.name === 'IFRS Standard' && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            IFRS requires a regulatory mapping layer that is not yet implemented.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Feature Comparison (for active templates only) */}
+                      {!isDisabled && displayInfo?.features && displayInfo.features.length > 0 && (
+                        <div className="pt-3 border-t border-gray-200">
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            {displayInfo.features.map((feature, idx) => (
+                              <div key={idx} className="flex items-center space-x-1.5">
+                                {feature.supported ? (
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+                                ) : (
+                                  <XCircle className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                )}
+                                <span className={feature.supported ? 'text-gray-700' : 'text-gray-500'}>
+                                  {feature.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer Hint */}
+                      {!isDisabled && displayInfo?.footerHint && (
+                        <div className="pt-2">
+                          <p className="text-xs text-gray-500 italic">
+                            {displayInfo.footerHint}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Select Button */}
+                      <Button
+                        className={`w-full mt-4 ${
+                          isDisabled
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+                            : 'shadow-gold'
+                        }`}
+                        disabled={isDisabled}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTemplateClick(template);
+                        }}
+                      >
+                        {displayInfo?.buttonText || 'Use This Template'}
+                      </Button>
+                    </div>
+                  </AtheneumCardContent>
+                </AtheneumCard>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
 
@@ -245,42 +364,66 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
 
 
             <div className="space-y-4 pt-4">
-              <p>
-                You are about to select <strong>{selectedTemplate?.name}</strong>.
-              </p>
+              {selectedTemplate && (() => {
+                const displayInfo = TEMPLATE_DISPLAY_INFO[selectedTemplate.name];
+                return (
+                  <>
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                      <h4 className="font-bold text-emerald-900 mb-1">
+                        {displayInfo?.title || selectedTemplate.name}
+                      </h4>
+                      <p className="text-sm text-emerald-700">
+                        {displayInfo?.subtitle || `${selectedTemplate.jurisdiction} · ${selectedTemplate.version}`}
+                      </p>
+                      <div className="mt-2 inline-flex items-center px-2 py-1 bg-emerald-100 rounded text-xs font-semibold text-emerald-900">
+                        {displayInfo?.badge || `${selectedTemplate.account_count || 0} accounts`}
+                      </div>
+                    </div>
 
-              <Alert className="border-amber-300 bg-amber-50">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertDescription className="text-amber-900 text-sm">
-                  <strong>This choice cannot be changed</strong> after your chart of accounts is created.
-                  The template will define your account structure permanently.
-                </AlertDescription>
-              </Alert>
+                    <Alert className="border-amber-300 bg-amber-50">
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-900 text-sm">
+                        <strong>This choice cannot be changed</strong> after your chart of accounts is created.
+                        The template will define your account structure permanently.
+                      </AlertDescription>
+                    </Alert>
 
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">This template includes:</p>
-                <ul className="text-sm space-y-1 pl-4">
-                  <li>✓ Jurisdiction: {selectedTemplate?.jurisdiction}</li>
-                  <li>✓ Version: {selectedTemplate?.version}</li>
-                  {selectedTemplate?.account_count && (
-                    <li>✓ {selectedTemplate.account_count} pre-configured accounts</li>
-                  )}
-                </ul>
-              </div>
+                    {displayInfo?.features && displayInfo.features.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">This template provides:</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {displayInfo.features.map((feature, idx) => (
+                            <div key={idx} className="flex items-center space-x-1.5 text-sm">
+                              {feature.supported ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              )}
+                              <span className={feature.supported ? 'text-gray-700' : 'text-gray-500'}>
+                                {feature.label}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
-              <div className="flex items-start space-x-2 pt-4">
-                <Checkbox
-                  id="confirm"
-                  checked={confirmationChecked}
-                  onCheckedChange={(checked) => setConfirmationChecked(checked as boolean)}
-                />
-                <label
-                  htmlFor="confirm"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  I understand that this choice cannot be changed after chart creation
-                </label>
-              </div>
+                    <div className="flex items-start space-x-2 pt-4">
+                      <Checkbox
+                        id="confirm"
+                        checked={confirmationChecked}
+                        onCheckedChange={(checked) => setConfirmationChecked(checked as boolean)}
+                      />
+                      <label
+                        htmlFor="confirm"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        I understand that this choice cannot be changed after chart creation
+                      </label>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </DialogHeader>
           <DialogFooter>

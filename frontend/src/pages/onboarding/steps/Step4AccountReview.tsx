@@ -98,6 +98,9 @@ const Step4AccountReview: React.FC<Step4AccountReviewProps> = ({
         <p className="text-gray-600">
           Your chart of accounts has been created. Review and customize if needed.
         </p>
+        <div className="mt-3 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          These are the standard accounts created for your company. You can rename, disable, or add accounts before activation.
+        </div>
       </div>
 
       {/* Error Alert */}
@@ -133,6 +136,10 @@ const Step4AccountReview: React.FC<Step4AccountReviewProps> = ({
             <AlertDescription className="text-blue-900 text-sm">
               <strong>Note:</strong> You can add, rename, or disable accounts later in the Chart of Accounts module.
               For now, review and proceed to set up fiscal periods.
+              <br />
+              <span className="inline-block mt-2 text-gray-700">
+                This account is required for correct accounting and cannot be removed.
+              </span>
             </AlertDescription>
           </Alert>
         </AtheneumCardContent>

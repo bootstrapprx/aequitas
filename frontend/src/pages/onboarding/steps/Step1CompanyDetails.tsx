@@ -236,6 +236,9 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                   readOnly={!!status?.company_name && !isNameUnlocked}
                   className={errors.name ? 'border-red-500' : (status?.company_name && !isNameUnlocked ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-70' : '')}
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  This name appears on reports and journal entries. It can be changed later.
+                </p>
                 {!isNameUnlocked && status?.company_name && (
                   <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
@@ -290,7 +293,7 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  {isLocked ? '🔒 Locked after template selection' : 'Determines accounting standards'}
+                  {isLocked ? '🔒 Locked after template selection' : 'Used to determine default accounting structure and regulatory context. This does not apply tax rules automatically.'}
                 </p>
               </div>
 
@@ -314,7 +317,7 @@ const Step1CompanyDetails: React.FC<Step1CompanyDetailsProps> = ({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500 mt-1">
-                  {isLocked ? '🔒 Cannot be changed later' : 'All transactions will use this currency'}
+                  {isLocked ? '🔒 Cannot be changed later' : 'Your accounting currency. Transactions in other currencies can be recorded later.'}
                 </p>
               </div>
 

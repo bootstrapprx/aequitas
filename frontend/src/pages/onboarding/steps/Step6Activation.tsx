@@ -97,14 +97,17 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
       </div>
 
       {/* Critical Warning */}
-      <Alert className="border-amber-300 bg-amber-50">
+      <Alert className="border-amber-200 bg-amber-50">
         <AlertTriangle className="h-5 w-5 text-amber-600" />
-        <AlertDescription className="text-amber-900">
-          <strong className="block mb-2">⚠️ Point of No Return</strong>
-          <p className="text-sm">
-            After activation, accounting rules will be enforced automatically. Some account properties
-            will lock after first use. This operation cannot be undone.
-          </p>
+        <AlertDescription className="text-amber-900 space-y-2">
+          <div className="font-semibold">Before you activate</div>
+          <ul className="list-disc list-inside text-sm space-y-1 text-amber-900">
+            <li>Activating finalizes your accounting structure.</li>
+            <li>Accounts and periods become protected.</li>
+            <li>History cannot be rewritten.</li>
+            <li>You can still add transactions and new accounts later.</li>
+          </ul>
+          <p className="text-sm pt-1">Take a moment to review before continuing.</p>
         </AlertDescription>
       </Alert>
 
@@ -208,8 +211,7 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
                 htmlFor="confirm"
                 className="text-sm font-medium cursor-pointer leading-tight"
               >
-                I understand that after activation, accounting rules will be enforced and some
-                operations will become irreversible
+                I understand that after activation, accounting rules will be enforced and history will be protected
               </label>
             </div>
 
@@ -253,6 +255,7 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
           disabled={!confirmed || !isAcknowledgmentValid || activateMutation.isPending}
           size="lg"
           className="bg-emerald-600 hover:bg-emerald-700 shadow-gold"
+          title="Activation protects accounting history. It does not post any transactions."
         >
           {activateMutation.isPending ? (
             <>

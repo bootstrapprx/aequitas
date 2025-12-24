@@ -1,334 +1,368 @@
 """
-Seed Chart Templates - Approach 1: Script-based seeding
+Seed Chart Templates - Canon kernels
 
-This script seeds the chart_templates, chart_template_accounts, and linking tables
-with predefined templates that can be selected during onboarding.
-
-PERMISSION MODEL:
-- Regular users: Can ADD accounts to their company chart (not subtract/delete mandatory accounts)
-- Superusers: Can ADD and SUBTRACT (full CRUD on templates and all accounts)
-
-CANONICAL TEMPLATE STRUCTURE:
-- Templates define jurisdiction-specific chart of accounts
-- Each template has mandatory accounts (is_mandatory=True) that users CANNOT delete
-- Templates allow custom children (allow_custom_children=True) where users CAN add accounts
-- Templates reference master_accounts for standardization
-
-Usage:
-    cd backend
-    python app/data/seed_chart_templates.py
+This script rebuilds onboarding templates using the canonical MasterAccount chart.
+It enforces a universal L0 kernel, a full L1 US GAAP standard kernel, and a
+pruned-but-complete L2 US GAAP simplified kernel. IFRS templates are disabled
+until proper mapping exists.
 """
 
 import sys
-import os
+from collections import Counter
 from pathlib import Path
+from typing import Dict, Iterable, Sequence
+import uuid
 
-# Add backend directory to Python path
+# Add backend directory to Python path for direct script execution
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from sqlalchemy.orm import Session
+
 from app.db.session import SessionLocal
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount
 from app.db.models.master_account import MasterAccount
-from typing import Dict, List
-import uuid
+
+# ============================================================================
+# Canon constants
+# ============================================================================
+
+MANDATORY_L0_CODES: Sequence[str] = (
+    "10000",  # Operating Cash
+    "10100",  # Undeposited Funds
+    "12000",  # Accounts Receivable
+    "14000",  # Prepaid Expenses
+    "15000",  # Fixed Assets
+    "15900",  # Accumulated Depreciation
+    "20000",  # Accounts Payable
+    "21000",  # Accrued Liabilities
+    "22000",  # Taxes Payable
+    "23000",  # Deferred Revenue
+    "30000",  # Owners Equity / Capital
+    "32000",  # Retained Earnings (system)
+    "39999",  # Current Period Earnings (system)
+    "40000",  # General Operating Revenue
+    "49000",  # Refunds / Allowances
+    "50000",  # Cost of Goods Sold
+    "60000",  # General Operating Expenses
+    "61000",  # Payroll Expense
+    "62000",  # Depreciation Expense
+    "69000",  # Tax Expense
+)
+
+L1_CATEGORY_CAPS: Dict[str, int] = {
+    "Asset": 40,
+    "Liability": 25,
+    "Equity": 20,
+    "Revenue": 15,
+    "Cost of Goods Sold": 20,
+    "Expense": 35,
+}
+
+L2_CATEGORY_CAPS: Dict[str, int] = {
+    "Asset": 15,
+    "Liability": 10,
+    "Equity": 20,  # full equity structure preserved
+    "Revenue": 8,
+    "Cost of Goods Sold": 8,
+}
+
+SIMPLIFIED_EXPENSE_CODES = {"60000", "61000", "62000", "69000"}
+
+ALLOWED_CATEGORIES = set(L1_CATEGORY_CAPS.keys())
+
+TEMPLATES = {
+    "US_GAAP_STANDARD": {"kernel_level": "L1", "enabled": True},
+    "US_GAAP_SIMPLIFIED": {"kernel_level": "L2", "enabled": True},
+    "IFRS_STANDARD": {
+        "enabled": False,
+        "reason": "IFRS mapping not implemented in Master Chart",
+    },
+}
+
+TEMPLATE_METADATA = {
+    "US_GAAP_STANDARD": {
+        "name": "US GAAP Standard",
+        "jurisdiction": "US",
+        "description": "US GAAP L1 kernel seeded from canonical MasterAccount.",
+    },
+    "US_GAAP_SIMPLIFIED": {
+        "name": "US GAAP Simplified",
+        "jurisdiction": "US",
+        "description": "US GAAP L2 kernel (collapsed expenses) seeded from canonical MasterAccount.",
+    },
+    "IFRS_STANDARD": {
+        "name": "IFRS Standard",
+        "jurisdiction": "INTL",
+        "description": "Disabled until IFRS mapping is present in MasterAccount.",
+    },
+}
+
+LEGACY_TEMPLATE_NAMES = ["US GAAP Standard", "US GAAP Simplified", "IFRS Standard"]
+TEMPLATE_VERSION = "2025.2-kernel"
+ONBOARDING_TEMPLATE_INCOMPLETE = "ONBOARDING_TEMPLATE_INCOMPLETE"
 
 
-def get_master_account_by_code(db: Session, code: str) -> MasterAccount | None:
-    """Fetch master account by code."""
-    return db.query(MasterAccount).filter(MasterAccount.code == code).first()
+# ============================================================================
+# Master account helpers
+# ============================================================================
+
+def load_master_account_map(db: Session) -> Dict[str, MasterAccount]:
+    """Load all master accounts keyed by code."""
+    accounts = db.query(MasterAccount).all()
+    return {account.code: account for account in accounts if account.code}
 
 
-def seed_us_gaap_standard_template(db: Session) -> ChartTemplate:
-    """
-    Seed the US GAAP Standard Template.
+def _is_gaap_account(account: MasterAccount) -> bool:
+    """Allow only 5-digit GAAP accounts without IFRS dot notation."""
+    return (
+        account.code.isdigit()
+        and len(account.code) == 5
+        and account.category in ALLOWED_CATEGORIES
+    )
 
-    This is a comprehensive template for US-based businesses following GAAP.
 
-    PERMISSION RULES:
-    - Mandatory accounts (is_mandatory=True): Users cannot delete or modify core properties
-    - Custom children allowed (allow_custom_children=True): Users can add sub-accounts
-    - Non-mandatory accounts: Users can delete if unused
-    """
-
-    # Check if template already exists
-    existing = db.query(ChartTemplate).filter(
-        ChartTemplate.jurisdiction == "US",
-        ChartTemplate.name == "US GAAP Standard"
-    ).first()
-
-    if existing:
-        print(f"✓ Template 'US GAAP Standard' already exists (ID: {existing.id})")
-        template = existing
-    else:
-        # Create template
-        template = ChartTemplate(
-            id=uuid.uuid4(),
-            name="US GAAP Standard",
-            jurisdiction="US",
-            version="2025.1",
-            description="Standard Chart of Accounts for US businesses following Generally Accepted Accounting Principles (GAAP). "
-                        "Includes comprehensive account structure for balance sheet and income statement reporting. "
-                        "Suitable for small to medium-sized businesses across various industries.",
-            is_active=True
+def validate_l0(master_accounts: Dict[str, MasterAccount]) -> None:
+    """Validate that all mandatory L0 accounts exist."""
+    missing = [code for code in MANDATORY_L0_CODES if code not in master_accounts]
+    if missing:
+        raise ValueError(
+            f"{ONBOARDING_TEMPLATE_INCOMPLETE}: Missing mandatory L0 master accounts {missing}"
         )
 
-        db.add(template)
-        db.flush()  # Get the template ID
 
-        print(f"✓ Created template: {template.name} (ID: {template.id})")
-
-    # Define template accounts structure
-    # Structure: (code, name, is_mandatory, allow_custom_children, sort_order, required_module)
-
-    account_definitions = [
-        # ASSETS
-        ("10069", "Cash", True, True, 1, None),  # Mapped to 'Payments to deposit'
-        ("16900", "Accounts Receivable", True, True, 2, None),
-
-        # LIABILITIES
-        ("20001", "Accounts Payable", True, True, 20, None),
-
-        # REVENUE
-        ("42307", "Sales Revenue", True, True, 50, None),
-
-        # EXPENSES
-        ("50001", "Cost of Goods Sold", False, True, 60, None),
-        ("67138", "Utilities Expense", True, True, 72, None),
+def ensure_equity_presence(selected_accounts: Dict[str, MasterAccount]) -> None:
+    """Ensure equity and system equity accounts are present."""
+    codes = set(selected_accounts.keys())
+    missing_codes = [
+        code
+        for code in ( "32000", "39999" )
+        if code not in codes
     ]
+    has_equity = any(acc.category == "Equity" for acc in selected_accounts.values())
+    if missing_codes or not has_equity:
+        detail = []
+        if missing_codes:
+            detail.append(f"missing equity system accounts {missing_codes}")
+        if not has_equity:
+            detail.append("no equity accounts present")
+        reason = "; ".join(detail)
+        raise ValueError(f"{ONBOARDING_TEMPLATE_INCOMPLETE}: {reason}")
 
-    created_count = 0
-    for code, name, is_mandatory, allow_custom, sort_order, req_module in account_definitions:
-        # Find corresponding master account
-        master_account = get_master_account_by_code(db, code)
 
-        if not master_account:
-            print(f"  ⚠ Warning: Master account {code} not found, skipping...")
+def _select_accounts_by_category(
+    master_accounts: Dict[str, MasterAccount],
+    category_caps: Dict[str, int],
+    base_codes: Iterable[str],
+) -> Dict[str, MasterAccount]:
+    """
+    Select accounts per category using deterministic caps to form kernels.
+    """
+    selected: Dict[str, MasterAccount] = {}
+    category_counts: Counter = Counter()
+
+    # Pre-load base codes (L0 + headers)
+    for code in base_codes:
+        account = master_accounts.get(code)
+        if account and _is_gaap_account(account):
+            selected[code] = account
+            category_counts[account.category] += 1
+
+    headers = [
+        acc
+        for acc in master_accounts.values()
+        if acc.type in {"H", "Header"} and acc.category in category_caps and _is_gaap_account(acc)
+    ]
+    for header in sorted(headers, key=lambda acc: int(acc.code)):
+        if header.code in selected:
             continue
+        if category_counts[header.category] >= category_caps[header.category]:
+            continue
+        selected[header.code] = header
+        category_counts[header.category] += 1
 
+    gaap_accounts = [
+        acc
+        for acc in master_accounts.values()
+        if _is_gaap_account(acc)
+    ]
+    gaap_accounts.sort(key=lambda acc: int(acc.code))
+
+    for account in gaap_accounts:
+        if account.code in selected:
+            continue
+        cap = category_caps.get(account.category)
+        if cap is None:
+            continue
+        if category_counts[account.category] >= cap:
+            continue
+        selected[account.code] = account
+        category_counts[account.category] += 1
+
+    return selected
+
+
+# ============================================================================
+# Kernel builders
+# ============================================================================
+
+def build_standard_kernel(master_accounts: Dict[str, MasterAccount]) -> Dict[str, MasterAccount]:
+    """Build the L1 US GAAP standard kernel."""
+    validate_l0(master_accounts)
+    base_codes = set(MANDATORY_L0_CODES)
+    selected = _select_accounts_by_category(master_accounts, L1_CATEGORY_CAPS, base_codes)
+    ensure_equity_presence(selected)
+    return selected
+
+
+def build_simplified_kernel(
+    master_accounts: Dict[str, MasterAccount],
+    standard_kernel: Dict[str, MasterAccount],
+) -> Dict[str, MasterAccount]:
+    """Build the L2 simplified kernel derived from L1."""
+    validate_l0(master_accounts)
+
+    base_codes = set(MANDATORY_L0_CODES)
+    # Preserve all equity accounts from L1 to keep the closing stack intact.
+    for code, account in standard_kernel.items():
+        if account.category == "Equity":
+            base_codes.add(code)
+
+    # Simplify expenses to the collapsed buckets.
+    expense_codes = {
+        code for code in standard_kernel if code in SIMPLIFIED_EXPENSE_CODES
+    }
+    base_codes.update(expense_codes)
+
+    simplified = _select_accounts_by_category(master_accounts, L2_CATEGORY_CAPS, base_codes)
+    ensure_equity_presence(simplified)
+    return simplified
+
+
+# ============================================================================
+# Template helpers
+# ============================================================================
+
+def archive_legacy_templates(db: Session) -> None:
+    """Deactivate existing templates so new kernels are used for new onboardings."""
+    existing = db.query(ChartTemplate).filter(ChartTemplate.name.in_(LEGACY_TEMPLATE_NAMES)).all()
+    for template in existing:
+        if template.is_active:
+            template.is_active = False
+
+
+def disable_ifrs_templates(db: Session) -> None:
+    """Mark IFRS templates as inactive with reason attached."""
+    ifrs_templates = db.query(ChartTemplate).filter(ChartTemplate.jurisdiction == "INTL").all()
+    for template in ifrs_templates:
+        template.is_active = False
+        if template.description:
+            if "IFRS mapping not implemented" not in template.description:
+                template.description = f"{template.description} | IFRS mapping not implemented in Master Chart"
+        else:
+            template.description = "IFRS mapping not implemented in Master Chart"
+
+
+def _create_template_accounts(
+    db: Session, template: ChartTemplate, accounts: Iterable[MasterAccount]
+) -> int:
+    """Create ChartTemplateAccount rows for a template."""
+    db.query(ChartTemplateAccount).filter(ChartTemplateAccount.template_id == template.id).delete()
+
+    sorted_accounts = sorted(accounts, key=lambda acc: int(acc.code))
+    count = 0
+    for sort_order, account in enumerate(sorted_accounts, start=1):
         template_account = ChartTemplateAccount(
             id=uuid.uuid4(),
             template_id=template.id,
-            master_account_id=master_account.id,
-            parent_id=None,  # Flat structure for now (can be enhanced with hierarchy)
-            code=code,
-            name=name,
-            is_mandatory=is_mandatory,
-            allow_custom_children=allow_custom,
+            master_account_id=account.id,
+            parent_id=None,
+            code=account.code,
+            name=account.description,
+            is_mandatory=True,
+            allow_custom_children=True,
             sort_order=sort_order,
-            required_module=req_module
+            required_module=None,
         )
-
         db.add(template_account)
-        created_count += 1
-
-    print(f"  ✓ Added {created_count} accounts to template")
-
-    return template
+        count += 1
+    return count
 
 
-def seed_us_gaap_simplified_template(db: Session) -> ChartTemplate:
+def seed_templates(db: Session) -> Dict[str, int]:
     """
-    Seed a simplified US GAAP Template for small businesses and startups.
+    Seed kernelized templates into the database.
 
-    This template has fewer accounts and is easier to manage.
+    Returns:
+        Dict mapping template key to account counts.
     """
+    master_accounts = load_master_account_map(db)
+    if not master_accounts:
+        raise ValueError("No master accounts found. Seed the master chart before templates.")
 
-    existing = db.query(ChartTemplate).filter(
-        ChartTemplate.jurisdiction == "US",
-        ChartTemplate.name == "US GAAP Simplified"
-    ).first()
+    archive_legacy_templates(db)
+    disable_ifrs_templates(db)
 
-    if existing:
-        print(f"✓ Template 'US GAAP Simplified' already exists (ID: {existing.id})")
-        template = existing
-    else:
+    kernels: Dict[str, Dict[str, MasterAccount]] = {}
+    kernels["L1"] = build_standard_kernel(master_accounts)
+    kernels["L2"] = build_simplified_kernel(master_accounts, kernels["L1"])
+
+    seeded_counts: Dict[str, int] = {}
+
+    for key, config in TEMPLATES.items():
+        meta = TEMPLATE_METADATA[key]
+        enabled = config.get("enabled", False)
+        if not enabled:
+            continue
+
+        kernel_level = config["kernel_level"]
+        accounts = kernels[kernel_level].values()
+
         template = ChartTemplate(
             id=uuid.uuid4(),
-            name="US GAAP Simplified",
-            jurisdiction="US",
-            version="2025.1",
-            description="Simplified Chart of Accounts for small businesses, startups, and sole proprietors. "
-                        "Contains essential accounts for basic bookkeeping and financial reporting. "
-                        "Ideal for businesses with straightforward transactions.",
-            is_active=True
+            name=meta["name"],
+            jurisdiction=meta["jurisdiction"],
+            version=TEMPLATE_VERSION,
+            description=meta["description"],
+            is_active=True,
         )
-
         db.add(template)
         db.flush()
 
-        print(f"✓ Created template: {template.name} (ID: {template.id})")
+        account_count = _create_template_accounts(db, template, accounts)
+        seeded_counts[key] = account_count
 
-    # Simplified account list - fewer accounts, all with custom children allowed
-    account_definitions = [
-        ("10069", "Cash", True, True, 1, None),
-        ("16900", "Accounts Receivable", True, True, 2, None),
-
-        ("20001", "Accounts Payable", True, True, 10, None),
-
-        ("42307", "Sales Revenue", True, True, 30, None),
-
-        ("67138", "Utilities Expense", True, True, 42, None),
-    ]
-
-    created_count = 0
-    for code, name, is_mandatory, allow_custom, sort_order, req_module in account_definitions:
-        master_account = get_master_account_by_code(db, code)
-
-        if not master_account:
-            print(f"  ⚠ Warning: Master account {code} not found, skipping...")
-            continue
-
-        template_account = ChartTemplateAccount(
-            id=uuid.uuid4(),
-            template_id=template.id,
-            master_account_id=master_account.id,
-            parent_id=None,
-            code=code,
-            name=name,
-            is_mandatory=is_mandatory,
-            allow_custom_children=allow_custom,
-            sort_order=sort_order,
-            required_module=req_module
-        )
-
-        db.add(template_account)
-        created_count += 1
-
-    print(f"  ✓ Added {created_count} accounts to template")
-
-    return template
+    return seeded_counts
 
 
-def seed_international_template(db: Session) -> ChartTemplate:
-    """
-    Seed an International (IFRS-based) Template.
-
-    For businesses outside the US following International Financial Reporting Standards.
-    """
-
-    existing = db.query(ChartTemplate).filter(
-        ChartTemplate.jurisdiction == "INTL",
-        ChartTemplate.name == "IFRS Standard"
-    ).first()
-
-    if existing:
-        print(f"✓ Template 'IFRS Standard' already exists (ID: {existing.id})")
-        return existing
-
-    template = ChartTemplate(
-        id=uuid.uuid4(),
-        name="IFRS Standard",
-        jurisdiction="INTL",
-        version="2025.1",
-        description="International Financial Reporting Standards (IFRS) compliant Chart of Accounts. "
-                    "Suitable for businesses operating in jurisdictions that follow IFRS, including "
-                    "the UK, EU, Australia, Canada, and many other countries.",
-        is_active=True
-    )
-
-    db.add(template)
-    db.flush()
-
-    print(f"✓ Created template: {template.name} (ID: {template.id})")
-
-    # Similar structure to US GAAP but with IFRS terminology
-    account_definitions = [
-        ("1.10.10.10", "Cash", True, True, 1, None),
-        ("1.10.20.10", "Accounts Receivable", True, True, 2, None),
-        ("1.10.40.10", "Prepaid Expenses", True, True, 4, None),
-
-        ("1.20.10.10", "Property, Plant & Equipment", True, True, 10, None),
-        ("1.20.20.10", "Accumulated Depreciation", True, False, 11, None),
-
-        ("2.10.10.10", "Accounts Payable", True, True, 20, None),
-        ("2.10.20.10", "Accrued Expenses", True, True, 21, None),
-
-        ("3.10.10.10", "Common Stock", True, False, 40, None),
-        ("3.10.20.10", "Retained Earnings", True, False, 41, None),
-
-        ("4.10.10.10", "Sales Revenue", True, True, 50, None),
-
-        ("5.20.10.10", "Salaries and Wages", True, True, 70, None),
-        ("5.20.20.10", "Rent Expense", True, True, 71, None),
-        ("5.20.50.10", "Depreciation Expense", True, True, 74, None),
-        ("5.30.20.10", "Office Supplies", True, True, 81, None),
-    ]
-
-    created_count = 0
-    for code, name, is_mandatory, allow_custom, sort_order, req_module in account_definitions:
-        master_account = get_master_account_by_code(db, code)
-
-        if not master_account:
-            print(f"  ⚠ Warning: Master account {code} not found, skipping...")
-            continue
-
-        template_account = ChartTemplateAccount(
-            id=uuid.uuid4(),
-            template_id=template.id,
-            master_account_id=master_account.id,
-            parent_id=None,
-            code=code,
-            name=name,
-            is_mandatory=is_mandatory,
-            allow_custom_children=allow_custom,
-            sort_order=sort_order,
-            required_module=req_module
-        )
-
-        db.add(template_account)
-        created_count += 1
-
-    print(f"  ✓ Added {created_count} accounts to template")
-
-    return template
-
+# ============================================================================
+# Entry point
+# ============================================================================
 
 def main():
     """Main seeding function."""
-    print("\n" + "="*60)
-    print("  SEEDING CHART TEMPLATES")
-    print("="*60 + "\n")
+    print("\n" + "=" * 60)
+    print("  SEEDING CHART TEMPLATES (KERNEL MODE)")
+    print("=" * 60 + "\n")
 
     db = SessionLocal()
-
     try:
-        # Check if master accounts exist first
         master_count = db.query(MasterAccount).count()
-        if master_count == 0:
-            print("❌ ERROR: No master accounts found!")
-            print("   Please run the master chart seeder first:")
-            print("   python app/data/seed_enriched_master_chart.py\n")
-            return
-
         print(f"✓ Found {master_count} master accounts\n")
 
-        # Seed templates
-        print("Seeding templates...\n")
-
-        template1 = seed_us_gaap_standard_template(db)
-        template2 = seed_us_gaap_simplified_template(db)
-        template3 = seed_international_template(db)
-
-        # Commit all changes
+        counts = seed_templates(db)
         db.commit()
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("  SEEDING COMPLETE")
-        print("="*60)
-        print(f"\n✓ Successfully seeded 3 chart templates")
-        print(f"✓ Templates are ready for use in onboarding\n")
+        print("=" * 60)
+        for key, count in counts.items():
+            meta = TEMPLATE_METADATA[key]
+            print(f"✓ {meta['name']} [{key}] seeded with {count} accounts (v{TEMPLATE_VERSION})")
+        print("\nIFRS templates remain disabled until canonical mapping is available.\n")
 
-        # Print summary
-        print("Templates created:")
-        print(f"  1. {template1.name} ({template1.jurisdiction}) - v{template1.version}")
-        print(f"  2. {template2.name} ({template2.jurisdiction}) - v{template2.version}")
-        print(f"  3. {template3.name} ({template3.jurisdiction}) - v{template3.version}")
-        print()
-
-    except Exception as e:
+    except Exception as exc:
         db.rollback()
-        print(f"\n❌ ERROR: {str(e)}\n")
+        print(f"\n❌ ERROR: {exc}\n")
         raise
     finally:
         db.close()

@@ -63,6 +63,9 @@ const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBac
                 <p className="text-muted-foreground">
                     Is this a standalone entity or part of a corporate group?
                 </p>
+                <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2">
+                    This step defines how your accounting structure is organized. You are not posting transactions yet.
+                </div>
             </div>
 
             <div className="grid gap-6 max-w-2xl mx-auto">
@@ -80,7 +83,7 @@ const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBac
                                 Standalone Entity
                             </span>
                             <span className="mt-1 flex items-center text-sm text-stone-500">
-                                This company operates independently. It has its own chart of accounts and does not consolidate automatically with others.
+                                This company operates independently. This affects structure only, not historical data.
                             </span>
                         </span>
                     </span>
@@ -108,7 +111,7 @@ const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBac
                                 Part of a Group (Subsidiary)
                             </span>
                             <span className="mt-1 flex items-center text-sm text-stone-500">
-                                This company is part of a larger group. It may share chart of accounts templates or require consolidation features.
+                                This company is part of a larger group. This affects structure only, not historical data.
                             </span>
                         </span>
                     </span>
