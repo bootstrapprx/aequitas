@@ -70,45 +70,38 @@ The project is organized into two main directories: `frontend` and `backend`.
 └── README.md        # This file
 ```
 
-## 📜 Canonical Contracts
+## 📜 Canonical Contracts (The Constitution)
 
-Aequitas follows a **contract-first architecture** where API behavior, data structures, and accounting rules are governed by authoritative documentation.
+Aequitas is governed by a **Constitutional Core**. The code is merely the executive branch that enforces these laws.
+API behavior, data structures, and accounting rules are strictly defined by authoritative documentation.
 
-**Core Principle:** Code must conform to contracts, not vice-versa.
+**Core Principle:** Code must conform to the Canon. If they conflict, the code is wrong.
 
-### Canonical Documents
+### The Canonical Documents
 
-All authoritative specifications live in [`docs/canonical/`](docs/canonical/):
+All authoritative specifications live in [`docs/canonical/`](docs/canonical/). This is the **Supreme Law** of the system.
+
+- **[README.md](docs/canonical/README.md)** - **Start Here:** The bridge between code and law.
+- **[CANON_I](docs/canonical/CANON_I_ACCOUNTING_TRUTH.md)** - Accounting Truth & Structure (What is real)
+- **[CANON_II](docs/canonical/CANON_II_AUTHORITY_AND_POWER.md)** - Authority & Power Boundaries (Who may act)
+- **[CANON_III](docs/canonical/CANON_III_EVOLUTION_AND_STATE.md)** - Evolution, State & Time (How things change)
+- **[CANON_IV](docs/canonical/CANON_IV_INTELLIGENCE_AND_GUIDANCE.md)** - Intelligence & Human Protection (Role of AI)
+
+Also included are specific technical contracts:
 
 - **[API_BOUNDARIES.md](docs/canonical/API_BOUNDARIES.md)** - Frozen API surface definition
-  - Allowed vs. forbidden operations
-  - Permission model (view / manage / superuser)
-  - Security boundaries and rate limiting
-
 - **[PHASE_3C1_DTO_SPECIFICATION.md](docs/canonical/PHASE_3C1_DTO_SPECIFICATION.md)** - Data transfer objects
-  - 8 canonical DTOs with field classifications
-  - Immutability rules (locked accounts, posted entries)
-  - OpenAPI-ready schemas
-
 - **[PHASE_3C2_WRITE_APIS.md](docs/canonical/PHASE_3C2_WRITE_APIS.md)** - Write API specifications
-  - 17 write endpoints with complete contracts
-  - Validation rules and error codes
-  - Audit requirements (who/when/what/why)
-
 - **[DATA_DICTIONARY.md](docs/canonical/DATA_DICTIONARY.md)** - Database schema reference
-  - PostgreSQL table definitions
-  - UUID-based relationships
-  - Enum types and constraints
 
-### Why Canonical Contracts?
+### Why a Constitution?
 
-1. **Accounting Correctness First** - GAAP compliance is non-negotiable
-2. **Security by Design** - Assume hostile or buggy clients
-3. **Immutability Enforcement** - Posted entries and locked accounts are protected
-4. **Deterministic Behavior** - Every error has an explicit code
-5. **Audit Integrity** - Critical operations tracked (who/when/what/why)
+1.  **Truth > Convenience:** Accounting reality is not negotiable just to make the UI easier.
+2.  **Immutability:** History is never rewritten. The system enforces "Points of No Return".
+3.  **Security by Design:** We assume hostile or buggy clients; the backend is the final authority.
+4.  **Audit Integrity:** Every critical action is tracked, and laws prevent "God Mode" bypasses.
 
-**Read more:** [docs/canonical/README.md](docs/canonical/README.md)
+**Read the full Constitution:** [docs/canonical/README.md](docs/canonical/README.md)
 
 ---
 
