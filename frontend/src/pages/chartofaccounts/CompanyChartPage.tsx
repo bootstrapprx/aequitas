@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
-import { Search, Plus, RefreshCw, FileText } from 'lucide-react';
+import { Search, Plus, RefreshCw, FileText, Lock, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import type { Company } from '@/types/company';
 
 interface CompanyAccount {
   id: string;
@@ -35,13 +37,15 @@ export default function CompanyChartPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   // Get companies
-  const { data: companies } = useQuery({
+  const { data: companies } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
-      const response = await api.get('/companies/');
+      const response = await api.get<Company[]>('/companies/');
       return response.data;
     },
   });
+  const selectedCompanyData = companies?.find((company) => company.id === selectedCompanyId);
+  const isActiveCompany = selectedCompanyData?.onboarding_status === 'ACTIVE' || selectedCompanyData?.is_active;
 
   // Auto-select first company
   React.useEffect(() => {
@@ -123,6 +127,30 @@ export default function CompanyChartPage() {
           Manage your company's chart of accounts
         </p>
       </div>
+
+      {isActiveCompany && (
+        <Alert className="bg-muted/40 border-border">
+          <div className="flex items-start gap-2">
+            <Lock className="h-4 w-4 mt-0.5 text-muted-foreground" />
+            <div className="space-y-2">
+              <AlertDescription className="text-foreground">
+                This chart is now protected. You may add new accounts, but existing structure and history are preserved.
+              </AlertDescription>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-default">
+                    <Info className="h-3.5 w-3.5" />
+                    <span>This structure is protected after activation.</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  This structure is protected after activation.
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Company Selector */}
       {companies && companies.length > 1 && (

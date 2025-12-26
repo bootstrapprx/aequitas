@@ -38,7 +38,7 @@ import type { JournalEntry, EntryStatus } from '@/types/accounting';
 
 const JournalEntriesPage = () => {
   const { user } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<EntryStatus | 'all'>('all');
   const [filterPeriod, setFilterPeriod] = useState<string>('all');
@@ -149,6 +149,17 @@ const JournalEntriesPage = () => {
           </Button>
         }
       />
+
+      {selectedCompany && (selectedCompany.onboarding_status === 'ACTIVE' || selectedCompany.is_active) && (
+        <Card>
+          <CardContent className="flex items-start gap-3 py-4">
+            <Feather className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="text-sm text-foreground">
+              Entries are recorded exactly as submitted. Corrections are made with new entries.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters - Using Athenaeum Card */}
       <AtheneumCard hover>

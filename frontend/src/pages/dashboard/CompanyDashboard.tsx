@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2,
   TrendingUp,
-  DollarSign,
   Users,
   FileText,
-  ChevronDown,
   RefreshCw,
   Download,
   Settings,
   Bell,
   MoreVertical,
+  ShieldCheck,
+  CheckCircle2,
+  X,
+  Info,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -38,6 +40,8 @@ import { useGetCompanies } from '@/integrations/queries/useCompanies';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNavigate } from 'react-router-dom';
 
 // Interfaces matching backend schema
 interface CompanyChartStatus {
@@ -67,7 +71,9 @@ interface CompanyDashboardStats {
 
 const CompanyDashboard = () => {
   const { user, currentCompanyId, switchCompany } = useAuth();
+  const navigate = useNavigate();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompanyId || '');
+  const [showPostActivationPanel, setShowPostActivationPanel] = useState(false);
 
   // Fetch companies
   const { data: companies, isLoading: isCompaniesLoading } = useGetCompanies();
@@ -93,6 +99,29 @@ const CompanyDashboard = () => {
 
   const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
   const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading);
+  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE' || selectedCompany?.is_active;
+
+  const dismissalKey = useMemo(() => {
+    if (!selectedCompanyId) return null;
+    const userKey = user?.id || user?.user_uid || user?.email || 'anonymous';
+    return `aequitas_post_activation_ack_${userKey}_${selectedCompanyId}`;
+  }, [selectedCompanyId, user?.email, user?.id, user?.user_uid]);
+
+  useEffect(() => {
+    if (isActiveCompany && dismissalKey) {
+      const stored = localStorage.getItem(dismissalKey);
+      setShowPostActivationPanel(stored !== 'dismissed');
+    } else {
+      setShowPostActivationPanel(false);
+    }
+  }, [dismissalKey, isActiveCompany]);
+
+  const acknowledgePanel = () => {
+    if (dismissalKey) {
+      localStorage.setItem(dismissalKey, 'dismissed');
+    }
+    setShowPostActivationPanel(false);
+  };
 
   // Derived metrics from real data
   const chartStatus = stats?.chart_status;
@@ -164,6 +193,26 @@ const CompanyDashboard = () => {
 
       {/* Main Content */}
       <main className="p-8 space-y-8">
+        {isActiveCompany && (
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant="outline" className="flex items-center gap-2 border-green-600 text-green-700 bg-green-50">
+              <ShieldCheck className="h-4 w-4" />
+              Accounting Active
+            </Badge>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground border border-dashed border-border px-3 py-1.5 rounded-lg cursor-default">
+                  <Info className="h-4 w-4" />
+                  Protected structure
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                This structure is protected after activation.
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
         {/* Welcome Banner */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -202,6 +251,53 @@ const CompanyDashboard = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {isActiveCompany && showPostActivationPanel && (
+          <Card className="border border-border bg-muted/40">
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl">Your accounting system is active.</CardTitle>
+                <CardDescription className="mt-2 space-y-1 text-base text-foreground">
+                  <p>Your chart of accounts and fiscal structure are now protected.</p>
+                  <p>Accounting history cannot be rewritten.</p>
+                  <p>You remain fully in control of all entries and decisions.</p>
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={acknowledgePanel} aria-label="Dismiss post-activation summary">
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-foreground">Allowed actions</p>
+                  <div className="space-y-2">
+                    {['Record journal entries', 'View financial reports', 'Use Sandbox for planning'].map((action) => (
+                      <div key={action} className="flex items-center gap-2 text-sm text-foreground">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <span>{action}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-foreground">Explicit non-actions</p>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>The system will never post entries automatically.</p>
+                    <p>No data is changed without your action.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={acknowledgePanel}>Continue to dashboard</Button>
+                <Button variant="outline" onClick={() => { acknowledgePanel(); navigate('/chartofaccounts'); }}>
+                  Review accounting structure
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -52,7 +52,7 @@ type PeriodStatus = 'open' | 'closed' | 'locked';
 
 const FiscalPeriodsPage = () => {
   const { user } = useAuth();
-  const { selectedCompanyId } = useCompany();
+  const { selectedCompanyId, selectedCompany } = useCompany();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkCreateDialogOpen, setBulkCreateDialogOpen] = useState(false);
   const [filterYear, setFilterYear] = useState<string>('all');
@@ -154,6 +154,7 @@ const FiscalPeriodsPage = () => {
   const getTypeDisplay = (type: PeriodType) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
+  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE' || selectedCompany?.is_active;
 
   // Empty state when no company is selected
   if (!selectedCompanyId) {
@@ -220,6 +221,11 @@ const FiscalPeriodsPage = () => {
             belong to an open period. Closing a period prevents new entries from being posted to it.
           </AlertDescription>
         </Alert>
+        {isActiveCompany && (
+          <p className="text-sm text-muted-foreground mt-2 pl-6">
+            Closed periods cannot be reopened.
+          </p>
+        )}
       </motion.div>
 
       {/* Filters - Using Athenaeum Card */}
