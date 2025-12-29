@@ -1,6 +1,5 @@
-use crate::domain::{Goal, GoalStatus, Phase};
+use crate::domain::{Goal, Phase};
 use crate::errors::{MetaError, Result};
-use chrono::NaiveDate;
 use serde_yaml;
 use std::collections::HashMap;
 

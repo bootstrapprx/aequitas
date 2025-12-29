@@ -1,4 +1,4 @@
-use crate::domain::{Goal, GoalStatus};
+use crate::domain::Goal;
 use crate::errors::{MetaError, Result};
 use crate::governance::GovernanceContext;
 use crate::writer::{FrontmatterSerializer, MarkdownWriter};

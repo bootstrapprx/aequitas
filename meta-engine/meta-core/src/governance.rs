@@ -352,7 +352,7 @@ impl GovernanceContext {
                 if let Some(decision) = self.resolve_decision_links(&link) {
                     if !decisions
                         .iter()
-                        .any(|d| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
+                        .any(|d: &Decision| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
                     {
                         decisions.push(decision);
                     }
@@ -382,7 +382,7 @@ impl GovernanceContext {
                 {
                     if !audits
                         .iter()
-                        .any(|a| a.file_path == audit.file_path)
+                        .any(|a: &AuditRecord| a.file_path == audit.file_path)
                     {
                         audits.push(audit.clone());
                     }
@@ -403,7 +403,7 @@ impl GovernanceContext {
                         .iter()
                         .any(|g| Self::goal_match(g, &goal.goal_id));
                 if linked || in_frontmatter {
-                    if !daily_refs.iter().any(|d| d.date == daily.date) {
+                    if !daily_refs.iter().any(|d: &DailyNote| d.date == daily.date) {
                         daily_refs.push(daily.clone());
                     }
                 }
@@ -589,7 +589,8 @@ impl GovernanceContext {
 
     pub fn daily_context(&self, date: NaiveDate) -> DailyContext {
         let active_phase = self.active_phase();
-        let active_phase_id = active_phase.as_ref().map(|p| p.phase_id.as_str());
+        let active_phase_cloned = active_phase.clone();
+        let active_phase_id = active_phase_cloned.as_ref().map(|p| p.phase_id.as_str());
 
         let relations = self.goal_relations_map(active_phase_id);
         let in_phase_goals: Vec<Goal> = self
@@ -650,7 +651,7 @@ impl GovernanceContext {
                 for decision in rel.decisions {
                     if !linked_decisions
                         .iter()
-                        .any(|d| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
+                        .any(|d: &Decision| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
                     {
                         linked_decisions.push(decision);
                     }
@@ -658,7 +659,7 @@ impl GovernanceContext {
                 for audit in rel.audits {
                     if !linked_audits
                         .iter()
-                        .any(|a| a.title == audit.title && a.file_path == audit.file_path)
+                        .any(|a: &AuditRecord| a.title == audit.title && a.file_path == audit.file_path)
                     {
                         linked_audits.push(audit);
                     }
