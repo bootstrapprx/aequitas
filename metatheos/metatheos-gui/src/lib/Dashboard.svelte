@@ -2,10 +2,15 @@
   import { invoke } from '@tauri-apps/api/core'
   import { onMount } from 'svelte'
   import Toast from './Toast.svelte'
+  import PhaseEditor from './PhaseEditor.svelte'
 
   let loading = true
   let error = null
   let devMode = false
+
+  // Editor state
+  let showPhaseEditor = false
+  let editingPhase = null
   let data = {
     current_phase: null,
     active_goals: [],
@@ -88,6 +93,35 @@
   function formatDate(value) {
     if (!value) return 'n/a'
     return new Date(value).toLocaleDateString()
+  }
+
+  function openNewPhaseEditor() {
+    editingPhase = null
+    showPhaseEditor = true
+  }
+
+  function openEditPhaseEditor(phase) {
+    editingPhase = phase
+    showPhaseEditor = true
+  }
+
+  function closePhaseEditor() {
+    showPhaseEditor = false
+    editingPhase = null
+  }
+
+  async function handlePhaseSaved() {
+    toastMessage = editingPhase ? 'Phase updated successfully!' : 'Phase created successfully!'
+    toastType = 'success'
+    toastShow = true
+    await loadDashboard()
+  }
+
+  async function handlePhaseActivated() {
+    toastMessage = 'Phase activated successfully!'
+    toastType = 'success'
+    toastShow = true
+    await loadDashboard()
   }
 
   async function createDailyNote() {
@@ -182,7 +216,27 @@
     <!-- Context and Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div class="card">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Phase</div>
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Current Phase</div>
+          {#if data.current_phase}
+            <button
+              class="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded transition-colors"
+              on:click={() => openEditPhaseEditor(data.current_phase)}
+              disabled={devMode}
+              title="Edit phase"
+            >
+              Edit
+            </button>
+          {:else}
+            <button
+              class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+              on:click={openNewPhaseEditor}
+              disabled={devMode}
+            >
+              New
+            </button>
+          {/if}
+        </div>
         <div class="text-2xl font-bold text-gray-900 dark:text-white mt-2">
           {#if data.current_phase}
             {data.current_phase.phase_id} — {data.current_phase.title}
@@ -487,5 +541,14 @@
     </div>
   {/if}
 </div>
+
+{#if showPhaseEditor}
+  <PhaseEditor
+    phase={editingPhase}
+    onClose={closePhaseEditor}
+    on:saved={handlePhaseSaved}
+    on:activated={handlePhaseActivated}
+  />
+{/if}
 
 <Toast bind:show={toastShow} message={toastMessage} type={toastType} />

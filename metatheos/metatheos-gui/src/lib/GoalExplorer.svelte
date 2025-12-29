@@ -2,6 +2,7 @@
   import { invoke } from '@tauri-apps/api/core'
   import { onMount } from 'svelte'
   import Toast from './Toast.svelte'
+  import GoalEditor from './GoalEditor.svelte'
 
   let loading = true
   let error = null
@@ -16,6 +17,10 @@
   let toastShow = false
   let toastMessage = ''
   let toastType = 'success'
+
+  // Editor state
+  let showEditor = false
+  let editingGoal = null
 
   const statusOrder = ['planned', 'active', 'blocked', 'partial', 'done', 'archived', 'unknown']
 
@@ -135,6 +140,35 @@
     return new Date(value).toLocaleDateString()
   }
 
+  function openNewGoalEditor() {
+    editingGoal = null
+    showEditor = true
+  }
+
+  function openEditGoalEditor(goal) {
+    editingGoal = goal
+    showEditor = true
+  }
+
+  function closeEditor() {
+    showEditor = false
+    editingGoal = null
+  }
+
+  async function handleGoalSaved() {
+    toastMessage = editingGoal ? 'Goal updated successfully!' : 'Goal created successfully!'
+    toastType = 'success'
+    toastShow = true
+    await loadGoals()
+  }
+
+  async function handleGoalDeleted() {
+    toastMessage = 'Goal deleted successfully!'
+    toastType = 'success'
+    toastShow = true
+    await loadGoals()
+  }
+
   $: {
     searchQuery
     applyFilters()
@@ -158,9 +192,21 @@
         Grouped by phase and status from 03_GOALS_EPICS
       </p>
     </div>
-    <button class="btn btn-secondary" on:click={loadGoals} disabled={loading}>
-      {loading ? 'Refreshing…' : 'Refresh'}
-    </button>
+    <div class="flex gap-3">
+      <button
+        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center gap-2"
+        on:click={openNewGoalEditor}
+        disabled={devMode}
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Goal
+      </button>
+      <button class="btn btn-secondary" on:click={loadGoals} disabled={loading}>
+        {loading ? 'Refreshing…' : 'Refresh'}
+      </button>
+    </div>
   </div>
 
   {#if devMode}
@@ -276,16 +322,28 @@
                               </div>
                             </div>
 
-                            <div class="relative">
+                            <div class="flex gap-2">
                               <button
-                                class="btn btn-secondary text-sm"
-                                on:click={() => toggleStatusMenu(goal.goal_id)}
-                                disabled={updatingGoalId === goal.goal_id || devMode}
+                                class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                on:click={() => openEditGoalEditor(goal)}
+                                disabled={devMode}
+                                title="Edit goal"
                               >
-                                {updatingGoalId === goal.goal_id ? 'Updating...' : 'Change Status'}
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
                               </button>
 
-                              {#if showStatusMenu === goal.goal_id}
+                              <div class="relative">
+                                <button
+                                  class="btn btn-secondary text-sm"
+                                  on:click={() => toggleStatusMenu(goal.goal_id)}
+                                  disabled={updatingGoalId === goal.goal_id || devMode}
+                                >
+                                  {updatingGoalId === goal.goal_id ? 'Updating...' : 'Change Status'}
+                                </button>
+
+                                {#if showStatusMenu === goal.goal_id}
                                 <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
                                   <div class="py-1">
                                     {#each ['planned', 'active', 'blocked', 'partial', 'done'] as statusOption}
@@ -301,6 +359,7 @@
                                   </div>
                                 </div>
                               {/if}
+                              </div>
                             </div>
                           </div>
                           <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-mono">
@@ -319,5 +378,14 @@
     {/if}
   {/if}
 </div>
+
+{#if showEditor}
+  <GoalEditor
+    goal={editingGoal}
+    onClose={closeEditor}
+    on:saved={handleGoalSaved}
+    on:deleted={handleGoalDeleted}
+  />
+{/if}
 
 <Toast bind:show={toastShow} message={toastMessage} type={toastType} />
