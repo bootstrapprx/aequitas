@@ -24,10 +24,17 @@
   <!-- Sidebar -->
   <aside class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
     <div class="p-6">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-        Metatheos
-      </h1>
-      <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Governance Engine</p>
+      <div class="flex items-center gap-3 mb-2">
+        <img
+          src="/metatheos-logo.png"
+          alt="Metatheos Logo"
+          class="w-10 h-10 rounded-lg"
+        />
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          Metatheos
+        </h1>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 ml-13">Governance Engine</p>
     </div>
 
     <nav class="mt-6">
