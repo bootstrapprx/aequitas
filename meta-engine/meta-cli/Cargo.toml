@@ -1,0 +1,14 @@
+[package]
+name = "meta-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+meta-core = { path = "../meta-core" }
+clap = { version = "4.5", features = ["derive", "cargo"] }
+anyhow.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+comfy-table = "7.1"

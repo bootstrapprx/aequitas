@@ -388,15 +388,19 @@ KERNEL_IMPLEMENTATION_SUMMARY.md            [NEW] This file
 ## Next Steps
 
 1. ✅ **COMPLETE:** Code artifacts created
-2. ⏭️ **TODO:** Start Docker services (`make dev`)
-3. ⏭️ **TODO:** Execute master chart reseed
-4. ⏭️ **TODO:** Verify kernel compliance
-5. ⏭️ **TODO:** Reseed chart templates
-6. ⏭️ **TODO:** Test company onboarding with new kernel
-7. ⏭️ **TODO:** Implement authorization layer
-8. ⏭️ **TODO:** Create RemediationEvent model & migration
-9. ⏭️ **TODO:** Implement frontend (Tracks 3 & 4)
-10. ⏭️ **TODO:** End-to-end testing
+2. ⏳ Execute reseed + verification cycle in target env (see checklist below)
+3. ⏳ Implement Track 3/4 frontends + RemediationEvent persistence
+## Execution Checklist (Post-Code)
+
+- [ ] Execute master chart reseed in target env (`reseed_kernel_master_chart.py`)
+- [ ] Verify kernel compliance via `sql/verify_kernel_compliance.sql`
+- [ ] Reseed chart templates post-kernel
+- [ ] Test company onboarding end-to-end against kernel accounts
+- [x] Authorization layer present (JWT + permission service)
+- [ ] Create `RemediationEvent` model/migration (currently inline logs only)
+- [ ] Implement Post-Activation UX components (Track 3 frontend)
+- [ ] Implement Dexter Observer frontend + readonly DB role (Track 4)
+- [ ] Run end-to-end test: reseed → onboarding → remediation → accounting smoke
 
 ---
 

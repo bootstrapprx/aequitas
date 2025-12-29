@@ -2,7 +2,7 @@
 
 **Session Date:** 2025-12-06
 **Total Session Time:** ~3-4 hours of implementation
-**Status:** Backend 100% | Frontend Journal Entries 100% | Trial Balance & Financial Statements (pending)
+**Status:** Backend 100% | Frontend Accounting UIs 100% | Custom reporting/export polish pending
 
 ---
 
@@ -84,7 +84,7 @@ This was the **critical blocker** preventing Aequitas from functioning as an acc
 15. ✅ `models/__init__.py` - Registered all accounting models
 16. ✅ `main.py` - Registered all API routes
 
-### **FRONTEND (Journal Entries 100% Complete) - 10 New Files**
+### **FRONTEND (Accounting Flows 100% Complete) - Key Files**
 
 #### TypeScript Types (1 file)
 17. ✅ `types/accounting.ts` - Complete type definitions
@@ -127,20 +127,16 @@ This was the **critical blocker** preventing Aequitas from functioning as an acc
     - Void reason dialog
     - Delete confirmation
 
-#### Pages (1 file - replacing placeholder)
-24. ✅ `JournalEntriesPage.tsx` - Complete functional page
-    - Create journal entries
-    - List with filters (status, period)
-    - Post entries
-    - Void entries with reason
-    - Delete draft entries
-    - Export to Excel button (ready for implementation)
-    - Full integration with backend API
+#### Pages (4 files - all live)
+24. ✅ `JournalEntriesPage.tsx` - Create/post/void/delete with status badges and export hook
+25. ✅ `DailyLedgerPage.tsx` - Account ledger view with filters and running balances
+26. ✅ `TrialBalancePage.tsx` - Period/date toggle, CSV export, balance validation messaging
+27. ✅ `FinancialStatementsPage.tsx` - Balance Sheet / Income Statement / Cash Flow tabs with CSV export
 
 ### **Documentation (3 files)**
-25. ✅ `PHASE4_CONTINUATION_GUIDE.md` - Complete continuation guide
-26. ✅ `SESSION_PROGRESS_2025-12-06.md` - Session progress report
-27. ✅ `IMPLEMENTATION_COMPLETE_SUMMARY.md` - This file
+28. ✅ `PHASE4_CONTINUATION_GUIDE.md` - Complete continuation guide
+29. ✅ `SESSION_PROGRESS_2025-12-06.md` - Session progress report
+30. ✅ `IMPLEMENTATION_COMPLETE_SUMMARY.md` - This file
 
 ---
 
@@ -280,53 +276,12 @@ This will start:
 
 ## ⚠️ KNOWN LIMITATIONS & TODOs
 
-### **Frontend TODOs (Marked in Code)**
-
-```typescript
-// TODO: Get actual company ID from context/params
-const MOCK_COMPANY_ID = 'company-uuid-here';
-
-// TODO: Get actual user ID from auth context
-const MOCK_USER_ID = 'user-uuid-here';
-
-// TODO: Fetch actual company accounts
-const MOCK_ACCOUNTS = [
-  { id: 'acc-1', code: '1000', description: 'Cash' },
-  // ... mock data
-];
-```
-
-**Action Required:**
-1. Integrate with existing auth context to get real user ID
-2. Get company ID from route params or company selector
-3. Fetch company accounts from `/api/v1/companychart/{companyId}`
-
-### **Missing Frontend Pages (Next to Build)**
-
-1. ⏳ **DailyLedgerPage** (placeholder exists)
-   - Account ledger view
-   - Running balance display
-   - Filter by account and date range
-
-2. ⏳ **TrialBalancePage** (placeholder exists)
-   - Debit/credit columns
-   - Balance validation indicator
-   - Export to Excel
-
-3. ⏳ **FinancialStatementsPage** (placeholder exists)
-   - Three-tab view (Balance Sheet, P&L, Cash Flow)
-   - Period selection
-   - Print-friendly layout
-
-**Estimated Time to Complete:** 2-3 hours
-
-### **Backend Known Issues (Lower Priority)**
-
-1. Dexter field references need fixing (`account.code` vs `account.account_code`)
-2. Duplicate services need consolidation (`master_chart_service` vs `masterchart_service`)
-3. Duplicate mapping models exist (`Mapping` vs `AccountMapping`)
-4. QBO token storage is in-memory (should be persistent)
-5. Vector store uses JSON column (should use pgvector native type)
+- Custom reporting & Export Center: UI placeholders shipped (`CustomReportsPage`, `ExportCenterPage`); no backend services yet.
+- KPI/analytics: Dashboard shows activity summaries only; KPI/calculation services still needed.
+- Opening balances + retained earnings: No guided Day 0 import or roll-forward helper.
+- Period close UX: API exists; UI needs surfaced warnings/locks before close.
+- Dexter/Mapping cleanup: Duplicate legacy services to consolidate; some field references need alignment (`account.code` vs `account.account_code`).
+- QBO token persistence/vector store: Tokens persisted in DB, but vector store still JSON column; consider pgvector-native.
 
 ---
 
@@ -342,8 +297,8 @@ Overall Completion: 60-65%
 
 ### **AFTER Phase 4:**
 ```
-Overall Completion: 80-85%
-├── Frontend: 75% (Journal entries complete, 2 pages remaining)
+Overall Completion: 85-90%
+├── Frontend: 85% (Accounting flows complete; reporting/KPIs pending)
 ├── Backend: 100% (All Phase 4 complete)
 └── Accounting Engine: 100% ✅ COMPLETE
 ```
@@ -352,47 +307,29 @@ Overall Completion: 80-85%
 
 | Phase | Before | After | Change |
 |-------|--------|-------|--------|
-| Phase 1 - Foundation | 70% | 75% | +5% |
-| Phase 2 - Mapping | 30% | 30% | - |
-| Phase 3 - Company Chart Generator | 10% | 10% | - |
+| Phase 1 - Foundation | 70% | 80% | +10% |
+| Phase 2 - Mapping | 30% | 40% | +10% |
+| Phase 3 - Company Chart Generator | 10% | 15% | +5% |
 | **Phase 4 - Accounting Engine** | **0%** | **100%** | **+100%** 🎉 |
-| Phase 5 - QBO Integration | 30% | 30% | - |
+| Phase 5 - QBO Integration/Reporting | 30% | 40% | +10% |
 | Phase 6 - Dashboard | 40% | 40% | - |
-| Phase 7 - Frontend | 70% | 75% | +5% |
+| Phase 7 - Frontend | 70% | 85% | +15% |
 | Phase 8 - Testing | 5% | 5% | - |
 
 ---
 
 ## 📝 NEXT SESSION TASKS
 
-### **Immediate (Continue Option A):**
+### **Immediate:**
 
-1. **Build TrialBalancePage** (1-2 hours)
-   - Create TrialBalanceTable component
-   - Replace placeholder page
-   - Add period selection
-   - Add export functionality
+1. **Ship Custom Reporting backend** (jobs + templates) to pair with `CustomReportsPage`.
+2. **Finish Export Center wiring** (PDF/CSV jobs + queue) behind `/reports/export`.
+3. **KPI/Analytics service** feeding CompanyDashboard cards (ratios, burn, runway).
 
-2. **Build FinancialStatementsPage** (1-2 hours)
-   - Create BalanceSheet component
-   - Create IncomeStatement component
-   - Create CashFlowStatement component
-   - Replace placeholder page
-   - Add three-tab view
-   - Add period comparison
-
-3. **Integrate Real Data** (30 mins)
-   - Replace MOCK_COMPANY_ID with real company from context
-   - Replace MOCK_USER_ID with real user from auth
-   - Fetch real company accounts from API
-
-### **After Frontend Complete:**
-
-Choose next priority:
-- **Option B:** Fix foundation issues (duplicate services, Dexter fields)
-- **Option C:** Complete mapping engine (confidence scoring, clustering)
-- **Option D:** Build company chart generator
-- **Option E:** Expand QBO integration (transaction sync)
+### **Platform Hardening:**
+- Consolidate duplicate services (master chart/mapping) and fix Dexter field references.
+- Add Day 0 opening balance import + retained earnings helper flow.
+- Polish period close UX with warnings/locks surfaced in UI.
 
 ---
 

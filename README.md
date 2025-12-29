@@ -79,20 +79,19 @@ API behavior, data structures, and accounting rules are strictly defined by auth
 
 ### The Canonical Documents
 
-All authoritative specifications live in [`docs/canonical/`](docs/canonical/). This is the **Supreme Law** of the system.
+All authoritative specifications live in [`governance/CONSTITUTION/`](governance/CONSTITUTION/). This is the **Supreme Law** of the system.
 
-- **[README.md](docs/canonical/README.md)** - **Start Here:** The bridge between code and law.
-- **[CANON_I](docs/canonical/CANON_I_ACCOUNTING_TRUTH.md)** - Accounting Truth & Structure (What is real)
-- **[CANON_II](docs/canonical/CANON_II_AUTHORITY_AND_POWER.md)** - Authority & Power Boundaries (Who may act)
-- **[CANON_III](docs/canonical/CANON_III_EVOLUTION_AND_STATE.md)** - Evolution, State & Time (How things change)
-- **[CANON_IV](docs/canonical/CANON_IV_INTELLIGENCE_AND_GUIDANCE.md)** - Intelligence & Human Protection (Role of AI)
+- **[README.md](governance/CONSTITUTION/README.md)** - **Start Here:** The bridge between code and law.
+- **[CANON_I](governance/CONSTITUTION/CANON_I_ACCOUNTING_TRUTH.md)** - Accounting Truth & Structure (What is real)
+- **[CANON_II](governance/CONSTITUTION/CANON_II_AUTHORITY_AND_POWER.md)** - Authority & Power Boundaries (Who may act)
+- **[CANON_III](governance/CONSTITUTION/CANON_III_EVOLUTION_AND_STATE.md)** - Evolution, State & Time (How things change)
+- **[CANON_IV](governance/CONSTITUTION/CANON_IV_INTELLIGENCE_AND_GUIDANCE.md)** - Intelligence & Human Protection (Role of AI)
 
 Also included are specific technical contracts:
 
-- **[API_BOUNDARIES.md](docs/canonical/API_BOUNDARIES.md)** - Frozen API surface definition
-- **[PHASE_3C1_DTO_SPECIFICATION.md](docs/canonical/PHASE_3C1_DTO_SPECIFICATION.md)** - Data transfer objects
-- **[PHASE_3C2_WRITE_APIS.md](docs/canonical/PHASE_3C2_WRITE_APIS.md)** - Write API specifications
-- **[DATA_DICTIONARY.md](docs/canonical/DATA_DICTIONARY.md)** - Database schema reference
+- **[Kernel 2025.2](governance/CONSTITUTION/kernels/kernel_2025.2.md)** - Current implementation kernel
+
+> **Note**: Additional protocol specifications may exist in `docs/canonical/` (legacy location). The authoritative Canon and Kernel documents are in `governance/CONSTITUTION/`.
 
 ### Why a Constitution?
 
@@ -101,7 +100,9 @@ Also included are specific technical contracts:
 3.  **Security by Design:** We assume hostile or buggy clients; the backend is the final authority.
 4.  **Audit Integrity:** Every critical action is tracked, and laws prevent "God Mode" bypasses.
 
-**Read the full Constitution:** [docs/canonical/README.md](docs/canonical/README.md)
+**Read the full Constitution:** [governance/CONSTITUTION/README.md](governance/CONSTITUTION/README.md)
+
+**Project Governance:** See [governance/README.md](governance/README.md) for project roadmap, phases, goals, decisions, and audits.
 
 ---
 

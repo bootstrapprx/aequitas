@@ -38,7 +38,18 @@
       "Bash(docker logs:*)",
       "Bash(docker rm:*)",
       "Bash(source:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "Bash(cp:*)",
+      "Bash(cargo new:*)",
+      "Bash(rustc:*)",
+      "Bash(sh:*)",
+      "Bash(cargo --version:*)",
+      "Bash(cargo build:*)",
+      "Bash(./meta-engine/target/release/meta-cli --help)",
+      "Bash(/home/actpm/Documents/workfolder/aequitas/meta-engine/target/release/meta-cli:*)",
+      "Bash(chmod:*)",
+      "Bash(./meta:*)",
+      "Bash(cargo install:*)"
     ],
     "deny": [],
     "ask": []

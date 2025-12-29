@@ -1,0 +1,14 @@
+#!/bin/bash
+# Aequitas Meta Engine - Convenience wrapper
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BINARY="$SCRIPT_DIR/meta-engine/target/release/meta-cli"
+GOVERNANCE="$SCRIPT_DIR/governance"
+
+if [ ! -f "$BINARY" ]; then
+    echo "Error: Meta Engine not built yet"
+    echo "Run: cd meta-engine && cargo build --release"
+    exit 1
+fi
+
+exec "$BINARY" --root "$GOVERNANCE" "$@"
