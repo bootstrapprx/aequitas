@@ -2,11 +2,13 @@
   import Dashboard from './lib/Dashboard.svelte'
   import GoalExplorer from './lib/GoalExplorer.svelte'
   import AuditViewer from './lib/AuditViewer.svelte'
+  import DailyEditor from './lib/DailyEditor.svelte'
 
   let currentView = 'dashboard'
 
   const views = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'daily', label: 'Daily', icon: '📅' },
     { id: 'goals', label: 'Goals', icon: '🎯' },
     { id: 'audit', label: 'Audit', icon: '✓' },
   ]
@@ -53,6 +55,8 @@
     <div class="p-8">
       {#if currentView === 'dashboard'}
         <Dashboard />
+      {:else if currentView === 'daily'}
+        <DailyEditor />
       {:else if currentView === 'goals'}
         <GoalExplorer />
       {:else if currentView === 'audit'}

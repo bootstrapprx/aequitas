@@ -14,3 +14,6 @@ thiserror.workspace = true
 chrono.workspace = true
 regex.workspace = true
 walkdir.workspace = true
+reqwest = { version = "0.12", features = ["json"] }
+async-trait = "0.1"
+tokio = { version = "1", features = ["full"] }

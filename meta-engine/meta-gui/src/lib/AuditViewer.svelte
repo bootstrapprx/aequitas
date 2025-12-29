@@ -4,213 +4,108 @@
 
   let loading = true
   let error = null
-  let audit = {
-    results: [],
-    total_files: 0,
-  }
+  let devMode = false
+  let audits = []
 
-  let errors = []
-  let warnings = []
-  let infos = []
+  const tauriAvailable = () => {
+    if (typeof window === 'undefined') return false
+    return Boolean(
+      window.__TAURI__ ||
+        window.__TAURI_IPC__ ||
+        window.__TAURI_INTERNALS__
+    )
+  }
 
   onMount(async () => {
-    await runAudit()
+    if (!tauriAvailable()) {
+      devMode = true
+      loading = false
+      return
+    }
+    await loadAudits()
   })
 
-  async function runAudit() {
+  async function loadAudits() {
     try {
       loading = true
-      audit = await invoke('run_audit')
-
-      errors = audit.results.filter(r => r.severity === 'Error')
-      warnings = audit.results.filter(r => r.severity === 'Warning')
-      infos = audit.results.filter(r => r.severity === 'Info')
-
-      loading = false
+      audits = await invoke('list_audits')
+      error = null
     } catch (err) {
-      error = err
+      error = err?.toString?.() ?? String(err)
+    } finally {
       loading = false
     }
   }
 
-  function getSeverityIcon(severity) {
-    const icons = {
-      Error: '❌',
-      Warning: '⚠',
-      Info: 'ℹ',
-    }
-    return icons[severity] || '•'
-  }
-
-  function getSeverityClass(severity) {
-    const classes = {
-      Error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-      Warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
-      Info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
-    }
-    return classes[severity] || ''
-  }
-
-  function getSeverityTextClass(severity) {
-    const classes = {
-      Error: 'text-red-800 dark:text-red-200',
-      Warning: 'text-yellow-800 dark:text-yellow-200',
-      Info: 'text-blue-800 dark:text-blue-200',
-    }
-    return classes[severity] || ''
+  function formatDate(value) {
+    if (!value) return 'n/a'
+    return new Date(value).toLocaleDateString()
   }
 </script>
 
 <div>
   <div class="flex items-center justify-between mb-6">
-    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Governance Audit</h2>
-    <button class="btn btn-primary" on:click={runAudit} disabled={loading}>
-      {loading ? 'Running...' : 'Run Audit'}
+    <div>
+      <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Audits</h2>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Read-only view of 05_AUDITS (scope, date, findings summary)
+      </p>
+    </div>
+    <button class="btn btn-primary" on:click={loadAudits} disabled={loading}>
+      {loading ? 'Refreshing…' : 'Refresh'}
     </button>
   </div>
 
-  {#if loading && audit.results.length === 0}
+  {#if devMode}
+    <div class="card mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+      <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Tauri not detected</h3>
+      <p class="text-yellow-700 dark:text-yellow-200 text-sm">
+        Run <code>cargo tauri dev</code> to load audits from the Governance Vault.
+      </p>
+    </div>
+  {/if}
+
+  {#if loading && audits.length === 0}
     <div class="card">
-      <p class="text-gray-500 dark:text-gray-400">Running governance audit...</p>
+      <p class="text-gray-500 dark:text-gray-400">Loading audits...</p>
     </div>
   {:else if error}
     <div class="card bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
       <p class="text-red-800 dark:text-red-200">Error: {error}</p>
     </div>
   {:else}
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="card">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Files</div>
-        <div class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
-          {audit.total_files}
-        </div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Audit Records</h3>
+        <span class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Read-only</span>
       </div>
 
-      <div class="card">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Errors</div>
-        <div class="text-3xl font-bold text-red-600 dark:text-red-400 mt-2">
-          {errors.length}
+      {#if audits.length === 0}
+        <p class="text-sm text-gray-500 dark:text-gray-400">No audits found.</p>
+      {:else}
+        <div class="space-y-3">
+          {#each audits as audit}
+            <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-lg font-semibold text-gray-900 dark:text-white">
+                    {audit.title}
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Date: {formatDate(audit.date)} · Scope: {audit.scope || 'n/a'} · Risk: {audit.risk || 'n/a'}
+                  </div>
+                  <div class="text-sm text-gray-700 dark:text-gray-200 mt-2">
+                    {audit.summary || 'No findings summary provided.'}
+                  </div>
+                </div>
+                <span class="text-xs font-mono text-gray-500 dark:text-gray-400">
+                  {audit.file_path}
+                </span>
+              </div>
+            </div>
+          {/each}
         </div>
-      </div>
-
-      <div class="card">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Warnings</div>
-        <div class="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mt-2">
-          {warnings.length}
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Info</div>
-        <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mt-2">
-          {infos.length}
-        </div>
-      </div>
+      {/if}
     </div>
-
-    <!-- Status -->
-    {#if errors.length === 0 && warnings.length === 0}
-      <div class="card bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 mb-6">
-        <div class="flex items-center gap-3">
-          <span class="text-4xl">✓</span>
-          <div>
-            <h3 class="text-lg font-semibold text-green-800 dark:text-green-200">
-              Governance is Valid
-            </h3>
-            <p class="text-green-700 dark:text-green-300 text-sm">
-              No errors or warnings found
-            </p>
-          </div>
-        </div>
-      </div>
-    {/if}
-
-    <!-- Errors -->
-    {#if errors.length > 0}
-      <div class="card mb-6">
-        <h3 class="text-xl font-semibold text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
-          <span>{getSeverityIcon('Error')}</span>
-          Errors ({errors.length})
-        </h3>
-        <div class="space-y-3">
-          {#each errors as result}
-            <div class="p-4 rounded-lg border {getSeverityClass('Error')}">
-              <div class="flex items-start gap-3">
-                <span class="text-xl">{getSeverityIcon('Error')}</span>
-                <div class="flex-1">
-                  <div class="font-mono text-sm {getSeverityTextClass('Error')} mb-1">
-                    {result.file.replace(/^governance\//, '')}
-                    {#if result.line}
-                      :{result.line}
-                    {/if}
-                  </div>
-                  <p class="{getSeverityTextClass('Error')}">
-                    {result.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    <!-- Warnings -->
-    {#if warnings.length > 0}
-      <div class="card mb-6">
-        <h3 class="text-xl font-semibold text-yellow-600 dark:text-yellow-400 mb-4 flex items-center gap-2">
-          <span>{getSeverityIcon('Warning')}</span>
-          Warnings ({warnings.length})
-        </h3>
-        <div class="space-y-3">
-          {#each warnings as result}
-            <div class="p-4 rounded-lg border {getSeverityClass('Warning')}">
-              <div class="flex items-start gap-3">
-                <span class="text-xl">{getSeverityIcon('Warning')}</span>
-                <div class="flex-1">
-                  <div class="font-mono text-sm {getSeverityTextClass('Warning')} mb-1">
-                    {result.file.replace(/^governance\//, '')}
-                    {#if result.line}
-                      :{result.line}
-                    {/if}
-                  </div>
-                  <p class="{getSeverityTextClass('Warning')}">
-                    {result.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
-
-    <!-- Info -->
-    {#if infos.length > 0}
-      <div class="card">
-        <h3 class="text-xl font-semibold text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
-          <span>{getSeverityIcon('Info')}</span>
-          Info ({infos.length})
-        </h3>
-        <div class="space-y-3">
-          {#each infos as result}
-            <div class="p-4 rounded-lg border {getSeverityClass('Info')}">
-              <div class="flex items-start gap-3">
-                <span class="text-xl">{getSeverityIcon('Info')}</span>
-                <div class="flex-1">
-                  <div class="font-mono text-sm {getSeverityTextClass('Info')} mb-1">
-                    {result.file.replace(/^governance\//, '')}
-                  </div>
-                  <p class="{getSeverityTextClass('Info')}">
-                    {result.message}
-                  </p>
-                </div>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
   {/if}
 </div>

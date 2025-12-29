@@ -8,6 +8,6 @@ pub mod daily;
 pub use goal::{Goal, GoalStatus};
 pub use phase::Phase;
 pub use decision::{Decision, DecisionStatus};
-pub use audit::{Audit, ValidationResult, ValidationSeverity};
+pub use audit::{Audit, AuditRecord, ValidationResult, ValidationSeverity};
 pub use prompt::Prompt;
 pub use daily::DailyNote;

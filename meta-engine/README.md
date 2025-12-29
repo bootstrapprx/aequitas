@@ -1,7 +1,7 @@
 # Aequitas Meta Engine
 
-**Version:** 0.2.0 (Phase 2 - GUI Foundation)
-**Status:** Functional with Desktop UI
+**Version:** 0.3.0 (Phase 3 - Write Operations Complete)
+**Status:** Production Ready ✅
 
 A local-first, deterministic governance tool for the Aequitas project.
 
@@ -10,10 +10,12 @@ A local-first, deterministic governance tool for the Aequitas project.
 The Meta Engine operates on the `/governance` folder as its source of truth. It provides:
 
 - **Governance validation** — Enforce invariants, detect gaps, surface inconsistencies
-- **Goal management** — Query, filter, and update goals by status/phase
-- **Daily workflow** — Create and manage daily notes
+- **Goal management** — Query, filter, and **update** goals by status/phase (read & write)
+- **Daily workflow** — Create and manage daily notes (with template generation)
 - **Phase tracking** — Monitor phase coherence and transitions
 - **Canon boundary enforcement** — Read-only access to canonical documents
+- **Desktop GUI** — Full-featured Tauri app with real-time updates and notifications
+- **Write Operations** — Update goal statuses, create daily notes (Phase 3 ✅)
 
 ## Architecture
 
@@ -382,23 +384,29 @@ cargo fmt
 
 ### Features
 
-**Phase 2 includes a native desktop application with:**
+**The desktop application provides:**
 
-- **Dashboard** — Overview of current phase, active/blocked goals, governance health
-- **Goal Explorer** — Browse and filter all goals by status, phase, or tags
+- **Dashboard** — Overview of current phase, active/blocked goals, governance health, daily note creation
+- **Goal Explorer** — Browse, filter, and **update goal statuses** with real-time UI refresh
 - **Audit Viewer** — Real-time validation results with errors, warnings, and info
+- **Write Operations** — Update goal statuses with server-side validation, create daily notes
+- **Toast Notifications** — User-friendly success/error feedback for all operations
+- **Status Transitions** — Enforced workflow rules (planned → active → done, etc.)
 
 ### Launch GUI
 
 ```bash
 cd meta-engine/meta-gui
-npm run dev
+cargo tauri dev
 ```
 
-Or run the built application:
-```bash
-./meta-engine/meta-gui/src-tauri/target/release/meta-gui
-```
+This will:
+1. Start Vite dev server on port 5174
+2. Build Rust backend
+3. Launch desktop application
+4. Load governance files from `/governance`
+
+**Note:** Use `cargo tauri dev` (not `npm run dev`) to run the full Tauri application.
 
 ### GUI Screenshots
 
@@ -416,16 +424,19 @@ The GUI provides a calm, professional interface optimized for architects:
 - Validation engine
 - Output formatters (markdown, JSON, table)
 
-### Phase 2 ✅ (Current)
+### Phase 2 ✅ (Complete)
 - Tauri GUI foundation
 - Dashboard view (read-only)
 - Goal explorer (read-only)
 - Audit viewer (read-only)
 
-### Phase 3 (Future)
+### Phase 3 ✅ (Complete)
 - Write operations from GUI
-- Daily note editor
-- Goal status updates
+- Goal status updates with validation
+- Daily note creation with templates
+- Toast notifications
+- Real-time UI updates
+- Server-side validation
 
 ### Phase 4 (Future)
 - LLM integration

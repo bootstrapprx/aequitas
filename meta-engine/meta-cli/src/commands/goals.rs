@@ -6,7 +6,8 @@ use crate::args::parse_goal_status;
 pub fn run_goals(
     root: &str,
     status: Option<String>,
-    phase: Option<u32>,
+    active: bool,
+    phase: Option<String>,
     tag: Option<String>,
     format: &str,
 ) -> Result<()> {
@@ -26,7 +27,11 @@ pub fn run_goals(
         query = query.with_tag(t);
     }
 
-    let goals = query.execute();
+    let mut goals = query.execute();
+
+    if active {
+        goals.retain(|g| g.is_active());
+    }
 
     let output = match format {
         "json" => JsonFormatter::format_goals(&goals),

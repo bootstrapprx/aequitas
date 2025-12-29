@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -104,4 +105,17 @@ impl Default for Audit {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Governance audit document (05_AUDITS)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuditRecord {
+    pub title: String,
+    pub date: Option<NaiveDate>,
+    pub scope: Option<String>,
+    pub risk: Option<String>,
+    pub auditor: Option<String>,
+    pub file_path: PathBuf,
+    pub summary: Option<String>,
+    pub content: String,
 }

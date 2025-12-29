@@ -7,7 +7,7 @@ pub struct CanonReader {
 
 impl CanonReader {
     pub fn new<P: AsRef<Path>>(governance_root: P) -> Self {
-        let canon_root = governance_root.as_ref().join("docs/canonical");
+        let canon_root = governance_root.as_ref().join("CONSTITUTION");
         Self { canon_root }
     }
 

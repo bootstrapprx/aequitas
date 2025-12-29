@@ -22,7 +22,11 @@ impl GovernanceValidator {
                 .all_goals()
                 .iter()
                 .filter(|g| g.is_active())
-                .filter_map(|g| g.phase)
+                .filter_map(|g| {
+                    g.phase
+                        .as_ref()
+                        .and_then(|p| p.trim_start_matches('P').parse::<u32>().ok())
+                })
                 .max();
 
             let phase_results = GoalValidator::validate_phase_coherence(goal, current_phase);

@@ -45,6 +45,12 @@ pub enum MetaError {
 
     #[error("Governance folder not found: {0}")]
     GovernanceFolderNotFound(String),
+
+    #[error("Network error: {0}")]
+    NetworkError(String),
+
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
 }
 
 pub type Result<T> = std::result::Result<T, MetaError>;

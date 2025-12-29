@@ -49,7 +49,11 @@
       "Bash(/home/actpm/Documents/workfolder/aequitas/meta-engine/target/release/meta-cli:*)",
       "Bash(chmod:*)",
       "Bash(./meta:*)",
-      "Bash(cargo install:*)"
+      "Bash(cargo install:*)",
+      "Bash(cargo tauri build:*)",
+      "Bash(cargo tauri dev:*)",
+      "Bash(cargo tauri icon:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

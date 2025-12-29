@@ -4,13 +4,15 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Prompt {
-    pub prompt_id: String,
-    pub agent: String,
-    pub purpose: String,
-    pub timestamp: DateTime<Utc>,
-    pub prompt_text: String,
+    pub prompt_id: Option<String>,
+    pub agent: Option<String>,
+    pub purpose: Option<String>,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub prompt_text: Option<String>,
     pub response_text: Option<String>,
+    pub title: String,
     pub file_path: PathBuf,
+    pub content: String,
 }
 
 impl Prompt {

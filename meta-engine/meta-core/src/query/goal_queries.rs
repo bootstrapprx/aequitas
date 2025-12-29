@@ -4,7 +4,7 @@ use crate::governance::GovernanceContext;
 pub struct GoalQuery<'a> {
     ctx: &'a GovernanceContext,
     status_filter: Option<GoalStatus>,
-    phase_filter: Option<u32>,
+    phase_filter: Option<String>,
     tag_filter: Option<String>,
 }
 
@@ -23,8 +23,8 @@ impl<'a> GoalQuery<'a> {
         self
     }
 
-    pub fn with_phase(mut self, phase: u32) -> Self {
-        self.phase_filter = Some(phase);
+    pub fn with_phase(mut self, phase: impl Into<String>) -> Self {
+        self.phase_filter = Some(phase.into());
         self
     }
 
@@ -40,8 +40,13 @@ impl<'a> GoalQuery<'a> {
             results.retain(|g| &g.status == status);
         }
 
-        if let Some(phase) = self.phase_filter {
-            results.retain(|g| g.phase == Some(phase));
+        if let Some(ref phase) = self.phase_filter {
+            results.retain(|g| {
+                g.phase
+                    .as_ref()
+                    .map(|p| p.eq_ignore_ascii_case(&phase))
+                    .unwrap_or(false)
+            });
         }
 
         if let Some(ref tag) = self.tag_filter {

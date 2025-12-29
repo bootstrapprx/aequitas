@@ -24,6 +24,9 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Summarize governance state
+    Scan,
+
     /// Initialize or open today's daily note
     Today {
         /// Show path instead of opening
@@ -31,26 +34,26 @@ pub enum Commands {
         show: bool,
     },
 
-    /// Validate governance integrity
+    /// List governance audits
     Audit {
         /// Output format: markdown, json, table
-        #[arg(long, default_value = "markdown")]
+        #[arg(long, default_value = "table")]
         format: String,
-
-        /// Treat warnings as errors
-        #[arg(long)]
-        strict: bool,
     },
 
     /// List goals with filtering
     Goals {
-        /// Filter by status: active, blocked, completed, archived
+        /// Filter by status: planned, active, blocked, partial, done
         #[arg(long)]
         status: Option<String>,
 
+        /// Quick filter for active goals
+        #[arg(long, conflicts_with = "status")]
+        active: bool,
+
         /// Filter by phase number
         #[arg(long)]
-        phase: Option<u32>,
+        phase: Option<String>,
 
         /// Filter by tag
         #[arg(long)]
@@ -102,6 +105,13 @@ pub enum PhaseAction {
 }
 
 pub fn parse_goal_status(s: &str) -> Result<GoalStatus, String> {
-    GoalStatus::from_str(s)
-        .ok_or_else(|| format!("Invalid status: {}. Expected: active, blocked, completed, archived", s))
+    match s.to_lowercase().as_str() {
+        "planned" => Ok(GoalStatus::Planned),
+        "active" => Ok(GoalStatus::Active),
+        "blocked" => Ok(GoalStatus::Blocked),
+        "partial" => Ok(GoalStatus::Partial),
+        "done" | "completed" => Ok(GoalStatus::Done),
+        "archived" => Ok(GoalStatus::Archived),
+        other => Ok(GoalStatus::Unknown(other.to_string())),
+    }
 }

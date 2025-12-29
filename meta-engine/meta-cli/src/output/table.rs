@@ -1,9 +1,10 @@
 use comfy_table::{Table, Cell, Color, Attribute, ContentArrangement};
-use meta_core::{Audit, Goal, ValidationSeverity};
+use meta_core::{Audit, AuditRecord, Goal, ValidationSeverity};
 
 pub struct TableFormatter;
 
 impl TableFormatter {
+    #[allow(dead_code)]
     pub fn format_audit(audit: &Audit) -> String {
         let mut table = Table::new();
         table.set_content_arrangement(ContentArrangement::Dynamic);
@@ -48,14 +49,16 @@ impl TableFormatter {
 
         for goal in goals {
             let status_cell = match goal.status.to_string().as_str() {
+                "planned" => Cell::new("planned").fg(Color::Cyan),
                 "active" => Cell::new("active").fg(Color::Green),
                 "blocked" => Cell::new("blocked").fg(Color::Red),
-                "completed" => Cell::new("completed").fg(Color::Blue),
+                "partial" => Cell::new("partial").fg(Color::Yellow),
+                "done" => Cell::new("done").fg(Color::Blue),
                 "archived" => Cell::new("archived").fg(Color::DarkGrey),
                 _ => Cell::new(goal.status.to_string()),
             };
 
-            let phase = goal.phase.map(|p| p.to_string()).unwrap_or_else(|| "-".to_string());
+            let phase = goal.phase.clone().unwrap_or_else(|| "-".to_string());
             let owner = goal.owner.as_deref().unwrap_or("-");
 
             table.add_row(vec![
@@ -65,6 +68,28 @@ impl TableFormatter {
                 Cell::new(phase),
                 Cell::new(owner),
             ]);
+        }
+
+        table.to_string()
+    }
+
+    pub fn format_audit_records(audits: &[&AuditRecord]) -> String {
+        let mut table = Table::new();
+        table.set_content_arrangement(ContentArrangement::Dynamic);
+        table.set_header(vec!["Title", "Date", "Scope", "Risk", "File"]);
+
+        for audit in audits {
+            table.add_row(vec![
+                Cell::new(&audit.title).add_attribute(Attribute::Bold),
+                Cell::new(audit.date.map(|d| d.to_string()).unwrap_or_else(|| "-".to_string())),
+                Cell::new(audit.scope.clone().unwrap_or_else(|| "-".to_string())),
+                Cell::new(audit.risk.clone().unwrap_or_else(|| "-".to_string())),
+                Cell::new(audit.file_path.display().to_string()),
+            ]);
+        }
+
+        if audits.is_empty() {
+            table.add_row(vec![Cell::new("No audits found"), Cell::new(""), Cell::new(""), Cell::new(""), Cell::new("")]);
         }
 
         table.to_string()

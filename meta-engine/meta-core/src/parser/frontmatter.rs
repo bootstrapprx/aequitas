@@ -48,6 +48,15 @@ impl FrontmatterParser {
         })
     }
 
+    pub fn get_date(
+        frontmatter: &HashMap<String, Value>,
+        key: &str,
+    ) -> Option<chrono::NaiveDate> {
+        frontmatter.get(key).and_then(|v| v.as_str()).and_then(|value| {
+            chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()
+        })
+    }
+
     pub fn get_array(
         frontmatter: &HashMap<String, Value>,
         key: &str,

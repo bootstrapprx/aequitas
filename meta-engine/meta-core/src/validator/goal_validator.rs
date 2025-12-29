@@ -29,7 +29,12 @@ impl GoalValidator {
         let mut results = Vec::new();
 
         if goal.is_active() {
-            if let (Some(goal_phase), Some(curr_phase)) = (goal.phase, current_phase) {
+            let goal_phase_num = goal
+                .phase
+                .as_ref()
+                .and_then(|p| p.trim_start_matches('P').parse::<u32>().ok());
+
+            if let (Some(goal_phase), Some(curr_phase)) = (goal_phase_num, current_phase) {
                 if goal_phase != curr_phase {
                     results.push(ValidationResult::warning(
                         goal.file_path.clone(),

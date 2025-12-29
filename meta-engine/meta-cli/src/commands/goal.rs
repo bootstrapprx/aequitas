@@ -1,7 +1,6 @@
 use anyhow::{Result, bail, anyhow};
 use meta_core::{GovernanceContext, MetaError};
 use crate::args::{GoalAction, parse_goal_status};
-use std::fs;
 
 pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
     let ctx = GovernanceContext::load(root)?;
@@ -14,9 +13,10 @@ pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
             println!("Goal: {}", goal.goal_id);
             println!("Title: {}", goal.title);
             println!("Status: {}", goal.status);
-            println!("Phase: {}", goal.phase.map(|p| p.to_string()).unwrap_or_else(|| "None".to_string()));
+            println!("Phase: {}", goal.phase.clone().unwrap_or_else(|| "None".to_string()));
             println!("Owner: {}", goal.owner.as_deref().unwrap_or("Unassigned"));
             println!("Dependencies: {:?}", goal.dependencies);
+            println!("Canon: {:?}", goal.canon);
             println!("Tags: {:?}", goal.tags);
             println!("\nFile: {}", goal.file_path.display());
         }
@@ -26,6 +26,7 @@ pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
                 .ok_or_else(|| MetaError::GoalNotFound(goal_id.clone()))?;
 
             let new_status = parse_goal_status(status).map_err(|e| anyhow!(e))?;
+            let status_label = new_status.to_string();
 
             if !goal.status.can_transition_to(&new_status) {
                 bail!(MetaError::InvalidTransition {
@@ -34,19 +35,8 @@ pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
                 });
             }
 
-            // Read the file
-            let content = fs::read_to_string(&goal.file_path)?;
-
-            // Replace the status in the frontmatter
-            let updated = content.replace(
-                &format!("status: {}", goal.status),
-                &format!("status: {}", new_status),
-            );
-
-            // Write back
-            fs::write(&goal.file_path, updated)?;
-
-            println!("Updated {} → {}", goal_id, new_status);
+            ctx.update_goal_status(goal_id, new_status)?;
+            println!("Updated {} → {}", goal_id, status_label);
         }
 
         GoalAction::Deps { goal_id } => {

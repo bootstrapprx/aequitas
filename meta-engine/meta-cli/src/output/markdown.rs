@@ -1,8 +1,9 @@
-use meta_core::{Audit, Goal, ValidationSeverity};
+use meta_core::{Audit, AuditRecord, Goal, ValidationSeverity};
 
 pub struct MarkdownFormatter;
 
 impl MarkdownFormatter {
+    #[allow(dead_code)]
     pub fn format_audit(audit: &Audit) -> String {
         let mut output = String::new();
 
@@ -84,7 +85,11 @@ impl MarkdownFormatter {
         output.push_str("# Goals\n\n");
 
         for goal in goals {
-            let phase = goal.phase.map(|p| format!("Phase {}", p)).unwrap_or_else(|| "No phase".to_string());
+            let phase = goal
+                .phase
+                .as_ref()
+                .map(|p| format!("Phase {}", p))
+                .unwrap_or_else(|| "No phase".to_string());
             let owner = goal.owner.as_deref().unwrap_or("Unassigned");
 
             output.push_str(&format!(
@@ -94,6 +99,41 @@ impl MarkdownFormatter {
                 goal.status,
                 phase,
                 owner
+            ));
+        }
+
+        output
+    }
+
+    pub fn format_audit_records(audits: &[&AuditRecord]) -> String {
+        let mut output = String::new();
+        output.push_str("# Governance Audits\n\n");
+
+        if audits.is_empty() {
+            output.push_str("- No audits found\n");
+            return output;
+        }
+
+        for audit in audits {
+            output.push_str(&format!("## {}\n", audit.title));
+            if let Some(date) = audit.date {
+                output.push_str(&format!("- Date: {}\n", date));
+            }
+            if let Some(scope) = &audit.scope {
+                output.push_str(&format!("- Scope: {}\n", scope));
+            }
+            if let Some(risk) = &audit.risk {
+                output.push_str(&format!("- Risk: {}\n", risk));
+            }
+            if let Some(auditor) = &audit.auditor {
+                output.push_str(&format!("- Auditor: {}\n", auditor));
+            }
+            if let Some(summary) = &audit.summary {
+                output.push_str(&format!("- Summary: {}\n", summary));
+            }
+            output.push_str(&format!(
+                "- File: {}\n\n",
+                audit.file_path.display()
             ));
         }
 

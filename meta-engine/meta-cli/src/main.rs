@@ -10,22 +10,26 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let exit_code = match cli.command {
+        Commands::Scan => {
+            commands::run_scan(&cli.root)?;
+            0
+        }
+
         Commands::Today { show } => {
             commands::run_today(&cli.root, show)?;
             0
         }
 
-        Commands::Audit { format, strict } => {
-            commands::run_audit(&cli.root, &format, strict)?
-        }
+        Commands::Audit { format } => commands::run_audit(&cli.root, &format)?,
 
         Commands::Goals {
             status,
+            active,
             phase,
             tag,
             format,
         } => {
-            commands::run_goals(&cli.root, status, phase, tag, &format)?;
+            commands::run_goals(&cli.root, status, active, phase, tag, &format)?;
             0
         }
 

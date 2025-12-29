@@ -7,73 +7,70 @@ pub fn run_phase(root: &str, action: &PhaseAction) -> Result<()> {
 
     match action {
         PhaseAction::Current => {
-            let current_phase = ctx
-                .all_goals()
-                .iter()
-                .filter(|g| g.status == GoalStatus::Active)
-                .filter_map(|g| g.phase)
-                .max();
-
-            if let Some(phase) = current_phase {
-                println!("Current Phase: {}", phase);
+            if let Some(phase) = ctx.active_phase() {
+                println!(
+                    "Current Phase: {} — {}",
+                    phase.phase_id, phase.title
+                );
             } else {
                 println!("No active goals with phase information");
             }
         }
 
         PhaseAction::List => {
-            let mut phases: Vec<u32> = ctx
-                .all_goals()
-                .iter()
-                .filter_map(|g| g.phase)
-                .collect();
-
-            phases.sort();
-            phases.dedup();
-
+            let mut phases = ctx.state.phases.clone();
+            phases.sort_by(|a, b| a.phase_id.cmp(&b.phase_id));
             println!("Phases found:");
             for phase in phases {
-                let goal_count = ctx
-                    .all_goals()
+                let goal_count = ctx.state.goals
                     .iter()
-                    .filter(|g| g.phase == Some(phase))
+                    .filter(|g| g.phase
+                        .as_ref()
+                        .map(|p| p.eq_ignore_ascii_case(&phase.phase_id))
+                        .unwrap_or(false))
                     .count();
 
-                println!("  Phase {}: {} goals", phase, goal_count);
+                println!("  {} ({} goals)", phase.phase_id, goal_count);
             }
         }
 
         PhaseAction::Validate => {
-            let current_phase = ctx
-                .all_goals()
+            let Some(curr_phase) = ctx.active_phase() else {
+                println!("No active goals with phase information");
+                return Ok(());
+            };
+
+            let all_goals = ctx.all_goals();
+            let mismatched: Vec<_> = all_goals
                 .iter()
                 .filter(|g| g.status == GoalStatus::Active)
-                .filter_map(|g| g.phase)
-                .max();
+                .filter(|g| {
+                    g.phase
+                        .as_ref()
+                        .map(|p| !p.eq_ignore_ascii_case(&curr_phase.phase_id))
+                        .unwrap_or(true)
+                })
+                .collect();
 
-            if let Some(curr_phase) = current_phase {
-                let all_goals = ctx.all_goals();
-                let mismatched: Vec<_> = all_goals
-                    .iter()
-                    .filter(|g| g.status == GoalStatus::Active)
-                    .filter(|g| g.phase.is_some() && g.phase != Some(curr_phase))
-                    .collect();
-
-                if mismatched.is_empty() {
-                    println!("✓ Phase coherence validated: all active goals are in Phase {}", curr_phase);
-                } else {
-                    println!("⚠ Warning: {} active goals are not in current Phase {}",
-                        mismatched.len(), curr_phase);
-                    for goal in mismatched {
-                        println!("  {} (Phase {}): {}",
-                            goal.goal_id,
-                            goal.phase.unwrap(),
-                            goal.title
-                        );
-                    }
-                }
+            if mismatched.is_empty() {
+                println!(
+                    "✓ Phase coherence validated: all active goals are in Phase {}",
+                    curr_phase.phase_id
+                );
             } else {
-                println!("No active goals with phase information");
+                println!(
+                    "⚠ Warning: {} active goals are not in current Phase {}",
+                    mismatched.len(),
+                    curr_phase.phase_id
+                );
+                for goal in mismatched {
+                    println!(
+                        "  {} (Phase {:?}): {}",
+                        goal.goal_id,
+                        goal.phase,
+                        goal.title
+                    );
+                }
             }
         }
     }
