@@ -52,8 +52,8 @@ impl From<&meta_core::Phase> for PhaseDto {
         PhaseDto {
             phase_id: phase.phase_id.clone(),
             title: phase.title.clone(),
-            status: phase.status.clone(),
-            updated: phase.updated.map(|d| d.to_string()),
+            status: Some(phase.status.clone()),
+            updated: None,
         }
     }
 }

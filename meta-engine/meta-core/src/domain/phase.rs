@@ -6,10 +6,10 @@ use std::path::PathBuf;
 pub struct Phase {
     pub phase_id: String,
     pub title: String,
-    pub status: Option<String>,
-    pub depends_on: Vec<String>,
-    pub owner: Option<String>,
-    pub updated: Option<NaiveDate>,
+    pub status: String,
+    pub start_date: Option<NaiveDate>,
+    pub target_date: Option<NaiveDate>,
+    pub dependencies: Vec<String>,
     pub file_path: PathBuf,
     pub content: String,
 }

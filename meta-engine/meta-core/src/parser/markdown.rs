@@ -125,18 +125,22 @@ impl MarkdownParser {
             .or_else(|| Self::heading_title(&body))
             .unwrap_or_else(|| phase_id.clone());
 
-        let status = FrontmatterParser::get_string(&frontmatter, "status");
-        let depends_on = FrontmatterParser::get_array(&frontmatter, "depends_on");
-        let owner = FrontmatterParser::get_string(&frontmatter, "owner");
-        let updated = FrontmatterParser::get_date(&frontmatter, "updated");
+        let status = FrontmatterParser::get_string(&frontmatter, "status")
+            .unwrap_or_else(|| "planned".to_string());
+        let mut dependencies = FrontmatterParser::get_array(&frontmatter, "dependencies");
+        if dependencies.is_empty() {
+             dependencies = FrontmatterParser::get_array(&frontmatter, "depends_on");
+        }
+        let start_date = FrontmatterParser::get_date(&frontmatter, "start_date");
+        let target_date = FrontmatterParser::get_date(&frontmatter, "target_date");
 
         Ok(Phase {
             phase_id,
             title,
             status,
-            depends_on,
-            owner,
-            updated,
+            start_date,
+            target_date,
+            dependencies,
             file_path: path.to_path_buf(),
             content: body,
         })

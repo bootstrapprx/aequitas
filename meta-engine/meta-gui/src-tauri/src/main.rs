@@ -2,6 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod commands;
+mod commands_ai;
+mod commands_crud;
 mod state;
 
 use state::AppState;
@@ -22,6 +24,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::new(governance_root))
         .invoke_handler(tauri::generate_handler![
+            // Read commands
             commands::get_all_goals,
             commands::get_goals_by_status,
             commands::get_goals_by_phase,
@@ -33,6 +36,20 @@ fn main() {
             commands::get_daily_note,
             commands::update_daily_note,
             commands::list_daily_notes,
+            // AI commands
+            commands_ai::ai_check_config,
+            commands_ai::ai_ask,
+            commands_ai::ai_suggest_status,
+            commands_ai::ai_get_examples,
+            // CRUD commands (Phase 5)
+            commands_crud::create_goal,
+            commands_crud::update_goal,
+            commands_crud::delete_goal,
+            commands_crud::create_phase,
+            commands_crud::update_phase,
+            commands_crud::set_active_phase,
+            commands_crud::delete_daily_note,
+            commands_crud::write_daily_note,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

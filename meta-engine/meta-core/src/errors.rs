@@ -51,6 +51,12 @@ pub enum MetaError {
 
     #[error("Configuration error: {0}")]
     ConfigError(String),
+
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+
+    #[error("Parse error: {0}")]
+    ParseError(String),
 }
 
 pub type Result<T> = std::result::Result<T, MetaError>;

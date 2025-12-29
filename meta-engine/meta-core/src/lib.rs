@@ -6,6 +6,7 @@ pub mod canon;
 pub mod governance;
 pub mod errors;
 pub mod llm;
+pub mod writer;
 
 pub use domain::*;
 pub use governance::{
@@ -16,3 +17,4 @@ pub use validator::GovernanceValidator;
 pub use query::GoalQuery;
 pub use errors::{MetaError, Result};
 pub use llm::{AIService, AIResponse, StatusSuggestion, ClaudeClient, ContextBuilder, PromptLogger};
+pub use writer::{GoalWriter, PhaseWriter, DailyWriter};

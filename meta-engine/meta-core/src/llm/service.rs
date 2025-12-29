@@ -1,6 +1,7 @@
 use crate::errors::Result;
 use crate::governance::GovernanceContext;
-use crate::llm::{LLMClient, ContextBuilder, PromptLogger, InteractionMetadata};
+use crate::llm::{LLMClient, ContextBuilder, PromptLogger};
+use crate::llm::logger::InteractionMetadata;
 use crate::domain::GoalStatus;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

@@ -260,19 +260,15 @@ impl GovernanceContext {
             .state
             .phases
             .iter()
-            .find(|p| p
-                .status
-                .as_ref()
-                .map(|s| s.to_lowercase().contains("active"))
-                .unwrap_or(false))
+            .find(|p| p.status.to_lowercase().contains("active"))
         {
             return Some(found.clone());
         }
 
         let mut phases = self.state.phases.clone();
         phases.sort_by(|a, b| {
-            b.updated
-                .cmp(&a.updated)
+            Self::mtime(&b.file_path)
+                .cmp(&Self::mtime(&a.file_path))
                 .then_with(|| b.number().cmp(&a.number()))
         });
         phases.into_iter().next()

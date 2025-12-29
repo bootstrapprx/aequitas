@@ -3,6 +3,7 @@
   import GoalExplorer from './lib/GoalExplorer.svelte'
   import AuditViewer from './lib/AuditViewer.svelte'
   import DailyEditor from './lib/DailyEditor.svelte'
+  import Assistant from './lib/Assistant.svelte'
 
   let currentView = 'dashboard'
 
@@ -10,6 +11,7 @@
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'daily', label: 'Daily', icon: '📅' },
     { id: 'goals', label: 'Goals', icon: '🎯' },
+    { id: 'assistant', label: 'Assistant', icon: '🤖' },
     { id: 'audit', label: 'Audit', icon: '✓' },
   ]
 
@@ -44,8 +46,8 @@
 
     <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 dark:border-gray-700 w-64">
       <p class="text-xs text-gray-500 dark:text-gray-400">
-        Aequitas Meta Engine v0.1.0<br />
-        Phase 2: GUI Foundation
+        Aequitas Meta Engine v0.4.0<br />
+        Phase 4B: AI Assistant
       </p>
     </div>
   </aside>
@@ -59,6 +61,8 @@
         <DailyEditor />
       {:else if currentView === 'goals'}
         <GoalExplorer />
+      {:else if currentView === 'assistant'}
+        <Assistant />
       {:else if currentView === 'audit'}
         <AuditViewer />
       {/if}

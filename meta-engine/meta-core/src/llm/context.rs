@@ -1,5 +1,5 @@
 use crate::governance::GovernanceContext;
-use crate::domain::{Goal, GoalStatus};
+use crate::domain::Goal;
 
 pub struct ContextBuilder {
     max_tokens: usize,
@@ -15,7 +15,7 @@ impl ContextBuilder {
         let mut context = String::new();
 
         // Current phase
-        if let Some(current_phase) = ctx.get_current_phase() {
+        if let Some(current_phase) = ctx.active_phase() {
             context.push_str(&format!("## Current Phase\n{}\n\n", current_phase.phase_id));
         }
 
