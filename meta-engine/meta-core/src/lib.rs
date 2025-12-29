@@ -10,8 +10,9 @@ pub mod writer;
 
 pub use domain::*;
 pub use governance::{
-    CanonDoc, GovernanceContext, GovernanceState, GovernanceSummary, GovernanceWarning,
-    GovernanceWarningKind,
+    CanonDoc, DailyContext, DependencyGap, GovernanceContext, GovernanceState,
+    GovernanceSummary, GovernanceWarning, GovernanceWarningKind, GoalRelations, PhaseGoalBreakdown,
+    ProtocolDoc,
 };
 pub use validator::GovernanceValidator;
 pub use query::GoalQuery;

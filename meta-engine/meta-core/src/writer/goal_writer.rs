@@ -182,7 +182,7 @@ impl GoalWriter {
 
     /// Create audit entry for goal operation
     fn create_audit_entry(&self, action: &str, goal_id: &str, details: &str) -> Result<()> {
-        let audit_dir = self.governance_root.join("05_AUDIT");
+        let audit_dir = self.governance_root.join("05_AUDITS");
         fs::create_dir_all(&audit_dir)?;
 
         let timestamp = Utc::now();

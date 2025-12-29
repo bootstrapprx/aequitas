@@ -19,15 +19,18 @@
     today_decisions: [],
     recent_decisions: [],
     canon_docs: [],
+    protocols: [],
+    latest_daily: null,
+    active_by_phase: [],
+    orphaned_goals: [],
+    stale_goals: [],
+    top_blocked: [],
     warnings: [],
   }
 
   let creatingNote = false
   let noteDate = new Date().toISOString().split('T')[0]
   let selectedMode = ''
-  let goalsInput = ''
-  let blockersInput = ''
-  let decisionsInput = ''
   const modeOptions = [
     { value: '', label: 'Unspecified' },
     { value: 'light', label: 'Light Day' },
@@ -62,9 +65,6 @@
       loading = true
       data = await invoke('get_dashboard_data')
       selectedMode = data.today_mode || ''
-      goalsInput = (data.today_goals || []).join('\n')
-      blockersInput = (data.today_blockers || []).join('\n')
-      decisionsInput = (data.today_decisions || []).join('\n')
       error = null
     } catch (err) {
       error = err?.toString?.() ?? String(err)
@@ -143,41 +143,6 @@
     }
   }
 
-  function toList(text) {
-    return text
-      .split('\n')
-      .map(s => s.trim())
-      .filter(Boolean)
-  }
-
-  async function saveDaily() {
-    if (devMode) {
-      toastMessage = 'Tauri is not available. Run `cargo tauri dev` to edit notes.'
-      toastType = 'error'
-      toastShow = true
-      return
-    }
-    try {
-      await invoke('update_daily_note', {
-        payload: {
-          date: noteDate,
-          mode: selectedMode || null,
-          protocol: null,
-          goals: toList(goalsInput),
-          blockers: toList(blockersInput),
-          decisions: toList(decisionsInput),
-        },
-      })
-      toastMessage = 'Daily note saved'
-      toastType = 'success'
-      toastShow = true
-      await loadDashboard()
-    } catch (err) {
-      toastMessage = err?.toString?.() ?? String(err)
-      toastType = 'error'
-      toastShow = true
-    }
-  }
 </script>
 
 <div>
@@ -258,22 +223,14 @@
     <div class="card mb-6">
       <div class="flex items-center justify-between gap-4">
         <div>
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Today</h3>
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Today’s Focus</h3>
           <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {#if data.today_exists}
-              Daily note exists at <span class="font-mono text-xs">{data.today_path}</span>
+            {#if data.latest_daily}
+              Latest daily: {data.latest_daily.date} {#if data.latest_daily.mode}· {data.latest_daily.mode}{/if}
             {:else}
-              Missing daily note for today.
+              No daily note found. Create one to anchor execution.
             {/if}
           </p>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Target date: {noteDate}
-          </p>
-          {#if data.today_mode}
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Current mode: {data.today_mode}
-            </p>
-          {/if}
         </div>
         <div class="flex items-center gap-3">
           <input
@@ -297,41 +254,48 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        <div class="flex flex-col gap-2">
-          <label class="text-sm text-gray-500 dark:text-gray-400">Goals</label>
-          <textarea
-            rows="5"
-            bind:value={goalsInput}
-            class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            placeholder="One goal per line"
-          />
+      {#if data.latest_daily}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Goals</div>
+            {#if data.latest_daily.goals.length === 0}
+              <p class="text-sm text-gray-500 dark:text-gray-400">No goals linked.</p>
+            {:else}
+              <ul class="space-y-1 text-sm text-gray-900 dark:text-white">
+                {#each data.latest_daily.goals as goal}
+                  <li>• {goal}</li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Blockers</div>
+            {#if data.latest_daily.blockers.length === 0}
+              <p class="text-sm text-gray-500 dark:text-gray-400">None recorded.</p>
+            {:else}
+              <ul class="space-y-1 text-sm text-gray-900 dark:text-white">
+                {#each data.latest_daily.blockers as blocker}
+                  <li>• {blocker}</li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Decisions</div>
+            {#if data.latest_daily.decisions.length === 0}
+              <p class="text-sm text-gray-500 dark:text-gray-400">No decisions linked.</p>
+            {:else}
+              <ul class="space-y-1 text-sm text-gray-900 dark:text-white">
+                {#each data.latest_daily.decisions as decision}
+                  <li>• {decision}</li>
+                {/each}
+              </ul>
+            {/if}
+          </div>
         </div>
-        <div class="flex flex-col gap-2">
-          <label class="text-sm text-gray-500 dark:text-gray-400">Blockers</label>
-          <textarea
-            rows="5"
-            bind:value={blockersInput}
-            class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            placeholder="One blocker per line"
-          />
-        </div>
-        <div class="flex flex-col gap-2">
-          <label class="text-sm text-gray-500 dark:text-gray-400">Decisions</label>
-          <textarea
-            rows="5"
-            bind:value={decisionsInput}
-            class="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            placeholder="One decision per line"
-          />
-        </div>
-      </div>
-
-      <div class="flex justify-end mt-4">
-        <button class="btn btn-primary" on:click={saveDaily} disabled={devMode}>
-          Save daily note
-        </button>
-      </div>
+      {:else}
+        <p class="text-sm text-gray-500 dark:text-gray-400 mt-3">Use the Daily Editor to seed today’s plan.</p>
+      {/if}
     </div>
 
     <!-- Governance Warnings -->
@@ -353,55 +317,51 @@
       {/if}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <!-- Active Goals -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Active Goals</h3>
-          <div class="text-sm text-gray-500 dark:text-gray-400">Showing {data.active_goals.length}</div>
-        </div>
-        {#if data.active_goals.length === 0}
-          <p class="text-sm text-gray-500 dark:text-gray-400">No active goals found.</p>
-        {:else}
-          <div class="space-y-3">
-            {#each data.active_goals as goal}
-              <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <div class="flex items-center gap-2">
-                  <span class="font-mono text-sm font-semibold text-primary-600 dark:text-primary-300">{goal.goal_id}</span>
-                  <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
-                  {#if goal.phase}
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Phase {goal.phase}</span>
-                  {/if}
-                  {#if goal.updated}
-                    <span class="text-xs text-gray-500 dark:text-gray-400">Updated {formatDate(goal.updated)}</span>
-                  {/if}
-                </div>
-                <p class="text-gray-900 dark:text-white font-semibold mt-1">{goal.title}</p>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {#if goal.dependencies.length > 0}
-                    Dependencies: {goal.dependencies.join(', ')}
-                  {:else}
-                    No dependencies
-                  {/if}
-                </div>
-              </div>
-            {/each}
-          </div>
-        {/if}
+    <div class="card mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Active Goals by Phase</h3>
+        <span class="text-xs text-gray-500 dark:text-gray-400">Phase-aware</span>
       </div>
-
-      <!-- Blockers -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Blockers</h3>
-          <div class="text-sm text-gray-500 dark:text-gray-400">Explicitly visible</div>
+      {#if data.active_by_phase.length === 0}
+        <p class="text-sm text-gray-500 dark:text-gray-400">No phases detected.</p>
+      {:else}
+        <div class="grid md:grid-cols-2 gap-4">
+          {#each data.active_by_phase as bucket}
+            <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                  {bucket.phase.phase_id} — {bucket.phase.title}
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{bucket.active_goals.length} active</span>
+              </div>
+              {#if bucket.active_goals.length === 0}
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">No active goals.</p>
+              {:else}
+                <ul class="space-y-1 mt-2 text-sm text-gray-900 dark:text-white">
+                  {#each bucket.active_goals as goal}
+                    <li class="flex items-center gap-2">
+                      <span class="font-mono text-xs text-primary-700 dark:text-primary-300">{goal.goal_id}</span>
+                      <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
+                      <span>{goal.title}</span>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </div>
+          {/each}
         </div>
-        {#if data.blocked_goals.length === 0}
+      {/if}
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div class="card">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Blocked Goals (Top 3)</h3>
+        {#if data.top_blocked.length === 0}
           <p class="text-sm text-gray-500 dark:text-gray-400">No blocked goals.</p>
         {:else}
-          <div class="space-y-3">
-            {#each data.blocked_goals as goal}
-              <div class="p-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+          <div class="space-y-2">
+            {#each data.top_blocked as goal}
+              <div class="p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
                 <div class="flex items-center gap-2">
                   <span class="font-mono text-sm font-semibold text-red-700 dark:text-red-300">{goal.goal_id}</span>
                   <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
@@ -409,10 +369,52 @@
                     <span class="text-xs text-red-700 dark:text-red-200">Phase {goal.phase}</span>
                   {/if}
                 </div>
-                <p class="text-gray-900 dark:text-white font-semibold mt-1">{goal.title}</p>
+                <div class="text-sm text-gray-900 dark:text-white">{goal.title}</div>
               </div>
             {/each}
           </div>
+        {/if}
+      </div>
+      <div class="card">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-3">Orphaned Goals</h3>
+        {#if data.orphaned_goals.length === 0}
+          <p class="text-sm text-gray-500 dark:text-gray-400">All goals have a phase.</p>
+        {:else}
+          <ul class="space-y-1 text-sm text-gray-900 dark:text-white">
+            {#each data.orphaned_goals as goal}
+              <li class="flex items-center gap-2">
+                <span class="font-mono text-xs text-orange-700 dark:text-orange-300">{goal.goal_id}</span>
+                <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
+                <span>{goal.title}</span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Stale Goals</h3>
+          <span class="text-xs text-gray-500 dark:text-gray-400">>30 days</span>
+        </div>
+        {#if data.stale_goals.length === 0}
+          <p class="text-sm text-gray-500 dark:text-gray-400">No stale goals detected.</p>
+        {:else}
+          <ul class="space-y-1 text-sm text-gray-900 dark:text-white">
+            {#each data.stale_goals as goal}
+              <li class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-xs text-gray-800 dark:text-gray-200">{goal.goal_id}</span>
+                  <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
+                  <span>{goal.title}</span>
+                </div>
+                {#if goal.updated}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">Updated {formatDate(goal.updated)}</span>
+                {:else}
+                  <span class="text-xs text-gray-500 dark:text-gray-400">No update date</span>
+                {/if}
+              </li>
+            {/each}
+          </ul>
         {/if}
       </div>
     </div>
@@ -467,6 +469,19 @@
               </li>
             {/each}
           </ul>
+        {/if}
+        {#if data.protocols.length > 0}
+          <div class="mt-3">
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">Protocols</div>
+            <ul class="space-y-1">
+              {#each data.protocols as doc}
+                <li class="flex items-center justify-between p-2 rounded-md border border-gray-200 dark:border-gray-700">
+                  <div class="font-semibold text-gray-900 dark:text-white">{doc.title}</div>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{doc.file_path}</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
         {/if}
       </div>
     </div>

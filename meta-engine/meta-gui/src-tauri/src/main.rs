@@ -29,6 +29,7 @@ fn main() {
             commands::get_goals_by_status,
             commands::get_goals_by_phase,
             commands::get_dashboard_data,
+            commands::get_daily_context,
             commands::update_goal_status,
             commands::create_daily_note,
             commands::list_audits,

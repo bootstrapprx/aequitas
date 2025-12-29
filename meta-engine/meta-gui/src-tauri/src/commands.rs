@@ -1,7 +1,8 @@
 use chrono::NaiveDate;
 use meta_core::{
-    CanonDoc, GovernanceContext, GovernanceWarning, GovernanceWarningKind, Goal, GoalQuery,
-    GoalStatus, AuditRecord,
+    AuditRecord, CanonDoc, DailyContext, DependencyGap, GovernanceContext, GovernanceWarning,
+    GovernanceWarningKind, Goal, GoalQuery, GoalRelations, GoalStatus, PhaseGoalBreakdown,
+    ProtocolDoc,
 };
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -122,6 +123,21 @@ impl From<&CanonDoc> for CanonDocDto {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ProtocolDocDto {
+    pub title: String,
+    pub file_path: String,
+}
+
+impl From<&ProtocolDoc> for ProtocolDocDto {
+    fn from(doc: &ProtocolDoc) -> Self {
+        Self {
+            title: doc.title.clone(),
+            file_path: doc.file_path.to_string_lossy().to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WarningDto {
     pub kind: String,
     pub message: String,
@@ -164,7 +180,96 @@ pub struct DashboardData {
     pub today_divergences: Vec<String>,
     pub recent_decisions: Vec<DecisionDto>,
     pub canon_docs: Vec<CanonDocDto>,
+    pub protocols: Vec<ProtocolDocDto>,
+    pub latest_daily: Option<DailyFocusDto>,
+    pub active_by_phase: Vec<PhaseGoalsDto>,
+    pub orphaned_goals: Vec<GoalDto>,
+    pub stale_goals: Vec<GoalDto>,
+    pub top_blocked: Vec<GoalDto>,
     pub warnings: Vec<WarningDto>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DailyFocusDto {
+    pub date: String,
+    pub mode: Option<String>,
+    pub goals: Vec<String>,
+    pub blockers: Vec<String>,
+    pub decisions: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PhaseGoalsDto {
+    pub phase: PhaseDto,
+    pub active_goals: Vec<GoalDto>,
+}
+
+impl From<&PhaseGoalBreakdown> for PhaseGoalsDto {
+    fn from(value: &PhaseGoalBreakdown) -> Self {
+        Self {
+            phase: PhaseDto::from(&value.phase),
+            active_goals: value
+                .active_goals
+                .iter()
+                .map(GoalDto::from)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DependencyGapDto {
+    pub goal_id: String,
+    pub missing: Vec<String>,
+}
+
+impl From<&DependencyGap> for DependencyGapDto {
+    fn from(gap: &DependencyGap) -> Self {
+        Self {
+            goal_id: gap.goal_id.clone(),
+            missing: gap.missing.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GoalRelationsDto {
+    pub goal: GoalDto,
+    pub decisions: Vec<DecisionDto>,
+    pub audits: Vec<AuditDto>,
+    pub daily_refs: Vec<String>,
+    pub missing_dependencies: Vec<String>,
+    pub out_of_phase: bool,
+}
+
+impl From<&GoalRelations> for GoalRelationsDto {
+    fn from(rel: &GoalRelations) -> Self {
+        Self {
+            goal: GoalDto::from(&rel.goal),
+            decisions: rel.decisions.iter().map(DecisionDto::from).collect(),
+            audits: rel.audits.iter().map(AuditDto::from).collect(),
+            daily_refs: rel.daily_refs.iter().map(|d| d.date.to_string()).collect(),
+            missing_dependencies: rel.missing_dependencies.clone(),
+            out_of_phase: rel.out_of_phase,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DailyContextDto {
+    pub date: String,
+    pub note: Option<DailyNoteDto>,
+    pub active_phase: Option<PhaseDto>,
+    pub in_phase_goals: Vec<GoalDto>,
+    pub out_of_phase_goals: Vec<GoalDto>,
+    pub goal_relations: Vec<GoalRelationsDto>,
+    pub recent_decisions: Vec<DecisionDto>,
+    pub linked_decisions: Vec<DecisionDto>,
+    pub linked_audits: Vec<AuditDto>,
+    pub blocked_goals: Vec<GoalDto>,
+    pub dependency_gaps: Vec<DependencyGapDto>,
+    pub active_goal_count: usize,
+    pub blocked_goal_count: usize,
 }
 
 #[tauri::command]
@@ -257,7 +362,98 @@ pub fn get_dashboard_data(state: State<AppState>) -> Result<DashboardData, Strin
             .iter()
             .map(CanonDocDto::from)
             .collect(),
+        protocols: summary
+            .protocols
+            .iter()
+            .map(ProtocolDocDto::from)
+            .collect(),
+        latest_daily: summary.latest_daily.as_ref().map(|d| DailyFocusDto {
+            date: d.date.to_string(),
+            mode: d.mode.clone(),
+            goals: d.goals.clone(),
+            blockers: d.blockers.clone(),
+            decisions: d.decisions.clone(),
+        }),
+        active_by_phase: summary
+            .active_by_phase
+            .iter()
+            .map(PhaseGoalsDto::from)
+            .collect(),
+        orphaned_goals: summary
+            .orphaned_goals
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
+        stale_goals: summary
+            .stale_goals
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
+        top_blocked: summary
+            .top_blocked
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
         warnings: summary.warnings.iter().map(WarningDto::from).collect(),
+    })
+}
+
+#[tauri::command]
+pub fn get_daily_context(date: String, state: State<AppState>) -> Result<DailyContextDto, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    let parsed_date =
+        NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
+
+    let context: DailyContext = ctx.daily_context(parsed_date);
+
+    Ok(DailyContextDto {
+        date,
+        note: context.note.as_ref().map(DailyNoteDto::from),
+        active_phase: context.active_phase.as_ref().map(PhaseDto::from),
+        in_phase_goals: context
+            .in_phase_goals
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
+        out_of_phase_goals: context
+            .out_of_phase_goals
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
+        goal_relations: context
+            .goal_relations
+            .values()
+            .map(GoalRelationsDto::from)
+            .collect(),
+        recent_decisions: context
+            .recent_decisions
+            .iter()
+            .map(DecisionDto::from)
+            .collect(),
+        linked_decisions: context
+            .linked_decisions
+            .iter()
+            .map(DecisionDto::from)
+            .collect(),
+        linked_audits: context
+            .linked_audits
+            .iter()
+            .map(AuditDto::from)
+            .collect(),
+        blocked_goals: context
+            .blocked_goals
+            .iter()
+            .map(GoalDto::from)
+            .collect(),
+        dependency_gaps: context
+            .dependency_gaps
+            .iter()
+            .map(DependencyGapDto::from)
+            .collect(),
+        active_goal_count: context.active_goal_count,
+        blocked_goal_count: context.blocked_goal_count,
     })
 }
 #[tauri::command]
@@ -334,15 +530,15 @@ impl From<&meta_core::DailyNote> for DailyNoteDto {
     fn from(d: &meta_core::DailyNote) -> Self {
         Self {
             date: d.date.to_string(),
-        mode: d.mode.clone(),
-        protocol: d.protocol.clone(),
-        goals: d.goals.clone(),
-        blockers: d.blockers.clone(),
-        decisions: d.decisions.clone(),
-        divergences: d.divergences.clone(),
-        content: d.content.clone(),
+            mode: d.mode.clone(),
+            protocol: d.protocol.clone(),
+            goals: d.goals.clone(),
+            blockers: d.blockers.clone(),
+            decisions: d.decisions.clone(),
+            divergences: d.divergences.clone(),
+            content: d.content.clone(),
+        }
     }
-}
 }
 
 #[tauri::command]

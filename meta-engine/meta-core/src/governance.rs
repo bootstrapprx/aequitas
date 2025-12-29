@@ -15,6 +15,12 @@ pub struct CanonDoc {
 }
 
 #[derive(Debug, Clone)]
+pub struct ProtocolDoc {
+    pub title: String,
+    pub file_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
 pub struct GovernanceState {
     pub phases: Vec<Phase>,
     pub goals: Vec<Goal>,
@@ -23,6 +29,7 @@ pub struct GovernanceState {
     pub audits: Vec<AuditRecord>,
     pub prompts: Vec<Prompt>,
     pub canon_docs: Vec<CanonDoc>,
+    pub protocols: Vec<ProtocolDoc>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,6 +50,45 @@ pub struct GovernanceWarning {
 }
 
 #[derive(Debug, Clone)]
+pub struct DependencyGap {
+    pub goal_id: String,
+    pub missing: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GoalRelations {
+    pub goal: Goal,
+    pub decisions: Vec<Decision>,
+    pub audits: Vec<AuditRecord>,
+    pub daily_refs: Vec<DailyNote>,
+    pub missing_dependencies: Vec<String>,
+    pub out_of_phase: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct DailyContext {
+    pub date: NaiveDate,
+    pub note: Option<DailyNote>,
+    pub active_phase: Option<Phase>,
+    pub in_phase_goals: Vec<Goal>,
+    pub out_of_phase_goals: Vec<Goal>,
+    pub goal_relations: HashMap<String, GoalRelations>,
+    pub recent_decisions: Vec<Decision>,
+    pub linked_decisions: Vec<Decision>,
+    pub linked_audits: Vec<AuditRecord>,
+    pub blocked_goals: Vec<Goal>,
+    pub dependency_gaps: Vec<DependencyGap>,
+    pub active_goal_count: usize,
+    pub blocked_goal_count: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct PhaseGoalBreakdown {
+    pub phase: Phase,
+    pub active_goals: Vec<Goal>,
+}
+
+#[derive(Debug, Clone)]
 pub struct GovernanceSummary {
     pub current_phase: Option<Phase>,
     pub active_goals: Vec<Goal>,
@@ -55,8 +101,14 @@ pub struct GovernanceSummary {
     pub today_blockers: Vec<String>,
     pub today_decisions: Vec<String>,
     pub today_divergences: Vec<String>,
+    pub latest_daily: Option<DailyNote>,
     pub recent_decisions: Vec<Decision>,
     pub canon_docs: Vec<CanonDoc>,
+    pub protocols: Vec<ProtocolDoc>,
+    pub active_by_phase: Vec<PhaseGoalBreakdown>,
+    pub orphaned_goals: Vec<Goal>,
+    pub stale_goals: Vec<Goal>,
+    pub top_blocked: Vec<Goal>,
     pub warnings: Vec<GovernanceWarning>,
 }
 
@@ -99,6 +151,7 @@ impl GovernanceScanner {
         let audits = self.scan_markdown("05_AUDITS", |p| MarkdownParser::parse_audit(p))?;
         let prompts = self.scan_markdown("06_PROMPTS", |p| MarkdownParser::parse_prompt(p))?;
         let canon_docs = self.scan_canon()?;
+        let protocols = self.scan_protocols()?;
 
         Ok(GovernanceState {
             phases,
@@ -108,6 +161,7 @@ impl GovernanceScanner {
             audits,
             prompts,
             canon_docs,
+            protocols,
         })
     }
 
@@ -180,6 +234,41 @@ impl GovernanceScanner {
 
         Ok(docs)
     }
+
+    fn scan_protocols(&self) -> Result<Vec<ProtocolDoc>> {
+        let master_root = self.root.join("00_MASTER");
+        if !master_root.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut docs = Vec::new();
+        for entry in WalkDir::new(&master_root)
+            .into_iter()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.path().is_file())
+        {
+            let path = entry.path();
+            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
+            if !name.to_ascii_uppercase().contains("PROTOCOL") {
+                continue;
+            }
+            if path.extension().and_then(|s| s.to_str()) != Some("md") {
+                continue;
+            }
+
+            let title = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default()
+                .replace('_', " ");
+            docs.push(ProtocolDoc {
+                title,
+                file_path: path.to_path_buf(),
+            });
+        }
+
+        Ok(docs)
+    }
 }
 
 /// Main governance context - loads and manages all governance data
@@ -219,6 +308,138 @@ impl GovernanceContext {
         }
     }
 
+    fn normalize_id(value: &str) -> String {
+        value.trim().to_lowercase()
+    }
+
+    fn goal_match(link: &str, goal_id: &str) -> bool {
+        let link_norm = Self::normalize_id(link);
+        let goal_norm = Self::normalize_id(goal_id);
+        link_norm.contains(&goal_norm) || goal_norm.contains(&link_norm)
+    }
+
+    fn decision_match(link: &str, decision_id: &str) -> bool {
+        let link_norm = Self::normalize_id(link);
+        let dec_norm = Self::normalize_id(decision_id);
+        link_norm.contains(&dec_norm) || dec_norm.contains(&link_norm)
+    }
+
+    fn resolve_goal_links(&self, link: &str) -> Option<Goal> {
+        self.state
+            .goals
+            .iter()
+            .find(|g| Self::goal_match(link, &g.goal_id))
+            .cloned()
+    }
+
+    fn resolve_decision_links(&self, link: &str) -> Option<Decision> {
+        self.state
+            .decisions
+            .iter()
+            .find(|d| Self::decision_match(link, &d.decision_id))
+            .cloned()
+    }
+
+    fn goal_relations_map(&self, active_phase: Option<&str>) -> HashMap<String, GoalRelations> {
+        let mut map = HashMap::new();
+
+        for goal in &self.state.goals {
+            let mut decisions = Vec::new();
+            let mut audits = Vec::new();
+            let mut daily_refs = Vec::new();
+
+            for link in LinkExtractor::extract_decision_links(&goal.content) {
+                if let Some(decision) = self.resolve_decision_links(&link) {
+                    if !decisions
+                        .iter()
+                        .any(|d| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
+                    {
+                        decisions.push(decision);
+                    }
+                }
+            }
+
+            for decision in &self.state.decisions {
+                let goal_links = LinkExtractor::extract_goal_links(&decision.content);
+                if goal_links
+                    .iter()
+                    .any(|link| Self::goal_match(link, &goal.goal_id))
+                {
+                    if !decisions
+                        .iter()
+                        .any(|d| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
+                    {
+                        decisions.push(decision.clone());
+                    }
+                }
+            }
+
+            for audit in &self.state.audits {
+                let goal_links = LinkExtractor::extract_goal_links(&audit.content);
+                if goal_links
+                    .iter()
+                    .any(|link| Self::goal_match(link, &goal.goal_id))
+                {
+                    if !audits
+                        .iter()
+                        .any(|a| a.file_path == audit.file_path)
+                    {
+                        audits.push(audit.clone());
+                    }
+                }
+            }
+
+            for daily in &self.state.daily_notes {
+                let linked = daily
+                    .linked_goals
+                    .iter()
+                    .any(|g| Self::goal_match(g, &goal.goal_id));
+                let in_frontmatter = daily
+                    .goals
+                    .iter()
+                    .any(|g| Self::goal_match(g, &goal.goal_id))
+                    || daily
+                        .goals_worked
+                        .iter()
+                        .any(|g| Self::goal_match(g, &goal.goal_id));
+                if linked || in_frontmatter {
+                    if !daily_refs.iter().any(|d| d.date == daily.date) {
+                        daily_refs.push(daily.clone());
+                    }
+                }
+            }
+
+            let missing_dependencies: Vec<String> = goal
+                .dependencies
+                .iter()
+                .filter(|dep| self.get_goal(dep).is_none())
+                .cloned()
+                .collect();
+
+            let out_of_phase = match (active_phase, goal.phase.as_ref()) {
+                (Some(active), Some(goal_phase)) => {
+                    !goal_phase.eq_ignore_ascii_case(active)
+                }
+                (Some(_), None) => true,
+                _ => false,
+            };
+
+            map.insert(
+                goal.goal_id.to_lowercase(),
+                GoalRelations {
+                    goal: goal.clone(),
+                    decisions,
+                    audits,
+                    daily_refs,
+                    missing_dependencies,
+                    out_of_phase,
+                },
+            );
+        }
+
+        map
+    }
+
     pub fn get_goal(&self, id: &str) -> Option<&Goal> {
         self.goals_index
             .get(&id.to_lowercase())
@@ -245,6 +466,51 @@ impl GovernanceContext {
 
     pub fn all_audits(&self) -> Vec<&AuditRecord> {
         self.state.audits.iter().collect()
+    }
+
+    pub fn goals_by_phase(&self) -> HashMap<String, Vec<Goal>> {
+        let mut grouped: HashMap<String, Vec<Goal>> = HashMap::new();
+        for goal in &self.state.goals {
+            if let Some(phase) = goal.phase.as_ref() {
+                grouped
+                    .entry(phase.to_string())
+                    .or_default()
+                    .push(goal.clone());
+            } else {
+                grouped.entry("".to_string()).or_default().push(goal.clone());
+            }
+        }
+        grouped
+    }
+
+    pub fn orphaned_goals(&self) -> Vec<Goal> {
+        self.state
+            .goals
+            .iter()
+            .filter(|g| g.phase.is_none() || g.phase.as_ref().map(|p| p.trim().is_empty()).unwrap_or(true))
+            .cloned()
+            .collect()
+    }
+
+    pub fn stale_goals(&self, stale_after_days: i64) -> Vec<Goal> {
+        let cutoff = Local::now().naive_local().date() - Duration::days(stale_after_days);
+
+        let mut stale: Vec<Goal> = self
+            .state
+            .goals
+            .iter()
+            .filter(|g| {
+                if let Some(updated) = g.updated {
+                    updated < cutoff
+                } else {
+                    true
+                }
+            })
+            .cloned()
+            .collect();
+
+        stale.sort_by(|a, b| a.goal_id.cmp(&b.goal_id));
+        stale
     }
 
     pub fn count_files(&self) -> usize {
@@ -299,6 +565,150 @@ impl GovernanceContext {
         goals
     }
 
+    pub fn decisions_within_days(&self, days: i64) -> Vec<Decision> {
+        let cutoff = Local::now().naive_local().date() - Duration::days(days);
+        let mut decisions: Vec<Decision> = self
+            .state
+            .decisions
+            .iter()
+            .filter(|d| {
+                let relevant_date = d.updated.or(d.date);
+                relevant_date.map(|dt| dt >= cutoff).unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+        decisions.sort_by(|a, b| {
+            let a_date = a.updated.or(a.date);
+            let b_date = b.updated.or(b.date);
+            b_date
+                .cmp(&a_date)
+                .then_with(|| Self::mtime(b.file_path.as_path()).cmp(&Self::mtime(a.file_path.as_path())))
+        });
+        decisions
+    }
+
+    pub fn daily_context(&self, date: NaiveDate) -> DailyContext {
+        let active_phase = self.active_phase();
+        let active_phase_id = active_phase.as_ref().map(|p| p.phase_id.as_str());
+
+        let relations = self.goal_relations_map(active_phase_id);
+        let in_phase_goals: Vec<Goal> = self
+            .state
+            .goals
+            .iter()
+            .filter(|g| {
+                if let Some(active) = active_phase_id {
+                    g.phase
+                        .as_ref()
+                        .map(|p| p.eq_ignore_ascii_case(active))
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
+
+        let out_of_phase_goals: Vec<Goal> = self
+            .state
+            .goals
+            .iter()
+            .filter(|g| {
+                if let Some(active) = active_phase_id {
+                    !g.phase
+                        .as_ref()
+                        .map(|p| p.eq_ignore_ascii_case(active))
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            })
+            .cloned()
+            .collect();
+
+        let note = self.get_daily(date);
+        let selected_goals: Vec<String> = note
+            .as_ref()
+            .map(|n| {
+                if n.goals.is_empty() {
+                    n.linked_goals.clone()
+                } else {
+                    n.goals.clone()
+                }
+            })
+            .unwrap_or_default();
+
+        let mut linked_decisions = Vec::new();
+        let mut linked_audits = Vec::new();
+        let mut dependency_gaps = Vec::new();
+
+        for goal_id in &selected_goals {
+            if let Some(rel) = relations
+                .get(&goal_id.to_lowercase())
+                .cloned()
+            {
+                for decision in rel.decisions {
+                    if !linked_decisions
+                        .iter()
+                        .any(|d| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
+                    {
+                        linked_decisions.push(decision);
+                    }
+                }
+                for audit in rel.audits {
+                    if !linked_audits
+                        .iter()
+                        .any(|a| a.title == audit.title && a.file_path == audit.file_path)
+                    {
+                        linked_audits.push(audit);
+                    }
+                }
+                if !rel.missing_dependencies.is_empty() {
+                    dependency_gaps.push(DependencyGap {
+                        goal_id: rel.goal.goal_id.clone(),
+                        missing: rel.missing_dependencies.clone(),
+                    });
+                }
+            }
+        }
+
+        DailyContext {
+            date,
+            note,
+            active_phase,
+            in_phase_goals,
+            out_of_phase_goals,
+            goal_relations: relations,
+            recent_decisions: self.decisions_within_days(30),
+            linked_decisions,
+            linked_audits,
+            blocked_goals: self.blocked_goals(),
+            dependency_gaps,
+            active_goal_count: self
+                .state
+                .goals
+                .iter()
+                .filter(|g| {
+                    let in_phase = active_phase_id
+                        .map(|p| g.phase.as_ref().map(|gp| gp.eq_ignore_ascii_case(p)).unwrap_or(false))
+                        .unwrap_or(true);
+                    in_phase && g.is_active()
+                })
+                .count(),
+            blocked_goal_count: self
+                .state
+                .goals
+                .iter()
+                .filter(|g| {
+                    let in_phase = active_phase_id
+                        .map(|p| g.phase.as_ref().map(|gp| gp.eq_ignore_ascii_case(p)).unwrap_or(false))
+                        .unwrap_or(true);
+                    in_phase && g.is_blocked()
+                })
+                .count(),
+        }
+    }
+
     pub fn summary(&self) -> GovernanceSummary {
         let today = Local::now().naive_local().date();
         let today_path = self
@@ -346,6 +756,58 @@ impl GovernanceContext {
         let warnings = self.compute_warnings();
         let mut canon_docs = self.state.canon_docs.clone();
         canon_docs.sort_by(|a, b| a.title.cmp(&b.title));
+        let mut protocols = self.state.protocols.clone();
+        protocols.sort_by(|a, b| a.title.cmp(&b.title));
+
+        let mut active_by_phase: Vec<PhaseGoalBreakdown> = Vec::new();
+        for phase in &self.state.phases {
+            let active_goals: Vec<Goal> = self
+                .state
+                .goals
+                .iter()
+                .filter(|g| g.phase.as_ref().map(|p| p.eq_ignore_ascii_case(&phase.phase_id)).unwrap_or(false))
+                .filter(|g| g.is_active())
+                .cloned()
+                .collect();
+            active_by_phase.push(PhaseGoalBreakdown {
+                phase: phase.clone(),
+                active_goals,
+            });
+        }
+
+        // Include goals with an unknown phase as their own bucket
+        if self.state.phases.is_empty() && !self.state.goals.is_empty() {
+            let active_goals: Vec<Goal> = self
+                .state
+                .goals
+                .iter()
+                .filter(|g| g.is_active())
+                .cloned()
+                .collect();
+            active_by_phase.push(PhaseGoalBreakdown {
+                phase: Phase {
+                    phase_id: "Unassigned".to_string(),
+                    title: "Unassigned".to_string(),
+                    status: "unknown".to_string(),
+                    start_date: None,
+                    target_date: None,
+                    dependencies: Vec::new(),
+                    file_path: PathBuf::new(),
+                    content: String::new(),
+                },
+                active_goals,
+            });
+        }
+
+        let mut blocked_top = self.blocked_goals();
+        blocked_top.truncate(3);
+
+        let latest_daily = self
+            .state
+            .daily_notes
+            .iter()
+            .max_by(|a, b| a.date.cmp(&b.date))
+            .cloned();
 
         GovernanceSummary {
             current_phase,
@@ -359,8 +821,14 @@ impl GovernanceContext {
             today_blockers,
             today_decisions,
             today_divergences,
+            latest_daily,
             recent_decisions,
             canon_docs,
+            protocols,
+            active_by_phase,
+            orphaned_goals: self.orphaned_goals(),
+            stale_goals: self.stale_goals(30),
+            top_blocked: blocked_top,
             warnings,
         }
     }

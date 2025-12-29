@@ -166,7 +166,7 @@ impl PhaseWriter {
 
     /// Create audit entry for phase operation
     fn create_audit_entry(&self, action: &str, phase_id: &str, details: &str) -> Result<()> {
-        let audit_dir = self.governance_root.join("05_AUDIT");
+        let audit_dir = self.governance_root.join("05_AUDITS");
         fs::create_dir_all(&audit_dir)?;
 
         let timestamp = Utc::now();
