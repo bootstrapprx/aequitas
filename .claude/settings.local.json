@@ -56,7 +56,9 @@
       "Bash(pkill:*)",
       "Bash(rsync:*)",
       "Bash(./metatheos-cli/target/release/metatheos:*)",
-      "Bash(./target/release/metatheos:*)"
+      "Bash(./target/release/metatheos:*)",
+      "Bash(du:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []
