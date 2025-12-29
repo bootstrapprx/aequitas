@@ -53,7 +53,10 @@
       "Bash(cargo tauri build:*)",
       "Bash(cargo tauri dev:*)",
       "Bash(cargo tauri icon:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(rsync:*)",
+      "Bash(./metatheos-cli/target/release/metatheos:*)",
+      "Bash(./target/release/metatheos:*)"
     ],
     "deny": [],
     "ask": []
