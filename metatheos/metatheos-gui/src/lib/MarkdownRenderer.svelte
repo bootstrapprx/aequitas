@@ -16,14 +16,10 @@
     function render(text) {
         if (!text) return "";
 
-        // Strip frontmatter if present
-        let body = text;
-        if (text.startsWith("---\n")) {
-            const parts = text.split("\n---\n");
-            if (parts.length > 1) {
-                body = parts.slice(1).join("\n---\n").trim();
-            }
-        }
+        // Strip frontmatter if present using a robust regex
+        // Matches --- at start, followed by anything, ending with --- and optional newline
+        const frontmatterRegex = /^---\n([\s\S]*?)\n---\n/;
+        const body = text.replace(frontmatterRegex, "");
 
         // Configure marked to highlight code if needed, but for now standard is fine.
         // We can add custom renderer for mermaid code blocks if we want to handle them specifically,

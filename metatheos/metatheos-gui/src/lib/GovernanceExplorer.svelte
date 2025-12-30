@@ -5,6 +5,7 @@
   import Editor from "./Editor.svelte";
   import FileTreeNode from "./FileTreeNode.svelte";
   import MarkdownRenderer from "./MarkdownRenderer.svelte";
+  import FrontmatterDisplay from "./FrontmatterDisplay.svelte";
   import { getFileIcon, getBadgeClass } from "./utils.js";
 
   let loading = true;
@@ -500,21 +501,7 @@
             <!-- Frontmatter Panel -->
             {#if selectedFile.frontmatter && Object.keys(selectedFile.frontmatter).length > 0}
               <div class="mb-6">
-                <h3
-                  class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
-                >
-                  Frontmatter
-                </h3>
-                <div
-                  class="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
-                >
-                  <pre
-                    class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{JSON.stringify(
-                      selectedFile.frontmatter,
-                      null,
-                      2,
-                    )}</pre>
-                </div>
+                <FrontmatterDisplay frontmatter={selectedFile.frontmatter} />
               </div>
             {/if}
 
