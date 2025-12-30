@@ -6,6 +6,7 @@
   import FileTreeNode from "./FileTreeNode.svelte";
   import MarkdownRenderer from "./MarkdownRenderer.svelte";
   import FrontmatterDisplay from "./FrontmatterDisplay.svelte";
+  import ResizeHandle from "./ResizeHandle.svelte";
   import { getFileIcon, getBadgeClass } from "./utils.js";
 
   let loading = true;
@@ -17,6 +18,9 @@
   let fileContent = "";
   let fileBacklinks = null;
   let expandedFolders = new Set();
+
+  // Layout State
+  let sidebarWidth = 320; // Default width in px
 
   let toastShow = false;
   let toastMessage = "";
@@ -308,6 +312,13 @@
       showToast(`Linked file not found: ${cleanTarget}`, "warning");
     }
   }
+
+  function handleResize(e) {
+    sidebarWidth += e.detail.x;
+    // Enforce min/max constraints
+    if (sidebarWidth < 200) sidebarWidth = 200;
+    if (sidebarWidth > 800) sidebarWidth = 800;
+  }
 </script>
 
 <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -389,12 +400,11 @@
         ></div>
       </div>
     {:else}
-      <!-- Tree View -->
+      <!-- Tree View (Resizable) -->
       {#if viewMode === "tree" || viewMode === "split"}
         <div
-          class="w-full {viewMode === 'split'
-            ? 'md:w-1/3'
-            : ''} border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-800"
+          class="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-800"
+          style="width: {viewMode === 'tree' ? '100%' : `${sidebarWidth}px`}"
         >
           {#if governanceTree}
             <div class="p-4">
@@ -412,6 +422,11 @@
             </p>
           {/if}
         </div>
+
+        <!-- Resize Handle (Only in Split View) -->
+        {#if viewMode === "split"}
+          <ResizeHandle on:resize={handleResize} orientation="vertical" />
+        {/if}
       {/if}
 
       <!-- Content View -->
