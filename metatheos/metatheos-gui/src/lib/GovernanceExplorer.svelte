@@ -264,6 +264,49 @@
       showToast(`Write failed: ${err}`, "error");
     }
   }
+
+  function handleNavigation(e) {
+    const target = e.detail;
+    // Target could be "File Name" or "Folder/File Name"
+    // We need to find this node in the governanceTree
+
+    if (!governanceTree) return;
+
+    // Remove [[ ]] if they somehow got through (shouldn't given regex)
+    const cleanTarget = target.replace(/^\[\[|\]\]$/g, "");
+
+    // Helper to find node recursively
+    function findNode(nodes, name) {
+      for (const node of nodes) {
+        // Check exact match on name (with or without extension)
+        if (node.name === name || node.name === name + ".md") {
+          return node;
+        }
+        // Check path ends with target (for "Folder/File")
+        if (
+          node.path.endsWith(cleanTarget) ||
+          node.path.endsWith(cleanTarget + ".md")
+        ) {
+          return node;
+        }
+
+        if (node.is_directory && node.children) {
+          const found = findNode(node.children, name);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    const foundNode = findNode(governanceTree.children || [], cleanTarget);
+
+    if (foundNode) {
+      selectFile(foundNode);
+      showToast(`Navigated to ${foundNode.name}`, "success");
+    } else {
+      showToast(`Linked file not found: ${cleanTarget}`, "warning");
+    }
+  }
 </script>
 
 <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -554,7 +597,10 @@
               <div
                 class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
               >
-                <MarkdownRenderer content={fileContent} />
+                <MarkdownRenderer
+                  content={fileContent}
+                  on:navigate={handleNavigation}
+                />
               </div>
             </div>
           {/if}

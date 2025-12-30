@@ -28,13 +28,28 @@
         // Configure marked to highlight code if needed, but for now standard is fine.
         // We can add custom renderer for mermaid code blocks if we want to handle them specifically,
         // but usually mermaid scans the DOM.
-        // Let's use a standard render and let mermaid find `.mermaid` classes.
-
         // However, marked usually renders ```mermaid as <pre><code class="language-mermaid">.
         // We need to transform that to <div class="mermaid"> for mermaid.js to pick it up easily,
         // OR tell mermaid to look for the code block.
 
-        // Custom renderer for code blocks
+        // WikiLinks support: [[Target]] or [[Target|Label]]
+        // Transform to <a href="#" data-wikilink="Target" class="text-primary-600 hover:underline">Label</a>
+
+        // Process wikilinks before markdown parsing to avoid conflicts with other syntax
+        const wikiLinkRegex = /\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g;
+
+        // We need to protect the replacement from being parsed as markdown link if possible,
+        // or just produce HTML (which marked allows).
+
+        const processedBody = body.replace(
+            wikiLinkRegex,
+            (match, target, label) => {
+                const displayText = label || target;
+                return `<a href="javascript:void(0)" data-wikilink="${target}" class="text-primary-600 hover:underline wikilink">${displayText}</a>`;
+            },
+        );
+
+        // Configure marked to highlight code if needed
         const renderer = new marked.Renderer();
         renderer.code = ({ text, lang }) => {
             if (lang === "mermaid") {
@@ -45,8 +60,10 @@
 
         marked.setOptions({ renderer });
 
-        const rawHtml = marked.parse(body);
-        return DOMPurify.sanitize(rawHtml);
+        const rawHtml = marked.parse(processedBody);
+        return DOMPurify.sanitize(rawHtml, {
+            ADD_ATTR: ["data-wikilink", "target"], // Allow data-wikilink attribute
+        });
     }
 
     async function processMermaid() {
@@ -58,6 +75,15 @@
             } catch (e) {
                 console.error("Mermaid render error:", e);
             }
+        }
+    }
+
+    function handleContainerClick(e) {
+        const link = e.target.closest("a[data-wikilink]");
+        if (link) {
+            e.preventDefault();
+            const target = link.dataset.wikilink;
+            dispatch("navigate", target);
         }
     }
 
@@ -75,6 +101,7 @@
 <div
     class="markdown-body prose dark:prose-invert max-w-none"
     bind:this={container}
+    on:click={handleContainerClick}
 >
     {@html htmlContent}
 </div>
