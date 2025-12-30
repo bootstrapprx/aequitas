@@ -387,3 +387,15 @@ The tool successfully:
 **Lines of code:** ~1,500
 **Test coverage:** All CLI commands functional
 **Status:** ✅ **Ready for use**
+
+---
+
+## Phase 4A — Ollama Reasoner Verification Checklist
+- [ ] Start Ollama on 127.0.0.1:11435 with model `qwen2.5:7b-instruct` (or override via `OLLAMA_MODEL` / `OLLAMA_BASE_URL`).
+- [ ] Launch Assistant tab → “Ollama (reason-only)” banner visible.
+- [ ] Enter NL request (e.g., “create a goal to harden onboarding”) and generate draft.
+- [ ] Review context list (goals/decisions/audits/dailies) and validation report (errors/warnings).
+- [ ] Edit draft markdown if needed; path stays inside governance folders only.
+- [ ] Click “Send to Safe Edit” → file written via Safe Write (creates new file or backup if exists).
+- [ ] Run git commit from UI with explicit message.
+- [ ] Confirm no model writes occur automatically and raw model output remains visible for audit.

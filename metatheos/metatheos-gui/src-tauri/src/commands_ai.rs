@@ -1,6 +1,9 @@
 use metatheos_core::{
     AIService, ClaudeClient, ContextBuilder, GovernanceContext, PromptLogger,
 };
+use metatheos_core::reasoner::{ReasoningEngine, ReasonerContextUsed, Intent};
+use metatheos_core::llm::runtime::OllamaRuntimeController;
+use metatheos_core::reasoner::DraftArtifact;
 use metatheos_core::llm::LLMClient;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -43,6 +46,50 @@ pub struct AIContextDescriptor {
     pub decisions_loaded: bool,
     pub audits_loaded: bool,
     pub mode: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReasonerContextSummary {
+    pub phase: Option<ReasonerItem>,
+    pub goals: Vec<ReasonerItem>,
+    pub decisions: Vec<ReasonerItem>,
+    pub audits: Vec<ReasonerItem>,
+    pub daily_notes: Vec<ReasonerItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReasonerItem {
+    pub id: String,
+    pub status: Option<String>,
+    pub phase: Option<String>,
+    pub path: String,
+    pub summary: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReasonerValidation {
+    pub valid: bool,
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ReasonerResponse {
+    pub intent: String,
+    pub confidence: f32,
+    pub rationale: String,
+    pub required_inputs: Vec<String>,
+    pub context_used: ReasonerContextSummary,
+    pub draft_path: Option<String>,
+    pub draft_frontmatter: Option<String>,
+    pub draft_body: Option<String>,
+    pub draft_markdown: Option<String>,
+    pub validation: ReasonerValidation,
+    pub raw_model_output: String,
+    pub model: String,
+    pub base_url: String,
+    pub next_actions: Vec<String>,
+    pub message: Option<String>,
 }
 
 /// Check if API key is configured
@@ -187,6 +234,108 @@ pub fn ai_get_examples(state: State<'_, AppState>) -> Result<Vec<String>, String
     Ok(examples)
 }
 
+/// Build a short manual context snippet for copy/paste into web chats (no auto injection)
+#[tauri::command]
+pub fn get_context_clipboard_payload(
+    selected_goals: Option<Vec<String>>,
+    current_path: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    let phase = ctx.active_phase().map(|p| p.phase_id.clone()).unwrap_or_else(|| "unknown".to_string());
+    let goals = selected_goals.unwrap_or_default();
+    let mut lines = Vec::new();
+    lines.push("Metatheos Governance Context (manual paste)".to_string());
+    lines.push(format!("Active phase: {}", phase));
+    if !goals.is_empty() {
+        lines.push(format!("Goals: {}", goals.join(", ")));
+    } else {
+        lines.push("Goals: (none selected)".to_string());
+    }
+    if let Some(path) = current_path {
+        if !path.is_empty() {
+            lines.push(format!("Last file: {}", path));
+        }
+    }
+    lines.push("Warning: No vault context here. Do not request auto-writes; drafts only.".to_string());
+
+    Ok(lines.join("\n"))
+}
+
+/// Local Ollama reasoning pipeline (reason-only, returns drafts)
+#[tauri::command]
+pub async fn ollama_reason(
+    query: String,
+    intent_override: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<ReasonerResponse, String> {
+    let root = {
+        let guard = state.governance_root.lock().unwrap();
+        guard.clone()
+    };
+
+    let ctx = GovernanceContext::load(&root).map_err(|e| e.to_string())?;
+    let runtime = OllamaRuntimeController::new(None, None).map_err(|e| e.to_string())?;
+    let health = runtime
+        .ollama_health()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if !health.reachable {
+        return Err(health.message);
+    }
+    if !health.default_model_ready {
+        return Err(format!("Model {} not available: {}", runtime.model_name(), health.message));
+    }
+
+    let engine = ReasoningEngine::new(runtime.clone());
+    let override_intent = intent_override
+        .as_deref()
+        .and_then(|s| match s {
+            "draft_goal" => Some(Intent::DraftGoal),
+            "update_goal" => Some(Intent::UpdateGoal),
+            "draft_decision" => Some(Intent::DraftDecision),
+            "draft_audit" => Some(Intent::DraftAudit),
+            "summarize_state" => Some(Intent::SummarizeState),
+            "analyze_blockers" => Some(Intent::AnalyzeBlockers),
+            "explain_phase" => Some(Intent::ExplainPhase),
+            _ => None,
+        });
+
+    let result = engine
+        .run(&query, &ctx, override_intent)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let draft_markdown = result.draft.as_ref().map(|d| {
+        format!("---\n{}---\n\n{}", d.frontmatter, d.body)
+    });
+
+    Ok(ReasonerResponse {
+        intent: format!("{:?}", result.intent),
+        confidence: result.intent_guess.confidence,
+        rationale: result.intent_guess.rationale,
+        required_inputs: result.required_inputs.clone(),
+        context_used: to_summary(&result.context_used),
+        draft_path: result.draft.as_ref().map(|d| d.target_path.to_string_lossy().to_string()),
+        draft_frontmatter: result.draft.as_ref().map(|d| d.frontmatter.clone()),
+        draft_body: result.draft.as_ref().map(|d| d.body.clone()),
+        draft_markdown,
+        validation: ReasonerValidation {
+            valid: result.validation.errors.is_empty(),
+            errors: result.validation.errors.clone(),
+            warnings: result.validation.warnings.clone(),
+        },
+        raw_model_output: result.raw_model_output,
+        model: runtime.model_name().to_string(),
+        base_url: runtime.base_url().to_string(),
+        next_actions: result.next_actions,
+        message: None,
+    })
+}
+
 fn build_context_descriptor(ctx: &GovernanceContext) -> AIContextDescriptor {
     let phase = ctx.active_phase().map(|p| p.phase_id);
     let included_goals = collect_included_goals(ctx);
@@ -295,4 +444,24 @@ fn find_unknown_references(text: &str, ctx: &GovernanceContext) -> Vec<String> {
     }
 
     unknown
+}
+
+fn to_summary(ctx: &ReasonerContextUsed) -> ReasonerContextSummary {
+    ReasonerContextSummary {
+        phase: ctx.phase.as_ref().map(to_item),
+        goals: ctx.goals.iter().map(to_item).collect(),
+        decisions: ctx.decisions.iter().map(to_item).collect(),
+        audits: ctx.audits.iter().map(to_item).collect(),
+        daily_notes: ctx.daily_notes.iter().map(to_item).collect(),
+    }
+}
+
+fn to_item(item: &metatheos_core::reasoner::ingestion::SummaryItem) -> ReasonerItem {
+    ReasonerItem {
+        id: item.id.clone(),
+        status: item.status.clone(),
+        phase: item.phase.clone(),
+        path: item.path.to_string_lossy().to_string(),
+        summary: item.summary.clone(),
+    }
 }

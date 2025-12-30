@@ -469,6 +469,10 @@ impl GovernanceContext {
         self.state.audits.iter().collect()
     }
 
+    pub fn all_daily_notes(&self) -> Vec<DailyNote> {
+        self.state.daily_notes.clone()
+    }
+
     pub fn goals_by_phase(&self) -> HashMap<String, Vec<Goal>> {
         let mut grouped: HashMap<String, Vec<Goal>> = HashMap::new();
         for goal in &self.state.goals {

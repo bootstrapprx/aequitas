@@ -102,6 +102,8 @@ impl FrontmatterSerializer {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+    use crate::GoalStatus;
+    use chrono::NaiveDate;
 
     #[test]
     fn test_goal_frontmatter_serialization() {

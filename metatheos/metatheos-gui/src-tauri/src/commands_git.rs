@@ -40,7 +40,7 @@ pub struct FileCommit {
 /// Detect if governance root is a Git repository and get its status
 #[tauri::command]
 pub fn get_governance_git_status(state: State<AppState>) -> Result<GitStatus, String> {
-    let root = state.governance_root.lock().unwrap();
+    let root = state.repo_root.lock().unwrap();
     let root_path = root.to_str().ok_or("Invalid path encoding")?;
 
     // Check if .git exists
@@ -108,7 +108,7 @@ pub fn commit_governance_changes(
     related_ids: Option<String>,
     state: State<AppState>,
 ) -> Result<CommitResult, String> {
-    let root = state.governance_root.lock().unwrap();
+    let root = state.repo_root.lock().unwrap();
     let root_path = root.to_str().ok_or("Invalid path encoding")?;
 
     // Reject empty messages
@@ -180,12 +180,13 @@ pub fn get_file_history(
     limit: Option<usize>,
     state: State<AppState>,
 ) -> Result<Vec<FileCommit>, String> {
-    let root = state.governance_root.lock().unwrap();
-    let root_path = root.to_str().ok_or("Invalid path encoding")?;
+    let gov_root = state.governance_root.lock().unwrap();
+    let repo_root = state.repo_root.lock().unwrap();
+    let root_path = repo_root.to_str().ok_or("Invalid path encoding")?;
 
     // Verify file is within governance root
     let target = std::path::Path::new(&file_path);
-    if !target.starts_with(&*root) {
+    if !target.starts_with(&*gov_root) {
         return Err("File is outside governance root".to_string());
     }
 
@@ -236,7 +237,7 @@ pub fn get_file_history(
 /// Get last commit hash affecting governance directory
 #[tauri::command]
 pub fn get_last_governance_commit(state: State<AppState>) -> Result<Option<String>, String> {
-    let root = state.governance_root.lock().unwrap();
+    let root = state.repo_root.lock().unwrap();
     let root_path = root.to_str().ok_or("Invalid path encoding")?;
 
     let log_output = Command::new("git")

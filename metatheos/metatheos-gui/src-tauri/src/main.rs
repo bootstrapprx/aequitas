@@ -20,10 +20,14 @@ fn main() {
             PathBuf::from(home)
                 .join("Documents/workfolder/aequitas/governance")
         });
+    let repo_root = governance_root
+        .parent()
+        .map(PathBuf::from)
+        .unwrap_or_else(|| governance_root.clone());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .manage(AppState::new(governance_root))
+        .manage(AppState::new(governance_root, repo_root))
         .invoke_handler(tauri::generate_handler![
             // Read commands
             commands::get_all_goals,
@@ -53,6 +57,8 @@ fn main() {
             commands_ai::ai_ask,
             commands_ai::ai_suggest_status,
             commands_ai::ai_get_examples,
+            commands_ai::get_context_clipboard_payload,
+            commands_ai::ollama_reason,
             // CRUD commands (Phase 5)
             commands_crud::create_goal,
             commands_crud::update_goal,

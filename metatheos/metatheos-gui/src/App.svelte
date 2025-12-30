@@ -6,8 +6,12 @@
   import PromptLibrary from './lib/PromptLibrary.svelte'
   import DailyEditor from './lib/DailyEditor.svelte'
   import Assistant from './lib/Assistant.svelte'
+  import ChatDock from './lib/ChatDock.svelte'
+  import ChatDockToggle from './lib/ChatDockToggle.svelte'
+  import { chatDockStore } from './lib/stores/chatDock'
 
   let currentView = 'dashboard'
+  let sidebarCollapsed = false
 
   const views = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -22,44 +26,57 @@
   function switchView(viewId) {
     currentView = viewId
   }
+
+  function handleSwitchToAssistant() {
+    currentView = 'assistant'
+  }
 </script>
 
 <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
   <!-- Sidebar -->
-  <aside class="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-2">
+  <aside class={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700`}>
+    <div class="p-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
         <img
           src="/metatheos-logo.png"
           alt="Metatheos Logo"
           class="w-10 h-10 rounded-lg"
         />
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-          Metatheos
-        </h1>
+        {#if !sidebarCollapsed}
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+            Metatheos
+          </h1>
+        {/if}
       </div>
-      <p class="text-sm text-gray-500 dark:text-gray-400 ml-13">Governance Engine</p>
+      <button class="collapse-btn" title="Toggle sidebar" on:click={() => (sidebarCollapsed = !sidebarCollapsed)}>
+        {sidebarCollapsed ? '»' : '«'}
+      </button>
     </div>
+    {#if !sidebarCollapsed}
+      <p class="text-sm text-gray-500 dark:text-gray-400 ml-6 mb-2">Governance Engine</p>
+    {/if}
 
     <nav class="mt-6">
       {#each views as view}
         <button
-          class="w-full text-left px-6 py-3 flex items-center gap-3 transition-colors {currentView === view.id
+          class={`nav-btn ${currentView === view.id ? 'active' : ''} ${sidebarCollapsed ? 'icon-only' : ''} ${currentView === view.id
             ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 border-r-4 border-primary-600'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}"
+            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
           on:click={() => switchView(view.id)}
         >
           <span class="text-xl">{view.icon}</span>
-          <span class="font-medium">{view.label}</span>
+          {!sidebarCollapsed && <span class="font-medium">{view.label}</span>}
         </button>
       {/each}
     </nav>
 
-    <div class="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 dark:border-gray-700 w-64">
-      <p class="text-xs text-gray-500 dark:text-gray-400">
-        Metatheos v0.5.0<br />
-        Aequitas Governance Engine
-      </p>
+    <div class="sidebar-footer">
+      {!sidebarCollapsed && (
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          Metatheos v0.5.0<br />
+          Aequitas Governance Engine
+        </p>
+      )}
     </div>
   </aside>
 
@@ -85,4 +102,47 @@
       </div>
     {/if}
   </main>
+
+  <ChatDock onSwitchToAssistant={handleSwitchToAssistant} />
+  <ChatDockToggle />
 </div>
+
+<style>
+  .sidebar {
+    width: 256px;
+    transition: width 0.2s ease;
+    position: relative;
+  }
+  .sidebar.collapsed {
+    width: 72px;
+  }
+  .sidebar-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    width: 100%;
+  }
+  .collapse-btn {
+    border: 1px solid rgba(0,0,0,0.1);
+    background: transparent;
+    color: #4b5563;
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  .nav-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: background-color 0.15s ease;
+  }
+  .nav-btn.icon-only {
+    justify-content: center;
+    padding: 12px;
+  }
+</style>

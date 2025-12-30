@@ -2,9 +2,38 @@
 
 ## Overview
 
-The Meta Engine includes an AI Assistant powered by Claude API. This guide shows you how to set it up.
+The Meta Engine Assistant now defaults to **local Ollama reasoning (port 11435)** with strict governance guardrails. Claude API remains available as a cloud fallback.
 
-## Option 1: Use Web Chatbot (No Setup Required)
+## Option 0: Local Ollama (Default, Recommended)
+
+1. Run Ollama on 127.0.0.1:11435 (distinct from Aequitas 11434):
+   ```bash
+   OLLAMA_HOST=127.0.0.1:11435 ollama serve
+   ```
+2. Pull a compatible model (no auto-pull inside the app):
+   ```bash
+   export OLLAMA_HOST=127.0.0.1:11435
+   ollama pull qwen2.5:7b-instruct
+   ```
+3. (Optional) Override defaults:
+   ```bash
+   export OLLAMA_BASE_URL="http://127.0.0.1:11435"
+   export OLLAMA_MODEL="qwen2.5:7b-instruct"
+   ```
+4. Launch Meta Engine: `cargo tauri dev`
+5. Assistant tab → choose **“Ollama (reason-only)”**
+6. Enter a natural-language request (e.g., “create a goal to improve onboarding”) and review:
+   - Context used
+   - Validation errors/warnings
+   - Draft markdown + target path (no auto-write)
+7. Click **“Send to Safe Edit”** to write via Safe Write, then commit.
+
+**What you get:**
+- Fully local reasoning; no network calls.
+- Strict JSON contracts; drafts only.
+- Explicit validation before any write.
+
+## Option 1: Use Web Chatbot (No Vault Context, No Setup)
 
 If you don't want to configure an API key:
 
@@ -12,7 +41,21 @@ If you don't want to configure an API key:
 2. Click the **Assistant** tab (🤖)
 3. Click the **"Web Chatbot"** button at the top
 4. You'll see Claude's web interface
-5. Ask questions directly (but without governance context)
+5. Ask questions directly (no governance context is loaded)
+
+## Web Chat Dock (no vault context)
+- Toggle the **Chat Dock** from the top bar or `Ctrl+Shift+Space`.
+- Choose a provider: ChatGPT, Claude, Mistral, DeepSeek (web sessions stay logged in).
+- A yellow banner reminds you: **Web Chat has no governance context**.
+- Use **Copy Context** to grab a tiny snippet (active phase, selected goals if provided, optional file path, and a “drafts only” warning) and paste it into the web chat manually.
+- “Local Ollama (vault-aware)” jumps to the Governance Assistant tab; it is the only vault-aware path. Web Chat must not be used for writes.
+
+## Controlled Materialization (Phase 5)
+- Assistant now routes intents (draft_goal, update_goal, draft_decision, draft_audit, summarize_state, analyze_blockers, explain_phase).
+- Context is curated (active phase + referenced items only). No full-vault ingestion.
+- Model output must match strict JSON contracts; invalid or low confidence prompts ask for clarification.
+- Drafts are shown with badges “Draft” and “No write performed”, plus validation results before any action.
+- To persist: **Edit Draft → Apply via Safe Edit** (existing safe_write_file) → optional Git commit. No autonomous writes.
 
 **Limitations:**
 - No access to your governance data

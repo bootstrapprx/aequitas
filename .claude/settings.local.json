@@ -61,7 +61,8 @@
       "Bash(tree:*)",
       "Bash(head:*)",
       "Bash(npm --prefix metatheos-gui run build)",
-      "Bash(npm --prefix metatheos/metatheos-gui run build)"
+      "Bash(npm --prefix metatheos/metatheos-gui run build)",
+      "Bash(OLLAMA_HOST=127.0.0.1:11435 ollama pull:*)"
     ],
     "deny": [],
     "ask": []

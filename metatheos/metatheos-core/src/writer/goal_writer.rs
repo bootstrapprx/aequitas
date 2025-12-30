@@ -269,7 +269,8 @@ impl MarkdownWriter for GoalWriter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
+    use crate::GoalStatus;
+    use std::path::PathBuf;
 
     #[test]
     fn test_goal_writer_validation() {

@@ -1404,19 +1404,24 @@ pub fn safe_write_file(
         return Err("Cannot modify read-only governance files (Canon, Constitution, Archive)".to_string());
     }
 
-    // Verify file exists
-    if !target_path.exists() {
-        return Err("Target file does not exist".to_string());
+    // Create parent directories if needed
+    if let Some(parent) = target_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directories: {}", e))?;
     }
 
-    // Create timestamped backup
-    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-    let backup_name = format!("{}.backup.{}", target_path.file_name().unwrap().to_string_lossy(), timestamp);
-    let backup_path = target_path.with_file_name(backup_name);
+    let mut backup_info = String::from("(no backup created)");
 
-    // Copy original to backup
-    fs::copy(target_path, &backup_path)
-        .map_err(|e| format!("Failed to create backup: {}", e))?;
+    // Create timestamped backup only if file exists
+    if target_path.exists() {
+        let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+        let backup_name = format!("{}.backup.{}", target_path.file_name().unwrap().to_string_lossy(), timestamp);
+        let backup = target_path.with_file_name(backup_name);
+
+        fs::copy(target_path, &backup)
+            .map_err(|e| format!("Failed to create backup: {}", e))?;
+        
+        backup_info = backup.to_string_lossy().to_string();
+    }
 
     // Write to temporary file first (atomic write pattern)
     let temp_name = format!("{}.tmp", target_path.file_name().unwrap().to_string_lossy());
@@ -1439,6 +1444,6 @@ pub fn safe_write_file(
 
     Ok(format!(
         "File written successfully. Backup created at {}",
-        backup_path.to_string_lossy()
+        backup_info
     ))
 }
