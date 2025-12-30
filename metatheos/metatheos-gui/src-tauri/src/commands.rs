@@ -1083,7 +1083,6 @@ fn file_last_reviewed(path: &std::path::Path) -> Option<String> {
 // ============================================================================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(tag = "type")]
 pub enum GovernanceFileType {
     Canon,
     Goal,
@@ -1114,7 +1113,20 @@ pub struct GovernanceFileNode {
 #[tauri::command]
 pub fn get_governance_tree(state: State<AppState>) -> Result<GovernanceFileNode, String> {
     let root = state.governance_root.lock().unwrap();
-    build_governance_tree(&*root, None)
+    println!("INFO: get_governance_tree called on root: {:?}", *root);
+    let result = build_governance_tree(&*root, None);
+    
+    if let Ok(ref node) = result {
+        match serde_json::to_string(node) {
+            Ok(json) => println!("INFO: Serialization successful. Payload length: {}", json.len()),
+            Err(e) => println!("ERROR: Serialization failed: {}", e),
+        }
+    } else if let Err(ref e) = result {
+        println!("ERROR: build_governance_tree failed: {}", e);
+    }
+    
+    println!("INFO: get_governance_tree finished");
+    result
 }
 
 fn build_governance_tree(
@@ -1214,7 +1226,7 @@ fn build_governance_tree(
 
 fn determine_file_type(
     path: &std::path::Path,
-    root: &std::path::Path,
+    _root: &std::path::Path,
 ) -> (GovernanceFileType, bool) {
     let path_str = path.to_string_lossy();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");

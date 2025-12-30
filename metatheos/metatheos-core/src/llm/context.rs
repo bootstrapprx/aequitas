@@ -2,6 +2,7 @@ use crate::governance::GovernanceContext;
 use crate::domain::Goal;
 
 pub struct ContextBuilder {
+    #[allow(dead_code)]
     max_tokens: usize,
 }
 

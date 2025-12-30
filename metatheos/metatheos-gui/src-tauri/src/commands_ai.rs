@@ -10,6 +10,7 @@ use tauri::State;
 use crate::state::AppState;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct AIAskRequest {
     pub query: String,
 }

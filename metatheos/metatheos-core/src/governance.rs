@@ -324,6 +324,7 @@ impl GovernanceContext {
         link_norm.contains(&dec_norm) || dec_norm.contains(&link_norm)
     }
 
+    #[allow(dead_code)]
     fn resolve_goal_links(&self, link: &str) -> Option<Goal> {
         self.state
             .goals

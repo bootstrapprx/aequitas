@@ -3,6 +3,7 @@
   import { onMount } from 'svelte'
   import Toast from './Toast.svelte'
   import PhaseEditor from './PhaseEditor.svelte'
+  import GovernanceGitPanel from './GovernanceGitPanel.svelte'
 
   let loading = true
   let error = null
@@ -279,6 +280,11 @@
           {data.total_goals}
         </div>
       </div>
+    </div>
+
+    <!-- Governance State (Phase 3) -->
+    <div class="mb-6">
+      <GovernanceGitPanel />
     </div>
 
     <!-- Today -->

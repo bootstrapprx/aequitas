@@ -4,6 +4,7 @@
 mod commands;
 mod commands_ai;
 mod commands_crud;
+mod commands_git;
 mod state;
 
 use state::AppState;
@@ -68,6 +69,11 @@ fn main() {
             commands_crud::create_prompt,
             commands_crud::update_prompt,
             commands_crud::delete_prompt,
+            // Git commands (Phase 3)
+            commands_git::get_governance_git_status,
+            commands_git::commit_governance_changes,
+            commands_git::get_file_history,
+            commands_git::get_last_governance_commit,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
