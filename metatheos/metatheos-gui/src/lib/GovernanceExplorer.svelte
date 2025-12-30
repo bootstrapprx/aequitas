@@ -4,6 +4,7 @@
   import Toast from "./Toast.svelte";
   import Editor from "./Editor.svelte";
   import FileTreeNode from "./FileTreeNode.svelte";
+  import MarkdownRenderer from "./MarkdownRenderer.svelte";
   import { getFileIcon, getBadgeClass } from "./utils.js";
 
   let loading = true;
@@ -553,10 +554,7 @@
               <div
                 class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
               >
-                <pre
-                  class="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">{renderMarkdown(
-                    fileContent,
-                  )}</pre>
+                <MarkdownRenderer content={fileContent} />
               </div>
             </div>
           {/if}
