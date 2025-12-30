@@ -7,6 +7,7 @@
   import MarkdownRenderer from "./MarkdownRenderer.svelte";
   import FrontmatterDisplay from "./FrontmatterDisplay.svelte";
   import ResizeHandle from "./ResizeHandle.svelte";
+  import Terminal from "./Terminal.svelte";
   import { getFileIcon, getBadgeClass } from "./utils.js";
 
   let loading = true;
@@ -21,10 +22,15 @@
 
   // Layout State
   let sidebarWidth = 320; // Default width in px
+  let showSidebar = true;
+  let showBottomPanel = false;
+  let bottomPanelHeight = 250;
 
   let toastShow = false;
   let toastMessage = "";
   let toastType = "success";
+
+  let terminal; // Bound instance
 
   // View mode: 'tree', 'content', 'split', 'edit'
   let viewMode = "split";
@@ -319,6 +325,16 @@
     if (sidebarWidth < 200) sidebarWidth = 200;
     if (sidebarWidth > 800) sidebarWidth = 800;
   }
+
+  function handlePanelResize(e) {
+    // Dragging up means y is negative, so we subtract y to increase height
+    // Wait, movementY is positive when moving down (shrinking height)
+    // So height = currentHeight - movementY
+    bottomPanelHeight -= e.detail.y;
+
+    if (bottomPanelHeight < 100) bottomPanelHeight = 100;
+    if (bottomPanelHeight > 600) bottomPanelHeight = 600;
+  }
 </script>
 
 <div class="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -339,6 +355,52 @@
         </p>
       </div>
       <div class="flex items-center gap-2">
+        <!-- Layout Controls -->
+        <div
+          class="flex items-center border-r border-gray-200 dark:border-gray-700 pr-3 mr-3 space-x-1"
+        >
+          <button
+            title="Toggle Sidebar"
+            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 {showSidebar
+              ? 'text-primary-600'
+              : 'text-gray-400'}"
+            on:click={() => (showSidebar = !showSidebar)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><rect x="3" y="3" width="18" height="18" rx="2" ry="2"
+              ></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg
+            >
+          </button>
+          <button
+            title="Toggle Bottom Panel"
+            class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 {showBottomPanel
+              ? 'text-primary-600'
+              : 'text-gray-400'}"
+            on:click={() => (showBottomPanel = !showBottomPanel)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><rect x="3" y="3" width="18" height="18" rx="2" ry="2"
+              ></rect><line x1="3" y1="15" x2="21" y2="15"></line></svg
+            >
+          </button>
+        </div>
+
         <button
           class="px-3 py-1 text-sm rounded {viewMode === 'tree'
             ? 'bg-primary-600 text-white'
@@ -392,356 +454,417 @@
   {/if}
 
   <!-- Main Content Area -->
-  <div class="flex-1 flex overflow-hidden">
-    {#if loading}
-      <div class="flex-1 flex items-center justify-center">
-        <div
-          class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"
-        ></div>
-      </div>
-    {:else}
-      <!-- Tree View (Resizable) -->
-      {#if viewMode === "tree" || viewMode === "split"}
-        <div
-          class="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-800"
-          style="width: {viewMode === 'tree' ? '100%' : `${sidebarWidth}px`}"
-        >
-          {#if governanceTree}
-            <div class="p-4">
-              <FileTreeNode
-                node={governanceTree}
-                {expandedFolders}
-                {selectFile}
-                {selectedFile}
-                level={0}
-              />
-            </div>
-          {:else}
-            <p class="p-4 text-gray-500 dark:text-gray-400">
-              No governance data found
-            </p>
-          {/if}
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top Workspace (Tree + Content) -->
+    <div class="flex-1 flex overflow-hidden">
+      {#if loading}
+        <div class="flex-1 flex items-center justify-center">
+          <div
+            class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"
+          ></div>
         </div>
-
-        <!-- Resize Handle (Only in Split View) -->
-        {#if viewMode === "split"}
-          <ResizeHandle on:resize={handleResize} orientation="vertical" />
-        {/if}
-      {/if}
-
-      <!-- Content View -->
-      {#if (viewMode === "content" || viewMode === "split") && selectedFile}
-        <div class="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-6">
-          <!-- File Header -->
-          <div class="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex items-center gap-3">
-                <span class="text-3xl"
-                  >{getFileIcon(selectedFile.file_type)}</span
-                >
-                <div>
-                  <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {selectedFile.name}
-                  </h2>
-                  <p
-                    class="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1"
-                  >
-                    {selectedFile.path}
-                  </p>
-                </div>
+      {:else}
+        <!-- Tree View (Resizable) -->
+        {#if (viewMode === "tree" || viewMode === "split") && showSidebar}
+          <div
+            class="flex-shrink-0 border-r border-gray-200 dark:border-gray-700 overflow-y-auto bg-white dark:bg-gray-800"
+            style="width: {viewMode === 'tree' ? '100%' : `${sidebarWidth}px`}"
+          >
+            {#if governanceTree}
+              <div class="p-4">
+                <FileTreeNode
+                  node={governanceTree}
+                  {expandedFolders}
+                  {selectFile}
+                  {selectedFile}
+                  level={0}
+                />
               </div>
-              <div class="flex items-center gap-3">
-                <div class="flex flex-col items-end gap-2">
-                  <span
-                    class="px-3 py-1 text-xs font-semibold rounded {getBadgeClass(
-                      selectedFile.file_type,
-                      selectedFile.is_writable,
-                    )}"
-                  >
-                    {selectedFile.file_type}
-                    {#if !selectedFile.is_writable}
-                      🔒 READ-ONLY
-                    {/if}
-                  </span>
-                  {#if selectedFile.size}
-                    <span class="text-xs text-gray-500 dark:text-gray-400"
-                      >{formatFileSize(selectedFile.size)}</span
-                    >
-                  {/if}
-                </div>
-                {#if selectedFile.is_writable}
-                  <button
-                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-                    on:click={startEditing}
-                  >
-                    ✏️ Safe Edit
-                  </button>
-                {/if}
-              </div>
-            </div>
-
-            {#if selectedFile.modified}
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Modified: {formatDate(selectedFile.modified)}
+            {:else}
+              <p class="p-4 text-gray-500 dark:text-gray-400">
+                No governance data found
               </p>
             {/if}
           </div>
 
-          <!-- Tab Navigation (Phase 3) -->
-          <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <div class="flex gap-4">
-              <button
-                class="px-4 py-2 font-medium border-b-2 transition-colors {currentTab ===
-                'content'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
-                on:click={() => (currentTab = "content")}
-              >
-                📄 Content
-              </button>
-              <button
-                class="px-4 py-2 font-medium border-b-2 transition-colors {currentTab ===
-                'history'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
-                on:click={switchToHistoryTab}
-              >
-                📜 History
-              </button>
-            </div>
-          </div>
+          <!-- Resize Handle (Only in Split View) -->
+          {#if viewMode === "split"}
+            <ResizeHandle on:resize={handleResize} orientation="vertical" />
+          {/if}
+        {/if}
 
-          <!-- Content Tab -->
-          {#if currentTab === "content"}
-            <!-- Frontmatter Panel -->
-            {#if selectedFile.frontmatter && Object.keys(selectedFile.frontmatter).length > 0}
-              <div class="mb-6">
-                <FrontmatterDisplay frontmatter={selectedFile.frontmatter} />
+        <!-- Content View -->
+        {#if (viewMode === "content" || viewMode === "split") && selectedFile}
+          <div class="flex-1 overflow-y-auto bg-white dark:bg-gray-800 p-6">
+            <!-- File Header -->
+            <div
+              class="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700"
+            >
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center gap-3">
+                  <span class="text-3xl"
+                    >{getFileIcon(selectedFile.file_type)}</span
+                  >
+                  <div>
+                    <h2
+                      class="text-2xl font-bold text-gray-900 dark:text-white"
+                    >
+                      {selectedFile.name}
+                    </h2>
+                    <p
+                      class="text-sm text-gray-500 dark:text-gray-400 font-mono mt-1"
+                    >
+                      {selectedFile.path}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="flex flex-col items-end gap-2">
+                    <span
+                      class="px-3 py-1 text-xs font-semibold rounded {getBadgeClass(
+                        selectedFile.file_type,
+                        selectedFile.is_writable,
+                      )}"
+                    >
+                      {selectedFile.file_type}
+                      {#if !selectedFile.is_writable}
+                        🔒 READ-ONLY
+                      {/if}
+                    </span>
+                    {#if selectedFile.size}
+                      <span class="text-xs text-gray-500 dark:text-gray-400"
+                        >{formatFileSize(selectedFile.size)}</span
+                      >
+                    {/if}
+                  </div>
+                  {#if selectedFile.is_writable}
+                    <button
+                      class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+                      on:click={startEditing}
+                    >
+                      ✏️ Safe Edit
+                    </button>
+                  {/if}
+                </div>
               </div>
-            {/if}
 
-            <!-- Backlinks Panel -->
-            {#if fileBacklinks}
-              <div class="mb-6">
+              {#if selectedFile.modified}
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                  Modified: {formatDate(selectedFile.modified)}
+                </p>
+              {/if}
+            </div>
+
+            <!-- Tab Navigation (Phase 3) -->
+            <div class="mb-6 border-b border-gray-200 dark:border-gray-700">
+              <div class="flex gap-4">
+                <button
+                  class="px-4 py-2 font-medium border-b-2 transition-colors {currentTab ===
+                  'content'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
+                  on:click={() => (currentTab = "content")}
+                >
+                  📄 Content
+                </button>
+                <button
+                  class="px-4 py-2 font-medium border-b-2 transition-colors {currentTab ===
+                  'history'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
+                  on:click={switchToHistoryTab}
+                >
+                  📜 History
+                </button>
+              </div>
+            </div>
+
+            <!-- Content Tab -->
+            {#if currentTab === "content"}
+              <!-- Frontmatter Panel -->
+              {#if selectedFile.frontmatter && Object.keys(selectedFile.frontmatter).length > 0}
+                <div class="mb-6">
+                  <FrontmatterDisplay frontmatter={selectedFile.frontmatter} />
+                </div>
+              {/if}
+
+              <!-- Backlinks Panel -->
+              {#if fileBacklinks}
+                <div class="mb-6">
+                  <h3
+                    class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
+                  >
+                    References
+                  </h3>
+                  <div class="grid grid-cols-2 gap-4">
+                    <!-- Forward Links -->
+                    <div>
+                      <h4
+                        class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Forward Links ({fileBacklinks.forward_links.length})
+                      </h4>
+                      {#if fileBacklinks.forward_links.length === 0}
+                        <p
+                          class="text-sm text-gray-500 dark:text-gray-400 italic"
+                        >
+                          None
+                        </p>
+                      {:else}
+                        <div class="space-y-1">
+                          {#each fileBacklinks.forward_links as link}
+                            <div
+                              class="text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-blue-700 dark:text-blue-300"
+                            >
+                              → {link}
+                            </div>
+                          {/each}
+                        </div>
+                      {/if}
+                    </div>
+
+                    <!-- Backlinks -->
+                    <div>
+                      <h4
+                        class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                      >
+                        Referenced By ({fileBacklinks.backlinks.length})
+                      </h4>
+                      {#if fileBacklinks.backlinks.length === 0}
+                        <p
+                          class="text-sm text-gray-500 dark:text-gray-400 italic"
+                        >
+                          None
+                        </p>
+                      {:else}
+                        <div class="space-y-1">
+                          {#each fileBacklinks.backlinks.slice(0, 10) as backlink}
+                            <div
+                              class="text-sm bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded text-green-700 dark:text-green-300 truncate"
+                            >
+                              ← {backlink.split("/").pop()}
+                            </div>
+                          {/each}
+                          {#if fileBacklinks.backlinks.length > 10}
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                              +{fileBacklinks.backlinks.length - 10} more
+                            </p>
+                          {/if}
+                        </div>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+              {/if}
+
+              <!-- Content Panel -->
+              <div>
                 <h3
                   class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
                 >
-                  References
+                  Content
                 </h3>
-                <div class="grid grid-cols-2 gap-4">
-                  <!-- Forward Links -->
-                  <div>
-                    <h4
-                      class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >
-                      Forward Links ({fileBacklinks.forward_links.length})
-                    </h4>
-                    {#if fileBacklinks.forward_links.length === 0}
-                      <p
-                        class="text-sm text-gray-500 dark:text-gray-400 italic"
-                      >
-                        None
-                      </p>
-                    {:else}
-                      <div class="space-y-1">
-                        {#each fileBacklinks.forward_links as link}
-                          <div
-                            class="text-sm bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-blue-700 dark:text-blue-300"
-                          >
-                            → {link}
-                          </div>
-                        {/each}
-                      </div>
-                    {/if}
-                  </div>
-
-                  <!-- Backlinks -->
-                  <div>
-                    <h4
-                      class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                    >
-                      Referenced By ({fileBacklinks.backlinks.length})
-                    </h4>
-                    {#if fileBacklinks.backlinks.length === 0}
-                      <p
-                        class="text-sm text-gray-500 dark:text-gray-400 italic"
-                      >
-                        None
-                      </p>
-                    {:else}
-                      <div class="space-y-1">
-                        {#each fileBacklinks.backlinks.slice(0, 10) as backlink}
-                          <div
-                            class="text-sm bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded text-green-700 dark:text-green-300 truncate"
-                          >
-                            ← {backlink.split("/").pop()}
-                          </div>
-                        {/each}
-                        {#if fileBacklinks.backlinks.length > 10}
-                          <p class="text-xs text-gray-500 dark:text-gray-400">
-                            +{fileBacklinks.backlinks.length - 10} more
-                          </p>
-                        {/if}
-                      </div>
-                    {/if}
-                  </div>
+                <div
+                  class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+                >
+                  <MarkdownRenderer
+                    content={fileContent}
+                    on:navigate={handleNavigation}
+                  />
                 </div>
               </div>
             {/if}
 
-            <!-- Content Panel -->
-            <div>
-              <h3
-                class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
-              >
-                Content
-              </h3>
-              <div
-                class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
-              >
-                <MarkdownRenderer
-                  content={fileContent}
-                  on:navigate={handleNavigation}
-                />
-              </div>
-            </div>
-          {/if}
-
-          <!-- History Tab (Phase 3) -->
-          {#if currentTab === "history"}
-            <div>
-              <h3
-                class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
-              >
-                Governance History
-              </h3>
-              <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Commits affecting this file, ordered by recency. Each commit is
-                a governance decision artifact.
-              </p>
-
-              {#if loadingHistory}
-                <div class="flex items-center justify-center py-8">
-                  <div
-                    class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"
-                  ></div>
-                </div>
-              {:else if fileHistory.length === 0}
-                <div
-                  class="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center"
+            <!-- History Tab (Phase 3) -->
+            {#if currentTab === "history"}
+              <div>
+                <h3
+                  class="text-lg font-semibold text-gray-900 dark:text-white mb-3"
                 >
-                  <p class="text-gray-600 dark:text-gray-400">
-                    No commit history found for this file
-                  </p>
-                  <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                    This file may not be tracked by Git yet
-                  </p>
-                </div>
-              {:else}
-                <div class="space-y-3">
-                  {#each fileHistory as commit}
+                  Governance History
+                </h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Commits affecting this file, ordered by recency. Each commit
+                  is a governance decision artifact.
+                </p>
+
+                {#if loadingHistory}
+                  <div class="flex items-center justify-center py-8">
                     <div
-                      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-2">
+                      class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"
+                    ></div>
+                  </div>
+                {:else if fileHistory.length === 0}
+                  <div
+                    class="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-8 text-center"
+                  >
+                    <p class="text-gray-600 dark:text-gray-400">
+                      No commit history found for this file
+                    </p>
+                    <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+                      This file may not be tracked by Git yet
+                    </p>
+                  </div>
+                {:else}
+                  <div class="space-y-3">
+                    {#each fileHistory as commit}
+                      <div
+                        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div class="flex items-start justify-between mb-2">
+                          <div class="flex items-center gap-2">
+                            <span
+                              class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded"
+                            >
+                              {commit.hash.substring(0, 7)}
+                            </span>
+                            <span
+                              class="text-sm text-gray-600 dark:text-gray-400"
+                            >
+                              {commit.author}
+                            </span>
+                          </div>
                           <span
-                            class="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded"
+                            class="text-xs text-gray-500 dark:text-gray-500"
                           >
-                            {commit.hash.substring(0, 7)}
-                          </span>
-                          <span
-                            class="text-sm text-gray-600 dark:text-gray-400"
-                          >
-                            {commit.author}
+                            {new Date(commit.date).toLocaleString()}
                           </span>
                         </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-500">
-                          {new Date(commit.date).toLocaleString()}
-                        </span>
+                        <p class="text-sm text-gray-900 dark:text-white">
+                          {commit.message}
+                        </p>
                       </div>
-                      <p class="text-sm text-gray-900 dark:text-white">
-                        {commit.message}
-                      </p>
-                    </div>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          {/if}
-        </div>
-      {:else if viewMode === "content" || viewMode === "split"}
-        <div
-          class="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400"
-        >
-          <div class="text-center">
-            <p class="text-lg mb-2">No file selected</p>
-            <p class="text-sm">
-              Select a file from the tree view to view its content
-            </p>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/if}
           </div>
-        </div>
-      {/if}
-
-      <!-- Edit View -->
-      {#if viewMode === "edit" && editingFile}
-        <div class="flex-1 flex flex-col bg-white dark:bg-gray-800">
-          <!-- Edit Header -->
-          <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl"
-                  >{getFileIcon(editingFile.file_type)}</span
-                >
-                <div>
-                  <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    Editing: {editingFile.name}
-                  </h2>
-                  <p
-                    class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1"
-                  >
-                    {editingFile.path}
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <button
-                  class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  on:click={cancelEditing}
-                >
-                  Cancel
-                </button>
-                <button
-                  class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  on:click={openPreview}
-                  disabled={editedContent === fileContent}
-                >
-                  👁️ Preview Changes
-                </button>
-              </div>
-            </div>
-            <div
-              class="mt-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3"
-            >
-              <p class="text-sm text-amber-800 dark:text-amber-200">
-                ⚠️ <strong>Governance Safeguard:</strong> All changes require preview
-                and confirmation before writing to disk. Canon and Constitution files
-                are permanently read-only.
+        {:else if viewMode === "content" || viewMode === "split"}
+          <div
+            class="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400"
+          >
+            <div class="text-center">
+              <p class="text-lg mb-2">No file selected</p>
+              <p class="text-sm">
+                Select a file from the tree view to view its content
               </p>
             </div>
           </div>
+        {/if}
 
-          <!-- Editor Area -->
-          <div class="flex-1 p-6 overflow-hidden">
-            <Editor
-              value={editedContent}
-              on:change={(e) => (editedContent = e.detail)}
-            />
+        <!-- Edit View -->
+        {#if viewMode === "edit" && editingFile}
+          <div class="flex-1 flex flex-col bg-white dark:bg-gray-800">
+            <!-- Edit Header -->
+            <div
+              class="border-b border-gray-200 dark:border-gray-700 px-6 py-4"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl"
+                    >{getFileIcon(editingFile.file_type)}</span
+                  >
+                  <div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                      Editing: {editingFile.name}
+                    </h2>
+                    <p
+                      class="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1"
+                    >
+                      {editingFile.path}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    on:click={cancelEditing}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    on:click={openPreview}
+                    disabled={editedContent === fileContent}
+                  >
+                    👁️ Preview Changes
+                  </button>
+                </div>
+              </div>
+              <div
+                class="mt-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3"
+              >
+                <p class="text-sm text-amber-800 dark:text-amber-200">
+                  ⚠️ <strong>Governance Safeguard:</strong> All changes require preview
+                  and confirmation before writing to disk. Canon and Constitution
+                  files are permanently read-only.
+                </p>
+              </div>
+            </div>
+
+            <!-- Editor Area -->
+            <div class="flex-1 p-6 overflow-hidden">
+              <Editor
+                value={editedContent}
+                on:change={(e) => (editedContent = e.detail)}
+              />
+            </div>
           </div>
-        </div>
+        {/if}
       {/if}
+    </div>
+    <!-- Close Top Workspace -->
+
+    <!-- Bottom Panel (Terminal) -->
+    {#if showBottomPanel}
+      <div
+        class="border-t border-gray-200 dark:border-gray-700 bg-gray-900 flex flex-col"
+        style="height: {bottomPanelHeight}px"
+      >
+        <!-- Horizontal Resize Handle -->
+        <ResizeHandle on:resize={handlePanelResize} orientation="horizontal" />
+
+        <!-- Terminal Header -->
+        <div
+          class="flex items-center px-4 py-1 bg-gray-800 border-b border-gray-700 h-8"
+        >
+          <span
+            class="text-xs font-semibold text-gray-400 uppercase tracking-wider"
+            >Output</span
+          >
+          <div class="flex-1"></div>
+          <button
+            title="Close Panel"
+            class="text-gray-500 hover:text-white p-1"
+            on:click={() => (showBottomPanel = false)}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-3 w-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              ><line x1="18" y1="6" x2="6" y2="18"></line><line
+                x1="6"
+                y1="6"
+                x2="18"
+                y2="18"
+              ></line></svg
+            >
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-hidden relative">
+          <Terminal bind:this={terminal} />
+        </div>
+      </div>
     {/if}
   </div>
+  <!-- Close Main Wrapper -->
 </div>
 
 <!-- File Tree Node Component -->
