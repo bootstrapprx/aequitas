@@ -115,6 +115,8 @@ pub struct AuditRecord {
     pub scope: Option<String>,
     pub risk: Option<String>,
     pub auditor: Option<String>,
+    pub status: Option<String>,
+    pub evidence: Option<String>,
     pub file_path: PathBuf,
     pub summary: Option<String>,
     pub content: String,

@@ -7,6 +7,8 @@ pub struct Prompt {
     pub prompt_id: Option<String>,
     pub agent: Option<String>,
     pub purpose: Option<String>,
+    pub origin: Option<String>,
+    pub status: Option<String>,
     pub timestamp: Option<DateTime<Utc>>,
     pub prompt_text: Option<String>,
     pub response_text: Option<String>,

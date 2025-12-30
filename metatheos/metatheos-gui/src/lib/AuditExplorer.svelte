@@ -202,15 +202,25 @@
         >
           <!-- Header -->
           <div class="flex items-start justify-between mb-3">
-            <h3 class="font-semibold text-gray-900 dark:text-white text-lg flex-1">
-              {audit.title}
-            </h3>
-            {#if audit.risk}
-              <span class="ml-2 px-2 py-1 text-xs font-medium rounded {getRiskBadgeClass(audit.risk)}">
-                {audit.risk}
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-1 text-[11px] font-semibold rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200">
+                AUDIT — Verification
               </span>
-            {/if}
+              <span class="px-2 py-1 text-[11px] font-semibold rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                {audit.status || 'open'}
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              {#if audit.risk}
+                <span class="px-2 py-1 text-xs font-medium rounded {getRiskBadgeClass(audit.risk)}">
+                  {audit.risk}
+                </span>
+              {/if}
+            </div>
           </div>
+          <h3 class="font-semibold text-gray-900 dark:text-white text-lg mb-2">
+            {audit.title}
+          </h3>
 
           <!-- Metadata -->
           <div class="space-y-1 text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -218,6 +228,12 @@
               <div class="flex items-center gap-2">
                 <span class="font-medium">Date:</span>
                 <span>{audit.date}</span>
+              </div>
+            {/if}
+            {#if audit.last_reviewed}
+              <div class="flex items-center gap-2">
+                <span class="font-medium">Last reviewed:</span>
+                <span>{audit.last_reviewed}</span>
               </div>
             {/if}
             {#if audit.scope}
@@ -232,6 +248,10 @@
                 <span>{audit.auditor}</span>
               </div>
             {/if}
+            <div class="flex items-center gap-2">
+              <span class="font-medium">Evidence:</span>
+              <span class="truncate">{audit.evidence || audit.file_path}</span>
+            </div>
           </div>
 
           <!-- Summary -->
@@ -285,7 +305,20 @@
       on:click|stopPropagation
     >
       <div class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-1 text-[11px] font-semibold rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200">
+            AUDIT — Verification
+          </span>
+          <span class="px-2 py-1 text-[11px] font-semibold rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+            {selectedAudit.status || 'open'}
+          </span>
+          {#if selectedAudit.risk}
+            <span class="px-2 py-1 text-xs font-medium rounded {getRiskBadgeClass(selectedAudit.risk)}">
+              {selectedAudit.risk}
+            </span>
+          {/if}
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white truncate ml-3">
           {selectedAudit.title}
         </h2>
         <button
@@ -303,6 +336,12 @@
             <div>
               <span class="font-medium text-gray-600 dark:text-gray-400">Date:</span>
               <p class="text-gray-900 dark:text-white mt-1">{selectedAudit.date}</p>
+            </div>
+          {/if}
+          {#if selectedAudit.last_reviewed}
+            <div>
+              <span class="font-medium text-gray-600 dark:text-gray-400">Last Reviewed:</span>
+              <p class="text-gray-900 dark:text-white mt-1">{selectedAudit.last_reviewed}</p>
             </div>
           {/if}
           {#if selectedAudit.risk}
@@ -327,6 +366,10 @@
               <p class="text-gray-900 dark:text-white mt-1">{selectedAudit.auditor}</p>
             </div>
           {/if}
+          <div class="col-span-2">
+            <span class="font-medium text-gray-600 dark:text-gray-400">Evidence:</span>
+            <p class="text-gray-900 dark:text-white mt-1 truncate">{selectedAudit.evidence || selectedAudit.file_path}</p>
+          </div>
         </div>
 
         <!-- Summary -->

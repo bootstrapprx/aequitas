@@ -130,6 +130,15 @@
     }
   }
 
+  function getStatusBadgeClass(status) {
+    if (!status) return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+    const s = status.toLowerCase()
+    if (s === 'active') return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+    if (s === 'draft') return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+    if (s === 'deprecated') return 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+    return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+  }
+
   function openDetailModal(prompt) {
     selectedPrompt = prompt
     showDetailModal = true
@@ -171,6 +180,9 @@
     <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Prompt Library</h1>
     <p class="text-gray-600 dark:text-gray-400">
       AI prompts, agent instructions, and cross-references
+    </p>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Curated prompts from <code class="bg-gray-100 dark:bg-gray-800 px-1 rounded">06_PROMPTS/library</code>. AI transcripts (logs) are excluded.
     </p>
   </div>
 
@@ -249,6 +261,16 @@
                 </p>
               {/if}
             </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="px-2 py-1 text-[10px] font-semibold rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200">
+                Designed Prompt
+              </span>
+              {#if prompt.status}
+                <span class="px-2 py-1 text-[10px] font-semibold rounded {getStatusBadgeClass(prompt.status)}">
+                  {prompt.status}
+                </span>
+              {/if}
+            </div>
           </div>
 
           <!-- Agent & Purpose -->
@@ -263,6 +285,11 @@
             {#if prompt.purpose}
               <p class="text-sm text-gray-600 dark:text-gray-400 truncate">
                 Purpose: {prompt.purpose}
+              </p>
+            {/if}
+            {#if prompt.origin}
+              <p class="text-sm text-gray-600 dark:text-gray-400 truncate">
+                Origin: {prompt.origin}
               </p>
             {/if}
             {#if prompt.timestamp}
@@ -358,6 +385,22 @@
             <div>
               <span class="font-medium text-gray-600 dark:text-gray-400">Purpose:</span>
               <p class="text-gray-900 dark:text-white mt-1">{selectedPrompt.purpose}</p>
+            </div>
+          {/if}
+          {#if selectedPrompt.origin}
+            <div>
+              <span class="font-medium text-gray-600 dark:text-gray-400">Origin:</span>
+              <p class="text-gray-900 dark:text-white mt-1">{selectedPrompt.origin}</p>
+            </div>
+          {/if}
+          {#if selectedPrompt.status}
+            <div>
+              <span class="font-medium text-gray-600 dark:text-gray-400">Status:</span>
+              <p class="mt-1">
+                <span class="inline-block px-2 py-1 text-xs font-medium rounded {getStatusBadgeClass(selectedPrompt.status)}">
+                  {selectedPrompt.status}
+                </span>
+              </p>
             </div>
           {/if}
           {#if selectedPrompt.timestamp}

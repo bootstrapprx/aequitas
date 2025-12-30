@@ -13,6 +13,7 @@ pub use audit_writer::AuditWriter;
 pub use prompt_writer::PromptWriter;
 
 use crate::errors::Result;
+use crate::errors::MetaError;
 use std::path::Path;
 
 /// Core trait for markdown writers
@@ -25,4 +26,32 @@ pub trait MarkdownWriter {
 
     /// Validate content before writing
     fn validate(&self, content: &str) -> Result<()>;
+}
+
+/// Ensure the governance root matches the expected on-disk layout.
+/// This guard prevents writes from drifting into incorrect folders.
+pub fn ensure_governance_layout(root: &Path) -> Result<()> {
+    let expected = [
+        "01_DAILY",
+        "02_PHASES",
+        "03_GOALS_EPICS",
+        "04_DECISIONS",
+        "05_AUDITS",
+        "06_PROMPTS",
+    ];
+
+    let missing: Vec<&str> = expected
+        .iter()
+        .copied()
+        .filter(|dir| !root.join(dir).exists())
+        .collect();
+
+    if !missing.is_empty() {
+        return Err(MetaError::ValidationError(format!(
+            "Governance layout incomplete. Missing: {}",
+            missing.join(", ")
+        )));
+    }
+
+    Ok(())
 }

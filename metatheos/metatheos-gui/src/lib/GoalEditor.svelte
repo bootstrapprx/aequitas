@@ -36,6 +36,7 @@ const statuses = [
 ];
 
 const isEditMode = !!goal;
+const initialStatus = goal?.status || 'planned';
 
 // Validation
 function validate(): boolean {
@@ -73,6 +74,14 @@ async function handleSave() {
   error = '';
 
   try {
+    if (isEditMode && status !== initialStatus) {
+      const ok = confirm(`Change status from "${initialStatus}" to "${status}"?`);
+      if (!ok) {
+        saving = false;
+        return;
+      }
+    }
+
     if (isEditMode) {
       // Update existing goal
       await invoke('update_goal', {

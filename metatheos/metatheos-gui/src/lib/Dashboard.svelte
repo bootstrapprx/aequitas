@@ -192,6 +192,14 @@
     </button>
   </div>
 
+  {#if !devMode}
+    <div class="card mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+      <p class="text-sm text-blue-900 dark:text-blue-100">
+        Governance write mode active. Changes will write to the vault after confirmation.
+      </p>
+    </div>
+  {/if}
+
   {#if devMode}
     <div class="card mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
       <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Tauri not detected</h3>

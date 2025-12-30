@@ -31,6 +31,7 @@ fn main() {
             commands::get_all_prompts,
             commands::get_enriched_audits,
             commands::get_enriched_prompts,
+            commands::check_governance_layout,
             commands::get_goals_by_status,
             commands::get_goals_by_phase,
             commands::get_dashboard_data,

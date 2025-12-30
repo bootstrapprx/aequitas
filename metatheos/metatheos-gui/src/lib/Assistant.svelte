@@ -11,6 +11,7 @@
   let examples = []
   let showExamples = true
   let activeMode = 'chat' // 'chat' or 'webview'
+  let lastContextDescriptor = null
 
   // Toast
   let toastShow = false
@@ -50,6 +51,7 @@
 
     try {
       const response = await invoke('ai_ask', { query: userMessage })
+      lastContextDescriptor = response.context_descriptor
 
       // Add AI response
       messages = [
@@ -58,7 +60,10 @@
           role: 'assistant',
           text: response.text,
           model: response.model,
-          hasContext: response.context.length > 0,
+          hasContext: response.context_descriptor?.included_goals?.length > 0,
+          descriptor: response.context_descriptor,
+          rejected: response.rejected,
+          unknown: response.unknown_references,
         },
       ]
 
@@ -96,6 +101,7 @@
   function clearChat() {
     messages = []
     showExamples = true
+    lastContextDescriptor = null
   }
 </script>
 
@@ -104,7 +110,7 @@
     <div>
       <h2 class="text-3xl font-bold text-gray-900 dark:text-white">AI Assistant</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-        Ask questions about your governance, get suggestions, and analyze goals
+        Analyze a snapshot of current goals (limited context, stateless)
       </p>
     </div>
 
@@ -118,7 +124,7 @@
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
             on:click={() => (activeMode = 'chat')}
           >
-            {hasApiKey ? 'AI Chat' : 'Fallback Mode'}
+            {hasApiKey ? 'Claude (vault snapshot)' : 'Fallback Mode'}
           </button>
           <button
             class="px-3 py-1 text-sm rounded transition-colors {activeMode === 'webview'
@@ -126,7 +132,7 @@
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}"
             on:click={() => (activeMode = 'webview')}
           >
-            Web Chatbot
+            Claude Web — no vault context
           </button>
         </div>
 
@@ -165,6 +171,50 @@
   {:else}
     <!-- AI Chat Interface -->
     <div class="flex-1 flex flex-col overflow-hidden">
+      {#if lastContextDescriptor}
+        <div class="card mb-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-gray-900 dark:text-white">Context Used</h3>
+            <span class="text-xs px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+              Mode: {lastContextDescriptor.mode || 'stateless'}
+            </span>
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Phase</p>
+              <p class="font-mono text-gray-900 dark:text-white">{lastContextDescriptor.phase || 'n/a'}</p>
+            </div>
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Decisions</p>
+              <p class="text-gray-900 dark:text-white">not loaded</p>
+            </div>
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Goals included</p>
+              <p class="text-gray-900 dark:text-white truncate">
+                {lastContextDescriptor.included_goals && lastContextDescriptor.included_goals.length
+                  ? lastContextDescriptor.included_goals.join(', ')
+                  : 'none'}
+              </p>
+            </div>
+            <div>
+              <p class="text-gray-600 dark:text-gray-400">Audits</p>
+              <p class="text-gray-900 dark:text-white">not loaded</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-gray-600 dark:text-gray-400">Status counts</p>
+              <p class="text-gray-900 dark:text-white">
+                {#if lastContextDescriptor.status_counts}
+                  {#each Object.entries(lastContextDescriptor.status_counts) as [status, count]}
+                    <span class="mr-2">{status}: {count}</span>
+                  {/each}
+                {:else}
+                  n/a
+                {/if}
+              </p>
+            </div>
+          </div>
+        </div>
+      {/if}
       <!-- Chat Messages -->
       <div class="flex-1 overflow-y-auto chat-messages space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
         {#if !hasApiKey}
@@ -207,11 +257,20 @@
                   <div class="text-xs opacity-75 mb-2">
                     {message.model}
                     {#if message.hasContext}
-                      · with governance context
+                      · goals snapshot context
                     {/if}
                   </div>
                 {/if}
-                <div class="text-sm whitespace-pre-wrap">{message.text}</div>
+                {#if message.rejected}
+                  <div class="text-sm whitespace-pre-wrap text-red-600 dark:text-red-300">
+                    {message.text}
+                  </div>
+                  {#if message.unknown?.length}
+                    <p class="text-xs text-red-500 dark:text-red-300 mt-2">Unknown references: {message.unknown.join(', ')}</p>
+                  {/if}
+                {:else}
+                  <div class="text-sm whitespace-pre-wrap">{message.text}</div>
+                {/if}
               </div>
             </div>
           </div>

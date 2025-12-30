@@ -157,6 +157,8 @@ impl MarkdownParser {
         let scope = FrontmatterParser::get_string(&frontmatter, "scope");
         let risk = FrontmatterParser::get_string(&frontmatter, "risk");
         let auditor = FrontmatterParser::get_string(&frontmatter, "auditor");
+        let status = FrontmatterParser::get_string(&frontmatter, "status");
+        let evidence = FrontmatterParser::get_string(&frontmatter, "evidence");
 
         let summary = body
             .lines()
@@ -170,6 +172,8 @@ impl MarkdownParser {
             scope,
             risk,
             auditor,
+            status,
+            evidence,
             file_path: path.to_path_buf(),
             summary,
             content: body,
@@ -188,11 +192,15 @@ impl MarkdownParser {
             .or_else(|| FrontmatterParser::get_string(&frontmatter, "id"));
         let agent = FrontmatterParser::get_string(&frontmatter, "agent");
         let purpose = FrontmatterParser::get_string(&frontmatter, "purpose");
+        let origin = FrontmatterParser::get_string(&frontmatter, "origin");
+        let status = FrontmatterParser::get_string(&frontmatter, "status");
 
         Ok(Prompt {
             prompt_id,
             agent,
             purpose,
+            origin,
+            status,
             timestamp: None,
             prompt_text: None,
             response_text: None,

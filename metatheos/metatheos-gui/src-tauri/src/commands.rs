@@ -1,13 +1,47 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, DateTime, Local};
 use metatheos_core::{
     AuditRecord, CanonDoc, DailyContext, DependencyGap, GovernanceContext, GovernanceWarning,
     GovernanceWarningKind, Goal, GoalQuery, GoalRelations, GoalStatus, PhaseGoalBreakdown,
     ProtocolDoc,
 };
+use metatheos_core::writer::ensure_governance_layout;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::state::AppState;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LayoutCheckResult {
+    pub ok: bool,
+    pub missing: Vec<String>,
+}
+
+#[tauri::command]
+pub fn check_governance_layout(state: State<AppState>) -> Result<LayoutCheckResult, String> {
+    let root = state.governance_root.lock().unwrap();
+    let expected = [
+        "01_DAILY",
+        "02_PHASES",
+        "03_GOALS_EPICS",
+        "04_DECISIONS",
+        "05_AUDITS",
+        "06_PROMPTS",
+    ];
+
+    let missing: Vec<String> = expected
+        .iter()
+        .filter(|dir| !root.join(dir).exists())
+        .map(|d| d.to_string())
+        .collect();
+
+    // Run guard for consistent error formatting (discard result, we only report missing list)
+    let _ = ensure_governance_layout(&*root);
+
+    Ok(LayoutCheckResult {
+        ok: missing.is_empty(),
+        missing,
+    })
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GoalDto {
@@ -110,6 +144,8 @@ pub struct AuditDto {
     pub scope: Option<String>,
     pub risk: Option<String>,
     pub auditor: Option<String>,
+    pub status: Option<String>,
+    pub evidence: Option<String>,
     pub summary: Option<String>,
     pub file_path: String,
 }
@@ -122,6 +158,8 @@ impl From<&AuditRecord> for AuditDto {
             scope: audit.scope.clone(),
             risk: audit.risk.clone(),
             auditor: audit.auditor.clone(),
+            status: audit.status.clone(),
+            evidence: audit.evidence.clone(),
             summary: audit.summary.clone(),
             file_path: audit.file_path.to_string_lossy().to_string(),
         }
@@ -133,9 +171,12 @@ pub struct PromptDto {
     pub prompt_id: Option<String>,
     pub agent: Option<String>,
     pub purpose: Option<String>,
+    pub origin: Option<String>,
+    pub status: Option<String>,
     pub prompt_text: Option<String>,
     pub title: String,
     pub file_path: String,
+    pub timestamp: Option<String>,
 }
 
 impl From<&metatheos_core::Prompt> for PromptDto {
@@ -144,9 +185,12 @@ impl From<&metatheos_core::Prompt> for PromptDto {
             prompt_id: prompt.prompt_id.clone(),
             agent: prompt.agent.clone(),
             purpose: prompt.purpose.clone(),
+            origin: prompt.origin.clone(),
+            status: prompt.status.clone(),
             prompt_text: prompt.prompt_text.clone(),
             title: prompt.title.clone(),
             file_path: prompt.file_path.to_string_lossy().to_string(),
+            timestamp: prompt.timestamp.map(|t| t.to_rfc3339()),
         }
     }
 }
@@ -158,12 +202,15 @@ pub struct EnrichedAuditDto {
     pub scope: Option<String>,
     pub risk: Option<String>,
     pub auditor: Option<String>,
+    pub status: Option<String>,
+    pub evidence: Option<String>,
     pub summary: Option<String>,
     pub file_path: String,
     // Enrichment data
     pub referenced_goals: Vec<String>,
     pub daily_references: Vec<String>,
     pub related_prompts: Vec<String>,
+    pub last_reviewed: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -171,6 +218,8 @@ pub struct EnrichedPromptDto {
     pub prompt_id: Option<String>,
     pub agent: Option<String>,
     pub purpose: Option<String>,
+    pub origin: Option<String>,
+    pub status: Option<String>,
     pub prompt_text: Option<String>,
     pub title: String,
     pub file_path: String,
@@ -217,6 +266,8 @@ pub struct WarningDto {
     pub message: String,
     pub related: Vec<String>,
 }
+
+
 
 impl From<&GovernanceWarning> for WarningDto {
     fn from(warning: &GovernanceWarning) -> Self {
@@ -893,11 +944,14 @@ pub fn get_enriched_audits(state: State<AppState>) -> Result<Vec<EnrichedAuditDt
                 scope: audit.scope.clone(),
                 risk: audit.risk.clone(),
                 auditor: audit.auditor.clone(),
+                status: audit.status.clone(),
+                evidence: audit.evidence.clone(),
                 summary: audit.summary.clone(),
                 file_path: file_path_str,
                 referenced_goals,
                 daily_references,
                 related_prompts,
+                last_reviewed: file_last_reviewed(audit.file_path.as_path()),
             }
         })
         .collect();
@@ -990,6 +1044,8 @@ pub fn get_enriched_prompts(state: State<AppState>) -> Result<Vec<EnrichedPrompt
                 prompt_id: prompt.prompt_id.clone(),
                 agent: prompt.agent.clone(),
                 purpose: prompt.purpose.clone(),
+                origin: prompt.origin.clone(),
+                status: prompt.status.clone(),
                 prompt_text: prompt.prompt_text.clone(),
                 title: prompt.title.clone(),
                 file_path: file_path_str,
@@ -1013,4 +1069,11 @@ fn parse_goal_status(status: &str) -> Result<GoalStatus, String> {
         "done" | "completed" => Ok(GoalStatus::Done),
         other => Ok(GoalStatus::Unknown(other.to_string())),
     }
+}
+
+fn file_last_reviewed(path: &std::path::Path) -> Option<String> {
+    let metadata = std::fs::metadata(path).ok()?;
+    let modified = metadata.modified().ok()?;
+    let dt: DateTime<Local> = modified.into();
+    Some(dt.to_rfc3339())
 }

@@ -1,7 +1,7 @@
 use crate::domain::Phase;
 use crate::errors::{MetaError, Result};
 use crate::governance::GovernanceContext;
-use crate::writer::{FrontmatterSerializer, MarkdownWriter};
+use crate::writer::{ensure_governance_layout, FrontmatterSerializer, MarkdownWriter};
 use chrono::Utc;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,6 +17,7 @@ impl PhaseWriter {
 
     /// Create a new phase
     pub fn create_phase(&self, phase: &Phase) -> Result<PathBuf> {
+        ensure_governance_layout(&self.governance_root)?;
         // Validate phase ID is unique
         let ctx = GovernanceContext::load(&self.governance_root)?;
         if ctx.all_phases().iter().any(|p| p.phase_id == phase.phase_id) {
@@ -66,6 +67,7 @@ impl PhaseWriter {
 
     /// Update an existing phase
     pub fn update_phase(&self, phase: &Phase) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         // Validate phase exists
         let ctx = GovernanceContext::load(&self.governance_root)?;
         let existing = ctx
@@ -113,6 +115,7 @@ impl PhaseWriter {
 
     /// Set a phase as active (deactivates others)
     pub fn set_active_phase(&self, phase_id: &str) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         let ctx = GovernanceContext::load(&self.governance_root)?;
 
         // Validate phase exists

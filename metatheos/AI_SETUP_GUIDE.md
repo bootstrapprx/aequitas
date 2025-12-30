@@ -109,12 +109,12 @@ The Assistant shows context-aware examples like:
 
 ### What the AI Knows
 
-When you ask a question, the AI receives:
-- Current phase
-- All goals (active, blocked, done, etc.)
-- Goal dependencies
-- Statistics (goal counts by status)
-- Recent context
+When you ask a question with an API key, the AI receives a **snapshot of goals only**:
+- Current phase (ID)
+- A limited slice of goals (recent active/blocked/done) with IDs and titles
+- Basic status counts
+
+It does **not** load decisions, audits, or full daily history. Each question is stateless.
 
 ### Audit Trail
 

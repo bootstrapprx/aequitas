@@ -149,7 +149,7 @@ impl GovernanceScanner {
         let decisions = self.scan_markdown("04_DECISIONS", |p| MarkdownParser::parse_decision(p))?;
         let daily_notes = self.scan_markdown("01_DAILY", |p| MarkdownParser::parse_daily(p))?;
         let audits = self.scan_markdown("05_AUDITS", |p| MarkdownParser::parse_audit(p))?;
-        let prompts = self.scan_markdown("06_PROMPTS", |p| MarkdownParser::parse_prompt(p))?;
+        let prompts = self.scan_markdown("06_PROMPTS/library", |p| MarkdownParser::parse_prompt(p))?;
         let canon_docs = self.scan_canon()?;
         let protocols = self.scan_protocols()?;
 
@@ -1076,7 +1076,7 @@ updated:
             if goal.phase.as_ref().map(|p| p.trim().is_empty()).unwrap_or(true) {
                 warnings.push(GovernanceWarning {
                     kind: GovernanceWarningKind::GoalMissingPhase,
-                    message: format!("{} has no phase assigned", goal.goal_id),
+                    message: format!("{} has no phase assigned", goal.title),
                     related: vec![goal.goal_id.clone()],
                 });
             }
@@ -1084,7 +1084,7 @@ updated:
             if matches!(goal.status, GoalStatus::Unknown(_)) {
                 warnings.push(GovernanceWarning {
                     kind: GovernanceWarningKind::GoalMissingStatus,
-                    message: format!("{} has an unrecognized status", goal.goal_id),
+                    message: format!("{} has an unrecognized status", goal.title),
                     related: vec![goal.goal_id.clone()],
                 });
             }
@@ -1116,7 +1116,7 @@ updated:
                     kind: GovernanceWarningKind::GoalMissingRecentDaily,
                     message: format!(
                         "{} has no daily note references in the last 7 days",
-                        goal.goal_id
+                        goal.title
                     ),
                     related: vec![goal.goal_id.clone()],
                 });
@@ -1141,7 +1141,7 @@ updated:
                     kind: GovernanceWarningKind::DecisionUnlinked,
                     message: format!(
                         "{} is not referenced by any goal",
-                        decision.decision_id
+                        decision.title
                     ),
                     related: vec![decision.decision_id.clone()],
                 });
@@ -1167,7 +1167,7 @@ updated:
                     kind: GovernanceWarningKind::PhaseWithoutActiveGoals,
                     message: format!(
                         "Phase {} has no active goals",
-                        phase.phase_id
+                        phase.title
                     ),
                     related: vec![phase.phase_id.clone()],
                 });

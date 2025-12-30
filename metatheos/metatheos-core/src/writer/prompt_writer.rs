@@ -1,6 +1,6 @@
 use crate::domain::Prompt;
 use crate::errors::{MetaError, Result};
-use crate::writer::MarkdownWriter;
+use crate::writer::{ensure_governance_layout, MarkdownWriter};
 use chrono::Utc;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,8 +16,10 @@ impl PromptWriter {
 
     /// Create a new prompt
     pub fn create_prompt(&self, prompt: &Prompt) -> Result<PathBuf> {
+        ensure_governance_layout(&self.governance_root)?;
+        self.validate_metadata(prompt)?;
         // Generate file path
-        let prompts_dir = self.governance_root.join("06_PROMPTS");
+        let prompts_dir = self.governance_root.join("06_PROMPTS").join("library");
         fs::create_dir_all(&prompts_dir)?;
 
         // Generate filename from prompt_id or title
@@ -57,6 +59,8 @@ impl PromptWriter {
 
     /// Update an existing prompt
     pub fn update_prompt(&self, prompt: &Prompt) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
+        self.validate_metadata(prompt)?;
         let file_path = &prompt.file_path;
 
         if !file_path.exists() {
@@ -65,6 +69,7 @@ impl PromptWriter {
                 file_path.display()
             )));
         }
+        self.ensure_library_path(file_path)?;
 
         // Backup existing file
         self.backup(file_path)?;
@@ -83,12 +88,14 @@ impl PromptWriter {
 
     /// Delete a prompt (archives it)
     pub fn delete_prompt(&self, file_path: &Path) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         if !file_path.exists() {
             return Err(MetaError::ValidationError(format!(
                 "Prompt file does not exist: {}",
                 file_path.display()
             )));
         }
+        self.ensure_library_path(file_path)?;
 
         // Create archive directory
         let archive_dir = self.governance_root.join("06_PROMPTS").join("_archive");
@@ -136,6 +143,20 @@ impl PromptWriter {
             );
         }
 
+        if let Some(origin) = &prompt.origin {
+            frontmatter.insert(
+                serde_yaml::Value::String("origin".to_string()),
+                serde_yaml::Value::String(origin.clone()),
+            );
+        }
+
+        if let Some(status) = &prompt.status {
+            frontmatter.insert(
+                serde_yaml::Value::String("status".to_string()),
+                serde_yaml::Value::String(status.clone()),
+            );
+        }
+
         if let Some(timestamp) = prompt.timestamp {
             frontmatter.insert(
                 serde_yaml::Value::String("timestamp".to_string()),
@@ -158,6 +179,55 @@ impl PromptWriter {
         let markdown = format!("---\n{}---\n\n# {}\n\n{}", fm_str, prompt.title, prompt.content);
 
         Ok(markdown)
+    }
+
+    fn validate_metadata(&self, prompt: &Prompt) -> Result<()> {
+        // Require core governance fields for curated prompts
+        let mut missing = Vec::new();
+        if prompt.prompt_id.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+            missing.push("id");
+        }
+        if prompt.agent.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+            missing.push("agent");
+        }
+        if prompt.purpose.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+            missing.push("purpose");
+        }
+        if prompt.origin.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+            missing.push("origin");
+        }
+        if prompt.status.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+            missing.push("status");
+        }
+
+        if !missing.is_empty() {
+            return Err(MetaError::ValidationError(format!(
+                "Prompt is missing required metadata: {}",
+                missing.join(", ")
+            )));
+        }
+
+        if let Some(status) = &prompt.status {
+            let allowed = ["draft", "active", "deprecated"];
+            if !allowed.contains(&status.to_lowercase().as_str()) {
+                return Err(MetaError::ValidationError(format!(
+                    "Invalid prompt status '{}'. Use draft|active|deprecated",
+                    status
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn ensure_library_path(&self, path: &Path) -> Result<()> {
+        let library_root = self.governance_root.join("06_PROMPTS").join("library");
+        if !path.starts_with(&library_root) {
+            return Err(MetaError::ValidationError(
+                "Prompts must live under 06_PROMPTS/library (logs are excluded)".to_string(),
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -197,6 +267,48 @@ impl MarkdownWriter for PromptWriter {
             return Err(MetaError::ValidationError(
                 "Prompt must have frontmatter".to_string(),
             ));
+        }
+
+        // Basic YAML validation and required fields
+        let end = content[4..]
+            .find("---")
+            .ok_or_else(|| MetaError::ValidationError("Prompt frontmatter must end with ---".to_string()))?
+            + 4;
+        let yaml_part = &content[4..end];
+
+        let value: serde_yaml::Value = serde_yaml::from_str(yaml_part).map_err(|e| {
+            MetaError::ValidationError(format!("Invalid YAML frontmatter: {}", e))
+        })?;
+
+        let mapping = value.as_mapping().ok_or_else(|| {
+            MetaError::ValidationError("Prompt frontmatter must be a mapping".to_string())
+        })?;
+
+        let required = ["id", "agent", "purpose", "origin", "status"];
+        let mut missing = Vec::new();
+        for key in &required {
+            if !mapping.contains_key(&serde_yaml::Value::String(key.to_string())) {
+                missing.push(*key);
+            }
+        }
+        if !missing.is_empty() {
+            return Err(MetaError::ValidationError(format!(
+                "Prompt missing required metadata: {}",
+                missing.join(", ")
+            )));
+        }
+
+        if let Some(status_value) = mapping
+            .get(&serde_yaml::Value::String("status".to_string()))
+            .and_then(|v| v.as_str())
+        {
+            let allowed = ["draft", "active", "deprecated"];
+            if !allowed.contains(&status_value.to_lowercase().as_str()) {
+                return Err(MetaError::ValidationError(format!(
+                    "Invalid prompt status '{}'. Use draft|active|deprecated",
+                    status_value
+                )));
+            }
         }
 
         Ok(())

@@ -1,7 +1,7 @@
 use crate::domain::Goal;
 use crate::errors::{MetaError, Result};
 use crate::governance::GovernanceContext;
-use crate::writer::{FrontmatterSerializer, MarkdownWriter};
+use crate::writer::{ensure_governance_layout, FrontmatterSerializer, MarkdownWriter};
 use chrono::Utc;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -17,6 +17,7 @@ impl GoalWriter {
 
     /// Create a new goal
     pub fn create_goal(&self, goal: &Goal) -> Result<PathBuf> {
+        ensure_governance_layout(&self.governance_root)?;
         // Validate goal ID is unique
         let ctx = GovernanceContext::load(&self.governance_root)?;
         if ctx.all_goals().iter().any(|g| g.goal_id == goal.goal_id) {
@@ -37,7 +38,7 @@ impl GoalWriter {
         }
 
         // Generate file path
-        let goals_dir = self.governance_root.join("01_GOALS");
+        let goals_dir = self.governance_root.join("03_GOALS_EPICS");
         fs::create_dir_all(&goals_dir)?;
 
         let file_path = goals_dir.join(format!("{}.md", goal.goal_id));
@@ -66,6 +67,7 @@ impl GoalWriter {
 
     /// Update an existing goal
     pub fn update_goal(&self, goal: &Goal) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         // Validate goal exists
         let ctx = GovernanceContext::load(&self.governance_root)?;
         let existing = ctx
@@ -121,6 +123,7 @@ impl GoalWriter {
 
     /// Delete a goal (archives it)
     pub fn delete_goal(&self, goal_id: &str) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         // Load context to check dependencies
         let ctx = GovernanceContext::load(&self.governance_root)?;
 
@@ -148,7 +151,7 @@ impl GoalWriter {
         }
 
         // Create archive directory
-        let archive_dir = self.governance_root.join("01_GOALS").join(".archive");
+        let archive_dir = self.governance_root.join("03_GOALS_EPICS").join(".archive");
         fs::create_dir_all(&archive_dir)?;
 
         // Move file to archive

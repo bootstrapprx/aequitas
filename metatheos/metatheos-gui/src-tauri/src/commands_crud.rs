@@ -328,6 +328,7 @@ pub struct AuditUpdateRequest {
     pub scope: Option<String>,
     pub risk: Option<String>,
     pub auditor: Option<String>,
+    pub status: Option<String>,
     pub summary: Option<String>,
     pub content: Option<String>,
 }
@@ -353,10 +354,16 @@ pub fn create_audit(
         scope: request.scope,
         risk: request.risk,
         auditor: request.auditor,
+        status: request.summary.as_ref().map(|_| "open".to_string()),
+        evidence: request.summary.clone(),
         summary: request.summary,
         content: request.content,
         file_path: std::path::PathBuf::new(), // Will be set by writer
     };
+
+    if audit.summary.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+        return Err("Audit summary is required to describe the claim being verified.".to_string());
+    }
 
     // Create audit
     let file_path = writer
@@ -396,6 +403,12 @@ pub fn update_audit(
     if let Some(auditor) = request.auditor {
         audit.auditor = Some(auditor);
     }
+    if let Some(status) = request.status {
+        audit.status = Some(status);
+    }
+    if let Some(evidence) = request.summary.clone() {
+        audit.evidence = Some(evidence);
+    }
     if let Some(summary) = request.summary {
         audit.summary = Some(summary);
     }
@@ -431,6 +444,8 @@ pub struct PromptCreateRequest {
     pub prompt_id: Option<String>,
     pub agent: Option<String>,
     pub purpose: Option<String>,
+    pub origin: Option<String>,
+    pub status: Option<String>,
     pub prompt_text: Option<String>,
     pub content: String,
 }
@@ -442,6 +457,8 @@ pub struct PromptUpdateRequest {
     pub prompt_id: Option<String>,
     pub agent: Option<String>,
     pub purpose: Option<String>,
+    pub origin: Option<String>,
+    pub status: Option<String>,
     pub prompt_text: Option<String>,
     pub content: Option<String>,
 }
@@ -455,11 +472,16 @@ pub fn create_prompt(
     let root = state.governance_root.lock().unwrap();
     let writer = PromptWriter::new(root.clone());
 
+    let origin = request.origin.unwrap_or_else(|| "unspecified".to_string());
+    let status = request.status.unwrap_or_else(|| "draft".to_string());
+
     // Build prompt
     let prompt = Prompt {
         prompt_id: request.prompt_id,
         agent: request.agent,
         purpose: request.purpose,
+        origin: Some(origin),
+        status: Some(status),
         timestamp: Some(chrono::Utc::now()),
         prompt_text: request.prompt_text,
         response_text: None,
@@ -503,11 +525,23 @@ pub fn update_prompt(
     if let Some(purpose) = request.purpose {
         prompt.purpose = Some(purpose);
     }
+    if let Some(ref origin) = request.origin {
+        prompt.origin = Some(origin.clone());
+    }
+    if let Some(ref status) = request.status {
+        prompt.status = Some(status.clone());
+    }
     if let Some(prompt_text) = request.prompt_text {
         prompt.prompt_text = Some(prompt_text);
     }
     if let Some(content) = request.content {
         prompt.content = content;
+    }
+    if prompt.origin.is_none() {
+        prompt.origin = Some(request.origin.unwrap_or_else(|| "unspecified".to_string()));
+    }
+    if prompt.status.is_none() {
+        prompt.status = Some(request.status.unwrap_or_else(|| "draft".to_string()));
     }
 
     // Update prompt

@@ -1,6 +1,6 @@
 use crate::domain::AuditRecord;
 use crate::errors::{MetaError, Result};
-use crate::writer::MarkdownWriter;
+use crate::writer::{ensure_governance_layout, MarkdownWriter};
 use chrono::{Utc, Datelike};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,6 +16,7 @@ impl AuditWriter {
 
     /// Create a new audit record
     pub fn create_audit(&self, audit: &AuditRecord) -> Result<PathBuf> {
+        ensure_governance_layout(&self.governance_root)?;
         // Generate file path based on date and title
         let audits_dir = self.governance_root.join("05_AUDITS");
         fs::create_dir_all(&audits_dir)?;
@@ -60,6 +61,7 @@ impl AuditWriter {
 
     /// Update an existing audit record
     pub fn update_audit(&self, audit: &AuditRecord) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         let file_path = &audit.file_path;
 
         if !file_path.exists() {
@@ -86,6 +88,7 @@ impl AuditWriter {
 
     /// Delete an audit record (archives it)
     pub fn delete_audit(&self, file_path: &Path) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         if !file_path.exists() {
             return Err(MetaError::ValidationError(format!(
                 "Audit file does not exist: {}",
@@ -143,6 +146,20 @@ impl AuditWriter {
             frontmatter.insert(
                 serde_yaml::Value::String("auditor".to_string()),
                 serde_yaml::Value::String(auditor.clone()),
+            );
+        }
+
+        if let Some(status) = &audit.status {
+            frontmatter.insert(
+                serde_yaml::Value::String("status".to_string()),
+                serde_yaml::Value::String(status.clone()),
+            );
+        }
+
+        if let Some(evidence) = &audit.evidence {
+            frontmatter.insert(
+                serde_yaml::Value::String("evidence".to_string()),
+                serde_yaml::Value::String(evidence.clone()),
             );
         }
 

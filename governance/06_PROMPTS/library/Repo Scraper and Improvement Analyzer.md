@@ -1,3 +1,12 @@
+---
+type: prompt
+id: PROMPT_REPO_SCRAPER
+agent: Codex
+purpose: repository reality extraction
+origin: governance audit
+status: active
+---
+
 # PROMPT: Repo Progress Extractor
 
 ## Target Agent

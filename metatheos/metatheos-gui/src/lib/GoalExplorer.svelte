@@ -30,6 +30,8 @@
   // Daily note references modal state
   let showDailyRefsModal = false
   let selectedGoalForDailyRefs = null
+  let layoutOk = false
+  let layoutMissing = []
 
   const statusOrder = ['planned', 'active', 'blocked', 'partial', 'done', 'archived', 'unknown']
 
@@ -48,8 +50,26 @@
       loading = false
       return
     }
+    await verifyLayout()
     await loadGoals()
   })
+
+  async function verifyLayout() {
+    try {
+      const result = await invoke('check_governance_layout')
+      layoutOk = result.ok
+      layoutMissing = result.missing || []
+      if (!layoutOk) {
+        toastMessage = `Governance layout incomplete: ${layoutMissing.join(', ')}`
+        toastType = 'error'
+        toastShow = true
+      }
+    } catch (err) {
+      layoutOk = false
+      layoutMissing = ['unknown']
+      error = err?.toString?.() ?? String(err)
+    }
+  }
 
   async function loadGoals() {
     try {
@@ -115,6 +135,16 @@
       toastMessage = 'Status changes require Tauri. Run `cargo tauri dev`.'
       toastType = 'error'
       toastShow = true
+      return
+    }
+    if (!layoutOk) {
+      toastMessage = 'Governance layout invalid; fix folders before changing status.'
+      toastType = 'error'
+      toastShow = true
+      return
+    }
+
+    if (!confirm(`Change status for ${goalId} to ${newStatus}?`)) {
       return
     }
 
@@ -288,7 +318,7 @@
       <button
         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center gap-2"
         on:click={openNewGoalEditor}
-        disabled={devMode}
+        disabled={devMode || !layoutOk}
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -301,11 +331,26 @@
     </div>
   </div>
 
+  {#if !devMode && layoutOk}
+    <div class="card mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+      <p class="text-sm text-blue-900 dark:text-blue-100">
+        Governance write mode active. New goals and status changes will write to the vault once confirmed.
+      </p>
+    </div>
+  {/if}
+
   {#if devMode}
     <div class="card mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
       <h3 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Tauri not detected</h3>
       <p class="text-yellow-700 dark:text-yellow-200 text-sm">
         Run <code>cargo tauri dev</code> to load and edit goals from the Governance Vault.
+      </p>
+    </div>
+  {:else if !layoutOk}
+    <div class="card mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+      <h3 class="text-lg font-semibold text-red-800 dark:text-red-200 mb-2">Governance layout check failed</h3>
+      <p class="text-red-700 dark:text-red-200 text-sm">
+        Missing folders: {layoutMissing.join(', ')}. Writes are disabled until the vault matches the expected structure.
       </p>
     </div>
   {/if}

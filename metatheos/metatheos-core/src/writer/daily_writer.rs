@@ -1,5 +1,5 @@
 use crate::errors::{MetaError, Result};
-use crate::writer::MarkdownWriter;
+use crate::writer::{ensure_governance_layout, MarkdownWriter};
 use chrono::{NaiveDate, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,6 +16,7 @@ impl DailyWriter {
     /// Create or update a daily note
     /// This combines create and update since daily notes don't have complex frontmatter
     pub fn write_daily_note(&self, date: NaiveDate, content: &str) -> Result<PathBuf> {
+        ensure_governance_layout(&self.governance_root)?;
         let daily_dir = self.governance_root.join("01_DAILY");
         fs::create_dir_all(&daily_dir)?;
 
@@ -46,6 +47,7 @@ impl DailyWriter {
 
     /// Delete a daily note (archives it)
     pub fn delete_daily_note(&self, date: NaiveDate) -> Result<()> {
+        ensure_governance_layout(&self.governance_root)?;
         let daily_dir = self.governance_root.join("01_DAILY");
         let filename = format!("{}.md", date.format("%Y-%m-%d"));
         let file_path = daily_dir.join(&filename);
