@@ -1,5 +1,6 @@
 <script>
   import Dashboard from './lib/Dashboard.svelte'
+  import GovernanceExplorer from './lib/GovernanceExplorer.svelte'
   import GoalExplorer from './lib/GoalExplorer.svelte'
   import AuditExplorer from './lib/AuditExplorer.svelte'
   import PromptLibrary from './lib/PromptLibrary.svelte'
@@ -10,6 +11,7 @@
 
   const views = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'explorer', label: 'Explorer', icon: '📁' },
     { id: 'daily', label: 'Daily', icon: '📅' },
     { id: 'goals', label: 'Goals', icon: '🎯' },
     { id: 'audits', label: 'Audits', icon: '🔍' },
@@ -62,21 +64,25 @@
   </aside>
 
   <!-- Main content -->
-  <main class="flex-1 overflow-y-auto">
-    <div class="p-8">
-      {#if currentView === 'dashboard'}
-        <Dashboard />
-      {:else if currentView === 'daily'}
-        <DailyEditor />
-      {:else if currentView === 'goals'}
-        <GoalExplorer />
-      {:else if currentView === 'audits'}
-        <AuditExplorer />
-      {:else if currentView === 'prompts'}
-        <PromptLibrary />
-      {:else if currentView === 'assistant'}
-        <Assistant />
-      {/if}
-    </div>
+  <main class="flex-1 overflow-hidden">
+    {#if currentView === 'explorer'}
+      <GovernanceExplorer />
+    {:else}
+      <div class="p-8 overflow-y-auto h-full">
+        {#if currentView === 'dashboard'}
+          <Dashboard />
+        {:else if currentView === 'daily'}
+          <DailyEditor />
+        {:else if currentView === 'goals'}
+          <GoalExplorer />
+        {:else if currentView === 'audits'}
+          <AuditExplorer />
+        {:else if currentView === 'prompts'}
+          <PromptLibrary />
+        {:else if currentView === 'assistant'}
+          <Assistant />
+        {/if}
+      </div>
+    {/if}
   </main>
 </div>

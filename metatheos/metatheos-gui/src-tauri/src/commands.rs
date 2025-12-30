@@ -1077,3 +1077,356 @@ fn file_last_reviewed(path: &std::path::Path) -> Option<String> {
     let dt: DateTime<Local> = modified.into();
     Some(dt.to_rfc3339())
 }
+
+// ============================================================================
+// Governance File Explorer (Phase 1)
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
+pub enum GovernanceFileType {
+    Canon,
+    Goal,
+    Phase,
+    Decision,
+    Audit,
+    Prompt,
+    Daily,
+    Archive,
+    Constitution,
+    Markdown,
+    Directory,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GovernanceFileNode {
+    pub name: String,
+    pub path: String,
+    pub file_type: GovernanceFileType,
+    pub is_writable: bool,
+    pub is_directory: bool,
+    pub children: Vec<GovernanceFileNode>,
+    pub frontmatter: Option<serde_json::Value>,
+    pub size: Option<u64>,
+    pub modified: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_governance_tree(state: State<AppState>) -> Result<GovernanceFileNode, String> {
+    let root = state.governance_root.lock().unwrap();
+    build_governance_tree(&*root, None)
+}
+
+fn build_governance_tree(
+    root_path: &std::path::Path,
+    relative_path: Option<&std::path::Path>,
+) -> Result<GovernanceFileNode, String> {
+    let current_path = if let Some(rel) = relative_path {
+        root_path.join(rel)
+    } else {
+        root_path.to_path_buf()
+    };
+
+    let name = current_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("governance")
+        .to_string();
+
+    let path_str = current_path.to_string_lossy().to_string();
+
+    let metadata = std::fs::metadata(&current_path).map_err(|e| e.to_string())?;
+    let is_directory = metadata.is_dir();
+
+    let modified = metadata
+        .modified()
+        .ok()
+        .map(|m| {
+            let dt: DateTime<Local> = m.into();
+            dt.to_rfc3339()
+        });
+
+    let size = if is_directory {
+        None
+    } else {
+        Some(metadata.len())
+    };
+
+    // Determine file type and writability
+    let (file_type, is_writable) = determine_file_type(&current_path, root_path);
+
+    let mut children = Vec::new();
+
+    if is_directory {
+        let mut entries: Vec<_> = std::fs::read_dir(&current_path)
+            .map_err(|e| e.to_string())?
+            .filter_map(|e| e.ok())
+            .collect();
+
+        entries.sort_by_key(|e| e.path());
+
+        for entry in entries {
+            let entry_name = entry.file_name();
+            let entry_name_str = entry_name.to_string_lossy();
+
+            // Skip hidden files and .obsidian
+            if entry_name_str.starts_with('.') {
+                continue;
+            }
+
+            // Skip backup files
+            if entry_name_str.ends_with(".backup") {
+                continue;
+            }
+
+            let child_rel_path = if let Some(rel) = relative_path {
+                rel.join(&entry_name)
+            } else {
+                std::path::PathBuf::from(&entry_name)
+            };
+
+            match build_governance_tree(root_path, Some(&child_rel_path)) {
+                Ok(child) => children.push(child),
+                Err(_) => {} // Skip unreadable files
+            }
+        }
+    }
+
+    // Extract frontmatter for markdown files
+    let frontmatter = if !is_directory && path_str.ends_with(".md") {
+        extract_frontmatter(&current_path).ok()
+    } else {
+        None
+    };
+
+    Ok(GovernanceFileNode {
+        name,
+        path: path_str,
+        file_type,
+        is_writable,
+        is_directory,
+        children,
+        frontmatter,
+        size,
+        modified,
+    })
+}
+
+fn determine_file_type(
+    path: &std::path::Path,
+    root: &std::path::Path,
+) -> (GovernanceFileType, bool) {
+    let path_str = path.to_string_lossy();
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
+    // Check if in CONSTITUTION folder (read-only)
+    if path_str.contains("CONSTITUTION") {
+        return (GovernanceFileType::Constitution, false);
+    }
+
+    // Check if in 00_MASTER (Canon - read-only)
+    if path_str.contains("00_MASTER") {
+        return (GovernanceFileType::Canon, false);
+    }
+
+    // Check if in 90_ARCHIVE (read-only)
+    if path_str.contains("90_ARCHIVE") {
+        return (GovernanceFileType::Archive, false);
+    }
+
+    // Check specific governance types (writable)
+    if path_str.contains("01_DAILY") {
+        return (GovernanceFileType::Daily, true);
+    }
+
+    if path_str.contains("02_PHASES") {
+        return (GovernanceFileType::Phase, true);
+    }
+
+    if path_str.contains("03_GOALS_EPICS") {
+        return (GovernanceFileType::Goal, true);
+    }
+
+    if path_str.contains("04_DECISIONS") {
+        return (GovernanceFileType::Decision, true);
+    }
+
+    if path_str.contains("05_AUDITS") {
+        return (GovernanceFileType::Audit, true);
+    }
+
+    if path_str.contains("06_PROMPTS") {
+        return (GovernanceFileType::Prompt, true);
+    }
+
+    // Directories
+    if path.is_dir() {
+        return (GovernanceFileType::Directory, false);
+    }
+
+    // Default markdown files
+    if name.ends_with(".md") {
+        return (GovernanceFileType::Markdown, true);
+    }
+
+    (GovernanceFileType::Directory, false)
+}
+
+fn extract_frontmatter(path: &std::path::Path) -> Result<serde_json::Value, String> {
+    let content = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+
+    // Simple frontmatter extraction
+    if let Some(stripped) = content.strip_prefix("---\n") {
+        if let Some(end_idx) = stripped.find("\n---\n") {
+            let yaml_str = &stripped[..end_idx];
+            let yaml_value: serde_yaml::Value =
+                serde_yaml::from_str(yaml_str).map_err(|e| e.to_string())?;
+            let json_value: serde_json::Value =
+                serde_json::to_value(yaml_value).map_err(|e| e.to_string())?;
+            return Ok(json_value);
+        }
+    }
+
+    Ok(serde_json::Value::Null)
+}
+
+#[tauri::command]
+pub fn get_file_content(file_path: String) -> Result<String, String> {
+    std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FileBacklinks {
+    pub path: String,
+    pub backlinks: Vec<String>,
+    pub forward_links: Vec<String>,
+}
+
+#[tauri::command]
+pub fn get_file_backlinks(
+    file_path: String,
+    state: State<AppState>,
+) -> Result<FileBacklinks, String> {
+    let root = state.governance_root.lock().unwrap();
+    let target_path = std::path::Path::new(&file_path);
+
+    let target_name = target_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or("Invalid file path")?;
+
+    // Read the target file to extract forward links
+    let content = std::fs::read_to_string(target_path)
+        .map_err(|e| format!("Failed to read target file: {}", e))?;
+
+    let forward_links = extract_links(&content);
+
+    // Search all governance files for backlinks
+    let mut backlinks = Vec::new();
+
+    for entry in walkdir::WalkDir::new(&*root)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) != Some("md") {
+            continue;
+        }
+
+        if path == target_path {
+            continue;
+        }
+
+        if let Ok(file_content) = std::fs::read_to_string(path) {
+            if file_content.contains(target_name) {
+                backlinks.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    Ok(FileBacklinks {
+        path: file_path,
+        backlinks,
+        forward_links,
+    })
+}
+
+fn extract_links(content: &str) -> Vec<String> {
+    let mut links = Vec::new();
+    let link_pattern = regex::Regex::new(r"\[\[([^\]]+)\]\]").unwrap();
+
+    for cap in link_pattern.captures_iter(content) {
+        if let Some(link) = cap.get(1) {
+            links.push(link.as_str().to_string());
+        }
+    }
+
+    links
+}
+
+/// Safe file write with atomic operation and timestamped backup
+/// Phase 2 — Controlled Editing Layer
+#[tauri::command]
+pub fn safe_write_file(
+    file_path: String,
+    new_content: String,
+    state: State<AppState>,
+) -> Result<String, String> {
+    use std::fs;
+    use std::io::Write;
+
+    let root = state.governance_root.lock().unwrap();
+    let target_path = std::path::Path::new(&file_path);
+
+    // Verify file is within governance root
+    if !target_path.starts_with(&*root) {
+        return Err("File is outside governance root".to_string());
+    }
+
+    // Verify file is writable (not in read-only folders)
+    let path_str = target_path.to_string_lossy();
+    if path_str.contains("CONSTITUTION")
+        || path_str.contains("00_MASTER")
+        || path_str.contains("90_ARCHIVE")
+    {
+        return Err("Cannot modify read-only governance files (Canon, Constitution, Archive)".to_string());
+    }
+
+    // Verify file exists
+    if !target_path.exists() {
+        return Err("Target file does not exist".to_string());
+    }
+
+    // Create timestamped backup
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let backup_name = format!("{}.backup.{}", target_path.file_name().unwrap().to_string_lossy(), timestamp);
+    let backup_path = target_path.with_file_name(backup_name);
+
+    // Copy original to backup
+    fs::copy(target_path, &backup_path)
+        .map_err(|e| format!("Failed to create backup: {}", e))?;
+
+    // Write to temporary file first (atomic write pattern)
+    let temp_name = format!("{}.tmp", target_path.file_name().unwrap().to_string_lossy());
+    let temp_path = target_path.with_file_name(temp_name);
+
+    {
+        let mut temp_file = fs::File::create(&temp_path)
+            .map_err(|e| format!("Failed to create temp file: {}", e))?;
+        temp_file
+            .write_all(new_content.as_bytes())
+            .map_err(|e| format!("Failed to write temp file: {}", e))?;
+        temp_file
+            .sync_all()
+            .map_err(|e| format!("Failed to sync temp file: {}", e))?;
+    }
+
+    // Atomic rename (overwrites target)
+    fs::rename(&temp_path, target_path)
+        .map_err(|e| format!("Failed to atomically replace file: {}", e))?;
+
+    Ok(format!(
+        "File written successfully. Backup created at {}",
+        backup_path.to_string_lossy()
+    ))
+}
