@@ -1,5 +1,9 @@
 use chrono::NaiveDate;
-use metatheos_core::{DailyWriter, Goal, GoalStatus, GoalWriter, Phase, PhaseWriter};
+use metatheos_core::{
+    AuditRecord, DailyWriter, Goal, GoalStatus, GoalWriter, Phase, PhaseWriter, Prompt,
+    parser::MarkdownParser,
+    writer::{AuditWriter, PromptWriter},
+};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tauri::State;
@@ -297,6 +301,229 @@ pub fn write_daily_note(date: String, content: String, state: State<AppState>) -
     writer
         .write_daily_note(parsed_date, &content)
         .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Audit Commands
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuditCreateRequest {
+    pub title: String,
+    pub date: Option<String>,
+    pub scope: Option<String>,
+    pub risk: Option<String>,
+    pub auditor: Option<String>,
+    pub summary: Option<String>,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuditUpdateRequest {
+    pub file_path: String,
+    pub title: Option<String>,
+    pub date: Option<String>,
+    pub scope: Option<String>,
+    pub risk: Option<String>,
+    pub auditor: Option<String>,
+    pub summary: Option<String>,
+    pub content: Option<String>,
+}
+
+/// Create a new audit record
+#[tauri::command]
+pub fn create_audit(
+    request: AuditCreateRequest,
+    state: State<AppState>,
+) -> Result<String, String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = AuditWriter::new(root.clone());
+
+    // Parse date if provided
+    let date = request
+        .date
+        .and_then(|d| NaiveDate::parse_from_str(&d, "%Y-%m-%d").ok());
+
+    // Build audit
+    let audit = AuditRecord {
+        title: request.title,
+        date,
+        scope: request.scope,
+        risk: request.risk,
+        auditor: request.auditor,
+        summary: request.summary,
+        content: request.content,
+        file_path: std::path::PathBuf::new(), // Will be set by writer
+    };
+
+    // Create audit
+    let file_path = writer
+        .create_audit(&audit)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    Ok(file_path.display().to_string())
+}
+
+/// Update an existing audit record
+#[tauri::command]
+pub fn update_audit(
+    request: AuditUpdateRequest,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = AuditWriter::new(root.clone());
+
+    // Load existing audit
+    let file_path = std::path::PathBuf::from(&request.file_path);
+    let mut audit = MarkdownParser::parse_audit(&file_path)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    // Apply updates
+    if let Some(title) = request.title {
+        audit.title = title;
+    }
+    if let Some(date_str) = request.date {
+        audit.date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").ok();
+    }
+    if let Some(scope) = request.scope {
+        audit.scope = Some(scope);
+    }
+    if let Some(risk) = request.risk {
+        audit.risk = Some(risk);
+    }
+    if let Some(auditor) = request.auditor {
+        audit.auditor = Some(auditor);
+    }
+    if let Some(summary) = request.summary {
+        audit.summary = Some(summary);
+    }
+    if let Some(content) = request.content {
+        audit.content = content;
+    }
+
+    // Update audit
+    writer.update_audit(&audit).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    Ok(())
+}
+
+/// Delete an audit record
+#[tauri::command]
+pub fn delete_audit(file_path: String, state: State<AppState>) -> Result<(), String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = AuditWriter::new(root.clone());
+
+    let path = std::path::PathBuf::from(file_path);
+    writer.delete_audit(&path).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Prompt Commands
+// ============================================================================
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptCreateRequest {
+    pub title: String,
+    pub prompt_id: Option<String>,
+    pub agent: Option<String>,
+    pub purpose: Option<String>,
+    pub prompt_text: Option<String>,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptUpdateRequest {
+    pub file_path: String,
+    pub title: Option<String>,
+    pub prompt_id: Option<String>,
+    pub agent: Option<String>,
+    pub purpose: Option<String>,
+    pub prompt_text: Option<String>,
+    pub content: Option<String>,
+}
+
+/// Create a new prompt
+#[tauri::command]
+pub fn create_prompt(
+    request: PromptCreateRequest,
+    state: State<AppState>,
+) -> Result<String, String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = PromptWriter::new(root.clone());
+
+    // Build prompt
+    let prompt = Prompt {
+        prompt_id: request.prompt_id,
+        agent: request.agent,
+        purpose: request.purpose,
+        timestamp: Some(chrono::Utc::now()),
+        prompt_text: request.prompt_text,
+        response_text: None,
+        title: request.title,
+        content: request.content,
+        file_path: std::path::PathBuf::new(), // Will be set by writer
+    };
+
+    // Create prompt
+    let file_path = writer
+        .create_prompt(&prompt)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    Ok(file_path.display().to_string())
+}
+
+/// Update an existing prompt
+#[tauri::command]
+pub fn update_prompt(
+    request: PromptUpdateRequest,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = PromptWriter::new(root.clone());
+
+    // Load existing prompt
+    let file_path = std::path::PathBuf::from(&request.file_path);
+    let mut prompt = MarkdownParser::parse_prompt(&file_path)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    // Apply updates
+    if let Some(title) = request.title {
+        prompt.title = title;
+    }
+    if let Some(prompt_id) = request.prompt_id {
+        prompt.prompt_id = Some(prompt_id);
+    }
+    if let Some(agent) = request.agent {
+        prompt.agent = Some(agent);
+    }
+    if let Some(purpose) = request.purpose {
+        prompt.purpose = Some(purpose);
+    }
+    if let Some(prompt_text) = request.prompt_text {
+        prompt.prompt_text = Some(prompt_text);
+    }
+    if let Some(content) = request.content {
+        prompt.content = content;
+    }
+
+    // Update prompt
+    writer.update_prompt(&prompt).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+
+    Ok(())
+}
+
+/// Delete a prompt
+#[tauri::command]
+pub fn delete_prompt(file_path: String, state: State<AppState>) -> Result<(), String> {
+    let root = state.governance_root.lock().unwrap();
+    let writer = PromptWriter::new(root.clone());
+
+    let path = std::path::PathBuf::from(file_path);
+    writer.delete_prompt(&path).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
 
     Ok(())
 }

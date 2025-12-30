@@ -22,6 +22,15 @@
   let showEditor = false
   let editingGoal = null
 
+  // Relationship highlighting state
+  let hoveredGoalId = null
+  let highlightedDependencies = new Set()
+  let highlightedReverseDeps = new Set()
+
+  // Daily note references modal state
+  let showDailyRefsModal = false
+  let selectedGoalForDailyRefs = null
+
   const statusOrder = ['planned', 'active', 'blocked', 'partial', 'done', 'archived', 'unknown']
 
   const tauriAvailable = () => {
@@ -45,7 +54,7 @@
   async function loadGoals() {
     try {
       loading = true
-      const result = await invoke('get_all_goals')
+      const result = await invoke('get_enriched_goals')
       goals = result
       applyFilters()
       error = null
@@ -138,6 +147,89 @@
   function formatDate(value) {
     if (!value) return 'n/a'
     return new Date(value).toLocaleDateString()
+  }
+
+  function computePhaseMetrics(phase) {
+    const phaseGoals = Object.values(groupedGoals[phase] || {}).flat()
+    const total = phaseGoals.length
+    const doneCount = phaseGoals.filter(g => g.status === 'done').length
+    const activeCount = phaseGoals.filter(g => g.status === 'active').length
+    const blockedCount = phaseGoals.filter(g => g.completion_blocked).length
+    const partialCount = phaseGoals.filter(g => g.status === 'partial').length
+    const completion = total > 0 ? Math.round((doneCount / total) * 100) : 0
+
+    return { total, doneCount, activeCount, blockedCount, partialCount, completion }
+  }
+
+  function getPhaseColorClass(phase) {
+    const colors = {
+      'P1': 'bg-purple-100 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700',
+      'P2': 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700',
+      'P3': 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700',
+      'P4': 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700',
+      'P5': 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700',
+      'P6': 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700',
+    }
+    return colors[phase] || 'bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700'
+  }
+
+  function getPhaseBadgeClass(phase) {
+    const colors = {
+      'P1': 'bg-purple-600 text-white',
+      'P2': 'bg-blue-600 text-white',
+      'P3': 'bg-green-600 text-white',
+      'P4': 'bg-yellow-600 text-white',
+      'P5': 'bg-orange-600 text-white',
+      'P6': 'bg-red-600 text-white',
+    }
+    return colors[phase] || 'bg-gray-600 text-white'
+  }
+
+  function handleGoalHover(goal) {
+    hoveredGoalId = goal.goal_id
+    highlightedDependencies = new Set(goal.dependencies)
+    highlightedReverseDeps = new Set(goal.reverse_dependencies)
+  }
+
+  function handleGoalLeave() {
+    hoveredGoalId = null
+    highlightedDependencies = new Set()
+    highlightedReverseDeps = new Set()
+  }
+
+  function scrollToGoal(goalId) {
+    const element = document.getElementById(`goal-${goalId}`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Flash the element briefly
+      element.classList.add('ring-2', 'ring-primary-500')
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-primary-500')
+      }, 2000)
+    }
+  }
+
+  function openDailyRefsModal(goal) {
+    selectedGoalForDailyRefs = goal
+    showDailyRefsModal = true
+  }
+
+  function closeDailyRefsModal() {
+    showDailyRefsModal = false
+    selectedGoalForDailyRefs = null
+  }
+
+  function getHighlightClass(goalId) {
+    if (hoveredGoalId === goalId) {
+      return 'ring-2 ring-primary-500 bg-primary-50 dark:bg-primary-900/20'
+    }
+    if (highlightedDependencies.has(goalId)) {
+      return 'ring-2 ring-blue-400 bg-blue-50 dark:bg-blue-900/20'
+    }
+    if (highlightedReverseDeps.has(goalId)) {
+      return 'ring-2 ring-green-400 bg-green-50 dark:bg-green-900/20'
+    }
+    return ''
   }
 
   function openNewGoalEditor() {
@@ -264,18 +356,42 @@
     {:else}
       <div class="space-y-6">
         {#each Object.keys(groupedGoals).sort() as phase}
-          <div class="card">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                  Phase {phase}
-                </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  Status groups sorted by workflow order
-                </p>
-              </div>
-              <div class="text-sm text-gray-500 dark:text-gray-400">
-                {Object.values(groupedGoals[phase]).reduce((acc, list) => acc + list.length, 0)} goals
+          {@const metrics = computePhaseMetrics(phase)}
+          <div class="border-2 rounded-lg {getPhaseColorClass(phase)}">
+            <!-- Phase Summary Panel -->
+            <div class="p-4 border-b border-current/20">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="px-3 py-1 rounded-md font-bold {getPhaseBadgeClass(phase)}">
+                    Phase {phase}
+                  </span>
+                  <div class="flex items-center gap-3 text-sm font-medium">
+                    <span class="text-green-700 dark:text-green-300">
+                      ✓ Done: {metrics.doneCount}
+                    </span>
+                    <span class="text-blue-700 dark:text-blue-300">
+                      ● Active: {metrics.activeCount}
+                    </span>
+                    {#if metrics.blockedCount > 0}
+                      <span class="text-red-700 dark:text-red-300 font-semibold">
+                        ⛔ Blocked: {metrics.blockedCount}
+                      </span>
+                    {/if}
+                    {#if metrics.partialCount > 0}
+                      <span class="text-yellow-700 dark:text-yellow-300">
+                        ⧗ Partial: {metrics.partialCount}
+                      </span>
+                    {/if}
+                  </div>
+                </div>
+                <div class="text-sm font-semibold">
+                  <span class="text-gray-700 dark:text-gray-300">
+                    Completion: {metrics.completion}%
+                  </span>
+                  <span class="text-gray-500 dark:text-gray-400 ml-2">
+                    ({metrics.doneCount}/{metrics.total})
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -289,42 +405,151 @@
                         {groupedGoals[phase][status].length} goal(s)
                       </span>
                     </div>
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                       {#each groupedGoals[phase][status] as goal}
-                        <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                        <div
+                          id="goal-{goal.goal_id}"
+                          class="p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 transition-all {getHighlightClass(goal.goal_id)}"
+                          on:mouseenter={() => handleGoalHover(goal)}
+                          on:mouseleave={handleGoalLeave}
+                        >
                           <div class="flex items-start justify-between gap-3">
-                            <div class="flex-1">
-                              <div class="flex items-center gap-2">
-                                <span class="font-mono text-sm font-bold text-primary-600 dark:text-primary-300">
+                            <!-- Left: Goal Info -->
+                            <div class="flex-1 space-y-2">
+                              <!-- Header Row: ID, Title, Badges -->
+                              <div class="flex items-start gap-2">
+                                <span class="font-mono text-sm font-bold text-primary-600 dark:text-primary-400 shrink-0">
                                   {goal.goal_id}
                                 </span>
-                                <span class="badge {getStatusBadge(goal.status)}">{goal.status}</span>
+                                <div class="flex-1">
+                                  <div class="text-gray-900 dark:text-white font-medium leading-tight">
+                                    {goal.title}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <!-- Metadata Row -->
+                              <div class="flex items-center gap-3 text-xs">
                                 {#if goal.phase}
-                                  <span class="text-xs text-gray-500 dark:text-gray-400">Phase {goal.phase}</span>
+                                  <span class="px-2 py-0.5 rounded {getPhaseBadgeClass(goal.phase)} font-semibold">
+                                    {goal.phase}
+                                  </span>
                                 {/if}
+                                <span class="badge {getStatusBadge(goal.status)}">
+                                  {#if goal.status === 'done'}
+                                    🔒
+                                  {/if}
+                                  {goal.status}
+                                </span>
                                 {#if goal.updated}
-                                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                                  <span class="text-gray-500 dark:text-gray-400">
                                     Updated {formatDate(goal.updated)}
                                   </span>
                                 {/if}
+                                {#if goal.is_canonical}
+                                  <span class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded font-semibold" title="Canonical goal">
+                                    ★ Canon
+                                  </span>
+                                {/if}
                               </div>
-                              <div class="text-gray-900 dark:text-white font-semibold mt-1">
-                                {goal.title}
+
+                              <!-- Relationship Info -->
+                              <div class="flex items-center gap-4 text-xs">
+                                <!-- Dependencies -->
+                                {#if goal.dependencies.length > 0}
+                                  <div class="flex items-center gap-1">
+                                    <span class="text-gray-600 dark:text-gray-400">→</span>
+                                    <span class="text-gray-700 dark:text-gray-300">
+                                      Depends: {goal.dependencies.length}
+                                    </span>
+                                    {#if goal.completion_blocked}
+                                      <span class="text-red-600 dark:text-red-400 font-semibold">
+                                        (⛔ Blocked by {goal.blocked_by.length})
+                                      </span>
+                                    {/if}
+                                    <div class="flex gap-1">
+                                      {#each goal.dependencies.slice(0, 3) as depId}
+                                        <button
+                                          class="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800/40 transition-colors"
+                                          on:click|stopPropagation={() => scrollToGoal(depId)}
+                                          title="Click to scroll to {depId}"
+                                        >
+                                          {depId}
+                                        </button>
+                                      {/each}
+                                      {#if goal.dependencies.length > 3}
+                                        <span class="text-gray-500 dark:text-gray-400">+{goal.dependencies.length - 3}</span>
+                                      {/if}
+                                    </div>
+                                  </div>
+                                {/if}
+
+                                <!-- Reverse Dependencies -->
+                                {#if goal.reverse_dependencies.length > 0}
+                                  <div class="flex items-center gap-1">
+                                    <span class="text-gray-600 dark:text-gray-400">←</span>
+                                    <span class="text-gray-700 dark:text-gray-300">
+                                      {goal.reverse_dependencies.length} depend on this
+                                    </span>
+                                    <div class="flex gap-1">
+                                      {#each goal.reverse_dependencies.slice(0, 2) as revDepId}
+                                        <button
+                                          class="px-1 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800/40 transition-colors"
+                                          on:click|stopPropagation={() => scrollToGoal(revDepId)}
+                                          title="Click to scroll to {revDepId}"
+                                        >
+                                          {revDepId}
+                                        </button>
+                                      {/each}
+                                      {#if goal.reverse_dependencies.length > 2}
+                                        <span class="text-gray-500 dark:text-gray-400">+{goal.reverse_dependencies.length - 2}</span>
+                                      {/if}
+                                    </div>
+                                  </div>
+                                {/if}
+
+                                <!-- Daily References -->
+                                {#if goal.daily_references.length > 0}
+                                  <button
+                                    class="flex items-center gap-1 hover:bg-gray-100 dark:hover:bg-gray-700 px-2 py-0.5 rounded transition-colors"
+                                    on:click|stopPropagation={() => openDailyRefsModal(goal)}
+                                    title="Click to see daily notes"
+                                  >
+                                    <span class="text-gray-600 dark:text-gray-400">📅</span>
+                                    <span class="text-gray-700 dark:text-gray-300 underline decoration-dotted">
+                                      {goal.daily_references.length} daily note(s)
+                                    </span>
+                                  </button>
+                                {/if}
+
+                                <!-- Missing Dependencies Warning -->
+                                {#if goal.missing_dependencies.length > 0}
+                                  <div class="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                                    <span>⚠️</span>
+                                    <span>
+                                      {goal.missing_dependencies.length} missing dep(s)
+                                    </span>
+                                  </div>
+                                {/if}
                               </div>
-                              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Dependencies:
-                                {goal.dependencies.length > 0
-                                  ? goal.dependencies.join(', ')
-                                  : 'None'}
-                              </div>
-                              <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Canon: {goal.canon.length > 0 ? goal.canon.join(', ') : 'None'}
-                              </div>
+
+                              <!-- Blocked By Details -->
+                              {#if goal.completion_blocked && goal.blocked_by.length > 0}
+                                <div class="px-2 py-1 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs">
+                                  <span class="text-red-800 dark:text-red-200 font-semibold">
+                                    Blocked by:
+                                  </span>
+                                  <span class="text-red-700 dark:text-red-300">
+                                    {goal.blocked_by.join(', ')}
+                                  </span>
+                                </div>
+                              {/if}
                             </div>
 
-                            <div class="flex gap-2">
+                            <!-- Right: Actions -->
+                            <div class="flex gap-2 shrink-0">
                               <button
-                                class="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded transition-colors"
+                                class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded transition-colors"
                                 on:click={() => openEditGoalEditor(goal)}
                                 disabled={devMode}
                                 title="Edit goal"
@@ -336,14 +561,15 @@
 
                               <div class="relative">
                                 <button
-                                  class="btn btn-secondary text-sm"
+                                  class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded transition-colors"
                                   on:click={() => toggleStatusMenu(goal.goal_id)}
-                                  disabled={updatingGoalId === goal.goal_id || devMode}
+                                  disabled={updatingGoalId === goal.goal_id || devMode || goal.status === 'done'}
+                                  title={goal.status === 'done' ? 'Done goals are locked' : 'Change status'}
                                 >
-                                  {updatingGoalId === goal.goal_id ? 'Updating...' : 'Change Status'}
+                                  {updatingGoalId === goal.goal_id ? '...' : '⋮'}
                                 </button>
 
-                                {#if showStatusMenu === goal.goal_id}
+                                {#if showStatusMenu === goal.goal_id && goal.status !== 'done'}
                                 <div class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
                                   <div class="py-1">
                                     {#each ['planned', 'active', 'blocked', 'partial', 'done'] as statusOption}
@@ -361,9 +587,6 @@
                               {/if}
                               </div>
                             </div>
-                          </div>
-                          <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-mono">
-                            {goal.file_path}
                           </div>
                         </div>
                       {/each}
@@ -386,6 +609,54 @@
     on:saved={handleGoalSaved}
     on:deleted={handleGoalDeleted}
   />
+{/if}
+
+{#if showDailyRefsModal && selectedGoalForDailyRefs}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" on:click={closeDailyRefsModal}>
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6" on:click|stopPropagation>
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+          Daily Notes Referencing {selectedGoalForDailyRefs.goal_id}
+        </h3>
+        <button
+          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+          on:click={closeDailyRefsModal}
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="mb-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          This goal is referenced in the following daily notes:
+        </p>
+      </div>
+
+      <div class="space-y-2 max-h-96 overflow-y-auto">
+        {#each selectedGoalForDailyRefs.daily_references.sort().reverse() as date}
+          <div class="flex items-center gap-2 p-2 rounded bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+            <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span class="font-mono text-sm text-gray-900 dark:text-white">
+              {date}
+            </span>
+          </div>
+        {/each}
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button
+          class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+          on:click={closeDailyRefsModal}
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 {/if}
 
 <Toast bind:show={toastShow} message={toastMessage} type={toastType} />

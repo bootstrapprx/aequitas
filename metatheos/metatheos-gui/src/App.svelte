@@ -1,7 +1,8 @@
 <script>
   import Dashboard from './lib/Dashboard.svelte'
   import GoalExplorer from './lib/GoalExplorer.svelte'
-  import AuditViewer from './lib/AuditViewer.svelte'
+  import AuditExplorer from './lib/AuditExplorer.svelte'
+  import PromptLibrary from './lib/PromptLibrary.svelte'
   import DailyEditor from './lib/DailyEditor.svelte'
   import Assistant from './lib/Assistant.svelte'
 
@@ -11,8 +12,9 @@
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'daily', label: 'Daily', icon: '📅' },
     { id: 'goals', label: 'Goals', icon: '🎯' },
+    { id: 'audits', label: 'Audits', icon: '🔍' },
+    { id: 'prompts', label: 'Prompts', icon: '💡' },
     { id: 'assistant', label: 'Assistant', icon: '🤖' },
-    { id: 'audit', label: 'Audit', icon: '✓' },
   ]
 
   function switchView(viewId) {
@@ -68,10 +70,12 @@
         <DailyEditor />
       {:else if currentView === 'goals'}
         <GoalExplorer />
+      {:else if currentView === 'audits'}
+        <AuditExplorer />
+      {:else if currentView === 'prompts'}
+        <PromptLibrary />
       {:else if currentView === 'assistant'}
         <Assistant />
-      {:else if currentView === 'audit'}
-        <AuditViewer />
       {/if}
     </div>
   </main>

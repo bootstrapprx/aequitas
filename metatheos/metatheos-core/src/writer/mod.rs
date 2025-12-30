@@ -2,11 +2,15 @@ pub mod frontmatter;
 pub mod goal_writer;
 pub mod phase_writer;
 pub mod daily_writer;
+pub mod audit_writer;
+pub mod prompt_writer;
 
 pub use frontmatter::FrontmatterSerializer;
 pub use goal_writer::GoalWriter;
 pub use phase_writer::PhaseWriter;
 pub use daily_writer::DailyWriter;
+pub use audit_writer::AuditWriter;
+pub use prompt_writer::PromptWriter;
 
 use crate::errors::Result;
 use std::path::Path;

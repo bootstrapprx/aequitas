@@ -58,7 +58,10 @@
       "Bash(./metatheos-cli/target/release/metatheos:*)",
       "Bash(./target/release/metatheos:*)",
       "Bash(du:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(head:*)",
+      "Bash(npm --prefix metatheos-gui run build)",
+      "Bash(npm --prefix metatheos/metatheos-gui run build)"
     ],
     "deny": [],
     "ask": []

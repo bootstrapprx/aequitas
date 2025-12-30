@@ -23,6 +23,27 @@ pub struct GoalDto {
     pub file_path: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EnrichedGoalDto {
+    pub goal_id: String,
+    pub title: String,
+    pub status: String,
+    pub phase: Option<String>,
+    pub owner: Option<String>,
+    pub dependencies: Vec<String>,
+    pub canon: Vec<String>,
+    pub tags: Vec<String>,
+    pub updated: Option<String>,
+    pub file_path: String,
+    // Enrichment data
+    pub missing_dependencies: Vec<String>,
+    pub blocked_by: Vec<String>,
+    pub reverse_dependencies: Vec<String>,
+    pub daily_references: Vec<String>,
+    pub is_canonical: bool,
+    pub completion_blocked: bool,
+}
+
 impl From<&Goal> for GoalDto {
     fn from(goal: &Goal) -> Self {
         Self {
@@ -105,6 +126,59 @@ impl From<&AuditRecord> for AuditDto {
             file_path: audit.file_path.to_string_lossy().to_string(),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromptDto {
+    pub prompt_id: Option<String>,
+    pub agent: Option<String>,
+    pub purpose: Option<String>,
+    pub prompt_text: Option<String>,
+    pub title: String,
+    pub file_path: String,
+}
+
+impl From<&metatheos_core::Prompt> for PromptDto {
+    fn from(prompt: &metatheos_core::Prompt) -> Self {
+        Self {
+            prompt_id: prompt.prompt_id.clone(),
+            agent: prompt.agent.clone(),
+            purpose: prompt.purpose.clone(),
+            prompt_text: prompt.prompt_text.clone(),
+            title: prompt.title.clone(),
+            file_path: prompt.file_path.to_string_lossy().to_string(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EnrichedAuditDto {
+    pub title: String,
+    pub date: Option<String>,
+    pub scope: Option<String>,
+    pub risk: Option<String>,
+    pub auditor: Option<String>,
+    pub summary: Option<String>,
+    pub file_path: String,
+    // Enrichment data
+    pub referenced_goals: Vec<String>,
+    pub daily_references: Vec<String>,
+    pub related_prompts: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EnrichedPromptDto {
+    pub prompt_id: Option<String>,
+    pub agent: Option<String>,
+    pub purpose: Option<String>,
+    pub prompt_text: Option<String>,
+    pub title: String,
+    pub file_path: String,
+    // Enrichment data
+    pub referenced_goals: Vec<String>,
+    pub daily_references: Vec<String>,
+    pub related_audits: Vec<String>,
+    pub timestamp: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -285,6 +359,136 @@ pub fn get_all_goals(state: State<AppState>) -> Result<Vec<GoalDto>, String> {
         .collect();
 
     Ok(goals)
+}
+
+#[tauri::command]
+pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    // Build reverse dependency map
+    let mut reverse_deps: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for goal in &ctx.state.goals {
+        for dep in &goal.dependencies {
+            reverse_deps
+                .entry(dep.clone())
+                .or_insert_with(Vec::new)
+                .push(goal.goal_id.clone());
+        }
+    }
+
+    // Build goal ID lookup
+    let goal_map: std::collections::HashMap<String, &Goal> = ctx
+        .state
+        .goals
+        .iter()
+        .map(|g| (g.goal_id.clone(), g))
+        .collect();
+
+    // Collect daily note references
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for daily in &ctx.state.daily_notes {
+        for goal_id in &daily.goals {
+            daily_refs
+                .entry(goal_id.clone())
+                .or_insert_with(Vec::new)
+                .push(daily.date.to_string());
+        }
+    }
+
+    let enriched_goals: Vec<EnrichedGoalDto> = ctx
+        .state
+        .goals
+        .iter()
+        .map(|goal| {
+            // Find missing dependencies
+            let missing_deps: Vec<String> = goal
+                .dependencies
+                .iter()
+                .filter(|dep| !goal_map.contains_key(*dep))
+                .cloned()
+                .collect();
+
+            // Find blocking dependencies (dependencies not done)
+            let blocked_by: Vec<String> = goal
+                .dependencies
+                .iter()
+                .filter_map(|dep| {
+                    goal_map.get(dep).and_then(|dep_goal| {
+                        if !dep_goal.is_done() {
+                            Some(dep.clone())
+                        } else {
+                            None
+                        }
+                    })
+                })
+                .collect();
+
+            let reverse_dependencies = reverse_deps
+                .get(&goal.goal_id)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let daily_references = daily_refs
+                .get(&goal.goal_id)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let is_canonical = !goal.canon.is_empty();
+            let completion_blocked = !blocked_by.is_empty();
+
+            EnrichedGoalDto {
+                goal_id: goal.goal_id.clone(),
+                title: goal.title.clone(),
+                status: goal.status.to_string(),
+                phase: goal.phase.clone(),
+                owner: goal.owner.clone(),
+                dependencies: goal.dependencies.clone(),
+                canon: goal.canon.clone(),
+                tags: goal.tags.clone(),
+                updated: goal.updated.map(|d| d.to_string()),
+                file_path: goal.file_path.to_string_lossy().to_string(),
+                missing_dependencies: missing_deps,
+                blocked_by,
+                reverse_dependencies,
+                daily_references,
+                is_canonical,
+                completion_blocked,
+            }
+        })
+        .collect();
+
+    Ok(enriched_goals)
+}
+
+#[tauri::command]
+pub fn get_all_audits(state: State<AppState>) -> Result<Vec<AuditDto>, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    let audits = ctx
+        .state
+        .audits
+        .iter()
+        .map(AuditDto::from)
+        .collect();
+
+    Ok(audits)
+}
+
+#[tauri::command]
+pub fn get_all_prompts(state: State<AppState>) -> Result<Vec<PromptDto>, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    let prompts = ctx
+        .state
+        .prompts
+        .iter()
+        .map(PromptDto::from)
+        .collect();
+
+    Ok(prompts)
 }
 
 #[tauri::command]
@@ -603,6 +807,201 @@ pub fn list_daily_notes(state: State<AppState>) -> Result<Vec<DailySummaryDto>, 
         .collect();
 
     Ok(notes)
+}
+
+#[tauri::command]
+pub fn get_enriched_audits(state: State<AppState>) -> Result<Vec<EnrichedAuditDto>, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    // Build goal references map (scan goals for audit mentions)
+    let mut goal_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for goal in &ctx.state.goals {
+        // Simple heuristic: check content for audit file references
+        for audit in &ctx.state.audits {
+            let audit_name = audit.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if goal.content.contains(audit_name) || goal.content.contains(&audit.title) {
+                goal_refs
+                    .entry(audit.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(goal.goal_id.clone());
+            }
+        }
+    }
+
+    // Build daily note references
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for daily in &ctx.state.daily_notes {
+        for audit in &ctx.state.audits {
+            let audit_name = audit.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if daily.content.contains(audit_name) || daily.content.contains(&audit.title) {
+                daily_refs
+                    .entry(audit.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(daily.date.to_string());
+            }
+        }
+    }
+
+    // Build prompt relations (audits mentioning prompts)
+    let mut prompt_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for audit in &ctx.state.audits {
+        for prompt in &ctx.state.prompts {
+            let prompt_name = prompt.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if audit.content.contains(prompt_name) ||
+               audit.content.contains(&prompt.title) ||
+               prompt.prompt_id.as_ref().map(|id| audit.content.contains(id)).unwrap_or(false) {
+                prompt_refs
+                    .entry(audit.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(prompt.prompt_id.clone().unwrap_or_else(|| prompt.title.clone()));
+            }
+        }
+    }
+
+    let enriched_audits: Vec<EnrichedAuditDto> = ctx
+        .state
+        .audits
+        .iter()
+        .map(|audit| {
+            let file_path_str = audit.file_path.to_string_lossy().to_string();
+
+            let referenced_goals = goal_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let daily_references = daily_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let related_prompts = prompt_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            EnrichedAuditDto {
+                title: audit.title.clone(),
+                date: audit.date.map(|d| d.to_string()),
+                scope: audit.scope.clone(),
+                risk: audit.risk.clone(),
+                auditor: audit.auditor.clone(),
+                summary: audit.summary.clone(),
+                file_path: file_path_str,
+                referenced_goals,
+                daily_references,
+                related_prompts,
+            }
+        })
+        .collect();
+
+    Ok(enriched_audits)
+}
+
+#[tauri::command]
+pub fn get_enriched_prompts(state: State<AppState>) -> Result<Vec<EnrichedPromptDto>, String> {
+    let root = state.governance_root.lock().unwrap();
+    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+
+    // Build goal references map
+    let mut goal_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for goal in &ctx.state.goals {
+        for prompt in &ctx.state.prompts {
+            let prompt_name = prompt.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if goal.content.contains(prompt_name) ||
+               goal.content.contains(&prompt.title) ||
+               prompt.prompt_id.as_ref().map(|id| goal.content.contains(id)).unwrap_or(false) {
+                goal_refs
+                    .entry(prompt.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(goal.goal_id.clone());
+            }
+        }
+    }
+
+    // Build daily note references
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for daily in &ctx.state.daily_notes {
+        for prompt in &ctx.state.prompts {
+            let prompt_name = prompt.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if daily.content.contains(prompt_name) ||
+               daily.content.contains(&prompt.title) ||
+               prompt.prompt_id.as_ref().map(|id| daily.content.contains(id)).unwrap_or(false) {
+                daily_refs
+                    .entry(prompt.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(daily.date.to_string());
+            }
+        }
+    }
+
+    // Build audit relations (prompts mentioned in audits)
+    let mut audit_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for prompt in &ctx.state.prompts {
+        for audit in &ctx.state.audits {
+            let prompt_name = prompt.file_path.file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            if audit.content.contains(prompt_name) ||
+               audit.content.contains(&prompt.title) ||
+               prompt.prompt_id.as_ref().map(|id| audit.content.contains(id)).unwrap_or(false) {
+                audit_refs
+                    .entry(prompt.file_path.to_string_lossy().to_string())
+                    .or_insert_with(Vec::new)
+                    .push(audit.title.clone());
+            }
+        }
+    }
+
+    let enriched_prompts: Vec<EnrichedPromptDto> = ctx
+        .state
+        .prompts
+        .iter()
+        .map(|prompt| {
+            let file_path_str = prompt.file_path.to_string_lossy().to_string();
+
+            let referenced_goals = goal_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let daily_references = daily_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            let related_audits = audit_refs
+                .get(&file_path_str)
+                .cloned()
+                .unwrap_or_else(Vec::new);
+
+            EnrichedPromptDto {
+                prompt_id: prompt.prompt_id.clone(),
+                agent: prompt.agent.clone(),
+                purpose: prompt.purpose.clone(),
+                prompt_text: prompt.prompt_text.clone(),
+                title: prompt.title.clone(),
+                file_path: file_path_str,
+                referenced_goals,
+                daily_references,
+                related_audits,
+                timestamp: prompt.timestamp.map(|t| t.to_rfc3339()),
+            }
+        })
+        .collect();
+
+    Ok(enriched_prompts)
 }
 
 fn parse_goal_status(status: &str) -> Result<GoalStatus, String> {

@@ -26,6 +26,11 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             // Read commands
             commands::get_all_goals,
+            commands::get_enriched_goals,
+            commands::get_all_audits,
+            commands::get_all_prompts,
+            commands::get_enriched_audits,
+            commands::get_enriched_prompts,
             commands::get_goals_by_status,
             commands::get_goals_by_phase,
             commands::get_dashboard_data,
@@ -51,6 +56,13 @@ fn main() {
             commands_crud::set_active_phase,
             commands_crud::delete_daily_note,
             commands_crud::write_daily_note,
+            // Audit & Prompt commands (Phase 6A)
+            commands_crud::create_audit,
+            commands_crud::update_audit,
+            commands_crud::delete_audit,
+            commands_crud::create_prompt,
+            commands_crud::update_prompt,
+            commands_crud::delete_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
