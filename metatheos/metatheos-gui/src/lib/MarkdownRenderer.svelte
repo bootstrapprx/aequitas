@@ -45,60 +45,64 @@
             },
         );
 
-        // Configure marked to highlight code if needed
-        const renderer = new marked.Renderer();
-        renderer.code = ({ text, lang }) => {
-            if (lang === "mermaid") {
-                return `<div class="mermaid">${text}</div>`;
-            }
-            if (
-                lang === "dataview" ||
-                lang === "dataviewjs" ||
-                lang === "dql"
-            ) {
-                // Simple syntax highlighting for Dataview DQL
-                const keywords = [
-                    "TABLE",
-                    "LIST",
-                    "TASK",
-                    "CALENDAR",
-                    "FROM",
-                    "WHERE",
-                    "SORT",
-                    "GROUP BY",
-                    "LIMIT",
-                    "FLATTEN",
-                    "AS",
-                    "AND",
-                    "OR",
-                    "ASC",
-                    "DESC",
-                ];
+        // Configure marked with custom renderer
+        // Note: marked >= 4.0 uses 'use' and the renderer methods receive (code, lang)
+        const renderer = {
+            code(text, lang) {
+                // Clean lang (handle whitespace/casing)
+                const language = (lang || "").trim().toLowerCase();
 
-                // Escape HTML first to prevent injection from content
-                let highlighted = text
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;");
+                if (language === "mermaid") {
+                    return `<div class="mermaid">${text}</div>`;
+                }
+                if (
+                    language === "dataview" ||
+                    language === "dataviewjs" ||
+                    language === "dql"
+                ) {
+                    // Simple syntax highlighting for Dataview DQL
+                    const keywords = [
+                        "TABLE",
+                        "LIST",
+                        "TASK",
+                        "CALENDAR",
+                        "FROM",
+                        "WHERE",
+                        "SORT",
+                        "GROUP BY",
+                        "LIMIT",
+                        "FLATTEN",
+                        "AS",
+                        "AND",
+                        "OR",
+                        "ASC",
+                        "DESC",
+                    ];
 
-                // Highlight keywords
-                // We use a regex with word boundaries to avoid partial matches
-                const keywordRegex = new RegExp(
-                    `\\b(${keywords.join("|")})\\b`,
-                    "gi",
-                );
-                highlighted = highlighted.replace(
-                    keywordRegex,
-                    '<span class="text-primary-400 font-bold">$1</span>',
-                );
+                    // Escape HTML first to prevent injection from content
+                    let highlighted = text
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, ">");
 
-                // Highlight strings
-                highlighted = highlighted.replace(
-                    /"([^"]*)"/g,
-                    '<span class="text-yellow-300">"$1"</span>',
-                );
+                    // Highlight keywords
+                    // We use a regex with word boundaries to avoid partial matches
+                    const keywordRegex = new RegExp(
+                        `\\b(${keywords.join("|")})\\b`,
+                        "gi",
+                    );
+                    highlighted = highlighted.replace(
+                        keywordRegex,
+                        '<span class="text-primary-400 font-bold">$1</span>',
+                    );
 
-                return `
+                    // Highlight strings
+                    highlighted = highlighted.replace(
+                        /"([^"]*)"/g,
+                        '<span class="text-yellow-300">"$1"</span>',
+                    );
+
+                    return `
                     <div class="my-4 rounded-lg border border-primary-500/30 bg-gray-900 overflow-hidden shadow-sm">
                         <div class="px-3 py-1 bg-primary-900/20 border-b border-primary-500/20 flex items-center gap-2">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
@@ -109,15 +113,17 @@
                         </div>
                     </div>
                 `;
-            }
-            return `<pre><code class="language-${lang}">${text}</code></pre>`;
+                }
+                return `<pre><code class="language-${language || "text"}">${text}</code></pre>`;
+            },
         };
 
-        marked.setOptions({ renderer });
+        marked.use({ renderer });
 
         const rawHtml = marked.parse(processedBody);
         return DOMPurify.sanitize(rawHtml, {
-            ADD_ATTR: ["data-wikilink", "target"], // Allow data-wikilink attribute
+            ADD_ATTR: ["data-wikilink", "target", "class", "style"], // Allow class/style for styling
+            ADD_TAGS: ["iframe"], // Optional: if we ever need embeds
         });
     }
 
@@ -168,5 +174,56 @@
         display: flex;
         justify-content: center;
         margin: 1rem 0;
+    }
+
+    /* Better Blockquotes */
+    :global(.markdown-body blockquote) {
+        border-left: 4px solid theme("colors.primary.500");
+        background-color: theme("colors.gray.800");
+        padding: 0.5rem 1rem;
+        font-style: italic;
+        color: theme("colors.gray.300");
+        border-radius: 0 0.5rem 0.5rem 0;
+        margin: 1rem 0;
+    }
+
+    /* Better Tables */
+    :global(.markdown-body table) {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        font-size: 0.875rem;
+    }
+    :global(.markdown-body th) {
+        text-align: left;
+        padding: 0.75rem;
+        background-color: theme("colors.gray.800");
+        border-bottom: 2px solid theme("colors.gray.700");
+        color: theme("colors.gray.200");
+        font-weight: 600;
+    }
+    :global(.markdown-body td) {
+        padding: 0.75rem;
+        border-bottom: 1px solid theme("colors.gray.800");
+        color: theme("colors.gray.300");
+    }
+    :global(.markdown-body tr:hover td) {
+        background-color: theme("colors.gray.800");
+    }
+
+    /* Better Links */
+    :global(.markdown-body a:not([data-wikilink])) {
+        color: theme("colors.primary.400");
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    /* Headers */
+    :global(.markdown-body h1),
+    :global(.markdown-body h2) {
+        color: theme("colors.white");
+        border-bottom: 1px solid theme("colors.gray.800");
+        padding-bottom: 0.5rem;
+        margin-top: 1.5rem;
     }
 </style>
