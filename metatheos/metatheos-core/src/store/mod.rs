@@ -3,7 +3,7 @@ use surrealdb::Surreal;
 use surrealdb::engine::local::{Db, SurrealKv};
 use crate::errors::{MetaError, Result};
 use chrono::NaiveDate;
-use crate::DailyNote;
+use crate::{DailyNote, Goal, Phase, Decision, AuditRecord, Prompt};
 
 pub mod migration;
 
@@ -48,50 +48,81 @@ impl SurrealStore {
     }
 
     pub async fn get_daily_note(&self, date: NaiveDate) -> Result<Option<DailyNote>> {
-        let id = format!("daily_notes:{}", date.format("%Y-%m-%d"));
-        let notes: Vec<DailyNote> = self.db.select((&id)).await
-            .map_err(|e| MetaError::SystemError(format!("DB Select Error: {}", e)))?;
+        let sql = "SELECT * FROM type::thing($table, $id)";
+        let mut response = self.db.query(sql)
+            .bind(("table", "daily_notes"))
+            .bind(("id", date.format("%Y-%m-%d").to_string()))
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+            
+        // take(0) returns Result<T>, we try to extract Option<DailyNote>
+        // Note: query usually returns a list of results. We want the first result set, then the first record?
+        // Actually, let's fetch as Vec<DailyNote> to be safe against list return, then take first.
+        let notes: Vec<DailyNote> = response.take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+            
         Ok(notes.into_iter().next())
     }
 
     pub async fn save_daily_note(&self, note: DailyNote) -> Result<()> {
         let id = format!("daily_notes:{}", note.date.format("%Y-%m-%d"));
-        // Update returns Vec<T>
-        let _: Vec<DailyNote> = self.db.update((&id))
+        // Inspecting update return: accept Vec<Value> which seems to correspond to what the driver returns
+        let _: Vec<serde_json::Value> = self.db.update((&id))
             .content(note)
             .await
             .map_err(|e| MetaError::SystemError(format!("DB Save Error: {}", e)))?;
         Ok(())
     }
 
-    // === Dashboard Query Methods ===
-
-    /// Get all goals from the database
-    pub async fn get_all_goals(&self) -> Result<Vec<crate::Goal>> {
-        let goals: Vec<crate::Goal> = self.db
-            .select("goals")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("Failed to query goals: {}", e)))?;
-        Ok(goals)
+    pub async fn get_all_goals(&self) -> Result<Vec<Goal>> {
+        let mut response = self.db.query("SELECT * FROM goals").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Goal> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
     }
 
-    /// Get all phases from the database
-    pub async fn get_all_phases(&self) -> Result<Vec<crate::Phase>> {
-        let phases: Vec<crate::Phase> = self.db
-            .select("phases")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("Failed to query phases: {}", e)))?;
-        Ok(phases)
+    pub async fn get_all_phases(&self) -> Result<Vec<Phase>> {
+        let mut response = self.db.query("SELECT * FROM phases").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Phase> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
     }
 
-    /// Get all daily notes from the database
+    pub async fn get_all_decisions(&self) -> Result<Vec<Decision>> {
+        let mut response = self.db.query("SELECT * FROM decisions").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Decision> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn get_all_audits(&self) -> Result<Vec<AuditRecord>> {
+        let mut response = self.db.query("SELECT * FROM audits").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<AuditRecord> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn get_all_prompts(&self) -> Result<Vec<Prompt>> {
+        let mut response = self.db.query("SELECT * FROM prompts").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Prompt> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
     pub async fn get_all_daily_notes(&self) -> Result<Vec<DailyNote>> {
-        let notes: Vec<DailyNote> = self.db
-            .select("daily_notes")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("Failed to query daily notes: {}", e)))?;
-        Ok(notes)
+        let mut response = self.db.query("SELECT * FROM daily_notes").await
+             .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<DailyNote> = response.take(0)
+             .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
     }
+
+    // === Dashboard Query Methods ===
 
     /// Count goals by status using SurrealDB query
     pub async fn count_goals_by_status(&self) -> Result<std::collections::HashMap<String, usize>> {

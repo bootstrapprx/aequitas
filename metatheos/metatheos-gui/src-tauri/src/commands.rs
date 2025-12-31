@@ -640,9 +640,19 @@ pub fn list_audits(state: State<AppState>) -> Result<Vec<AuditDto>, String> {
 }
 
 #[tauri::command]
-pub fn get_dashboard_data(state: State<AppState>) -> Result<DashboardData, String> {
-    let root = state.governance_root.lock().unwrap();
-    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+pub async fn get_dashboard_data(state: State<'_, AppState>) -> Result<DashboardData, String> {
+    let root = state.governance_root.lock().unwrap().clone();
+    
+    let store_opt = {
+        let db_mutex = state.db.lock().unwrap();
+        db_mutex.clone()
+    };
+
+    let ctx = if let Some(store) = store_opt {
+         GovernanceContext::from_store(&store, root).await.map_err(|e| e.to_string())?
+    } else {
+         GovernanceContext::load(&root).map_err(|e| e.to_string())?
+    };
 
     let summary = ctx.summary();
 

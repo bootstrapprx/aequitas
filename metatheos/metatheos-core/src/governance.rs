@@ -296,6 +296,43 @@ impl GovernanceContext {
         Ok(ctx)
     }
 
+    /// Load context from SurrealStore (hybrid DB + FS for Canon/Protocols)
+    pub async fn from_store(store: &crate::store::SurrealStore, root: PathBuf) -> Result<Self> {
+        // Fetch DB data
+        let goals = store.get_all_goals().await?;
+        let phases = store.get_all_phases().await?;
+        let decisions = store.get_all_decisions().await?;
+        let audits = store.get_all_audits().await?;
+        let prompts = store.get_all_prompts().await?;
+        let daily_notes = store.get_all_daily_notes().await?;
+
+        // Fetch FS data (Canon + Protocols) via Scanner
+        let scanner = GovernanceScanner::new(&root);
+        let canon_docs = scanner.scan_canon()?; 
+        let protocols = scanner.scan_protocols()?;
+
+        let state = GovernanceState {
+            goals,
+            phases,
+            decisions,
+            audits,
+            prompts,
+            daily_notes,
+            canon_docs,
+            protocols,
+        };
+
+        let mut ctx = Self {
+            root,
+            state,
+            goals_index: HashMap::new(),
+            decisions_index: HashMap::new(),
+        };
+
+        ctx.build_indexes();
+        Ok(ctx)
+    }
+
     fn build_indexes(&mut self) {
         for (idx, goal) in self.state.goals.iter().enumerate() {
             self.goals_index
