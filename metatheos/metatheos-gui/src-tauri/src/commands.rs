@@ -852,6 +852,7 @@ pub struct DailyNoteDto {
     pub divergences: Vec<String>,
     pub content: String,
     pub raw_content: Option<String>,
+    pub properties: std::collections::HashMap<String, String>,
 }
 
 impl From<&metatheos_core::DailyNote> for DailyNoteDto {
@@ -866,33 +867,32 @@ impl From<&metatheos_core::DailyNote> for DailyNoteDto {
             divergences: d.divergences.clone(),
             content: d.content.clone(),
             raw_content: None,
+            properties: d.extra.iter()
+                .map(|(k, v)| (k.clone(), v.to_string().trim_matches('"').to_string()))
+                .collect(),
         }
     }
 }
 
 #[tauri::command]
-pub fn get_daily_note(date: String, state: State<AppState>) -> Result<Option<DailyNoteDto>, String> {
+pub async fn get_daily_note(date: String, state: State<'_, AppState>) -> Result<Option<DailyNoteDto>, String> {
+    let db_mutex = state.db.lock().unwrap();
+/*
+    if let Some(store) = db_mutex.as_ref() {
+        let id = format!("daily_notes:{}", date);
+        let note: Option<metatheos_core::DailyNote> = store.db.select((&id)).await.map_err(|e| e.to_string())?;
+        
+        // Return DTO directly from note
+        return Ok(note.map(|n| DailyNoteDto::from(&n)));
+    }
+*/
+    
+    // Fallback to FS if DB not ready (shouldn't happen if setup worked)
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
-
-    let parsed_date =
-        NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
-
+    let parsed_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
     let daily = ctx.get_daily(parsed_date);
-    
-    match daily {
-        Some(d) => {
-            let mut dto = DailyNoteDto::from(d);
-            // Read raw content to preserve full frontmatter
-            if d.file_path.exists() {
-                 if let Ok(raw) = std::fs::read_to_string(&d.file_path) {
-                     dto.raw_content = Some(raw);
-                 }
-            }
-            Ok(Some(dto))
-        },
-        None => Ok(None)
-    }
+    Ok(daily.map(|d| DailyNoteDto::from(&d)))
 }
 
 #[tauri::command]

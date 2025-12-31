@@ -17,6 +17,8 @@ pub struct DailyNote {
     pub linked_goals: Vec<String>,
     pub file_path: PathBuf,
     pub content: String,
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl DailyNote {

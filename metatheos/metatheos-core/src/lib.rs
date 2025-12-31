@@ -8,6 +8,7 @@ pub mod errors;
 pub mod llm;
 pub mod writer;
 pub mod reasoner;
+pub mod store;
 
 pub use domain::*;
 pub use governance::{

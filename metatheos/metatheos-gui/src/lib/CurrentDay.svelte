@@ -31,30 +31,42 @@
             // detailed response needed: content + parsed frontmatter
             const note = await invoke("get_daily_note", { date });
 
-            if (note && note.raw_content) {
-                rawContent = note.raw_content;
-                // Parse Frontmatter manually
-                const match = rawContent.match(/^---\n([\s\S]*?)\n---/);
-                if (match) {
-                    const fmString = match[1];
-                    frontmatter = {};
-                    fmString.split("\n").forEach((line) => {
-                        const parts = line.split(":");
-                        if (parts.length >= 2) {
-                            const key = parts[0].trim();
-                            const val = parts.slice(1).join(":").trim();
-                            if (key) frontmatter[key] = val;
-                        }
-                    });
-                    // Remove frontmatter from content for display if desired,
-                    // BUT note.content already has stripped content.
-                    content = note.content;
+            if (note) {
+                // DB-backed note has properties map
+                if (note.properties) {
+                    frontmatter = { ...note.properties };
+                } else if (note.raw_content) {
+                    // Fallback to manual parse if raw_content exists (legacy FS)
+                    const match = note.raw_content.match(
+                        /^---\n([\s\S]*?)\n---/,
+                    );
+                    if (match) {
+                        const fmString = match[1];
+                        frontmatter = {};
+                        fmString.split("\n").forEach((line) => {
+                            const parts = line.split(":");
+                            if (parts.length >= 2) {
+                                const key = parts[0].trim();
+                                const val = parts.slice(1).join(":").trim();
+                                if (key) frontmatter[key] = val;
+                            }
+                        });
+                    }
                 } else {
                     frontmatter = {};
-                    content = note.content;
                 }
+
+                content = note.content || "";
+
+                // For Ollama context, we reconstruct the full note since we might not have raw_content
+                let contextStr = "---\n";
+                for (const [key, val] of Object.entries(frontmatter)) {
+                    if (val) contextStr += `${key}: ${val}\n`;
+                }
+                contextStr += "---\n\n" + content;
+                rawContent = contextStr;
             } else {
-                content = note?.content || "";
+                content = "";
                 frontmatter = {};
                 rawContent = "";
             }

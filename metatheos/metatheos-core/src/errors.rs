@@ -57,6 +57,9 @@ pub enum MetaError {
 
     #[error("Parse error: {0}")]
     ParseError(String),
+
+    #[error("System error: {0}")]
+    SystemError(String),
 }
 
 pub type Result<T> = std::result::Result<T, MetaError>;

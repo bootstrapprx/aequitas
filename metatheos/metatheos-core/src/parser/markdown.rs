@@ -253,6 +253,21 @@ impl MarkdownParser {
 
         let linked_goals = LinkExtractor::extract_all_links(&body);
 
+        // Capture extra fields
+        // Parser logic updated for HashMap source
+        let mut extra = std::collections::HashMap::new();
+        // frontmatter is already HashMap<String, serde_json::Value>
+        let known_keys = [
+            "date", "phase", "mode", "protocol", "goals_worked", "decisions_made", 
+            "divergences", "goals", "blockers", "decisions"
+        ];
+        
+        for (key, v) in &frontmatter {
+            if !known_keys.contains(&key.as_str()) {
+                extra.insert(key.clone(), v.clone());
+            }
+        }
+
         Ok(DailyNote {
             date,
             phase,
@@ -267,6 +282,7 @@ impl MarkdownParser {
             linked_goals,
             file_path: path.to_path_buf(),
             content: body,
+            extra,
         })
     }
 

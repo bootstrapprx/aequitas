@@ -9,6 +9,7 @@ mod state;
 
 use state::AppState;
 use std::path::PathBuf;
+use tauri::Manager;
 
 fn main() {
     // Default governance root - absolute path to Aequitas governance folder
@@ -29,7 +30,33 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .manage(AppState::new(governance_root, repo_root))
+        .manage(AppState::new(governance_root.clone(), repo_root))
+        .setup(move |app| {
+             let handle = app.handle().clone();
+             let gov_root = governance_root.clone();
+             
+             tauri::async_runtime::spawn(async move {
+                 let state = handle.state::<AppState>();
+                 let db_path = gov_root.join(".metatheos.db"); // Embedded DB folder
+                 println!("Initializing SurrealDB at {:?}", db_path);
+                 match metatheos_core::store::SurrealStore::init(db_path).await {
+                     Ok(store) => {
+                         let store = std::sync::Arc::new(store);
+                         
+                         // Run Migration
+                         if let Err(e) = metatheos_core::store::migration::migrate_all(&store, &gov_root).await {
+                             eprintln!("Migration failed: {}", e);
+                         }
+                         
+                         // Set state
+                         *state.db.lock().unwrap() = Some(store);
+                         println!("SurrealDB initialized and state updated.");
+                     },
+                     Err(e) => eprintln!("Failed to init SurrealDB: {}", e),
+                 }
+             });
+             Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Read commands
             commands::get_all_goals,
@@ -51,9 +78,10 @@ fn main() {
             commands::create_daily_note,
             commands::list_audits,
             commands::set_daily_mode,
-            commands::get_daily_note,
+            commands::list_audits,
+            commands::set_daily_mode,
+            commands::get_daily_note, // It is now async, still valid handler
             commands::update_daily_note,
-            commands::list_daily_notes,
             // AI commands
             commands_ai::ai_check_config,
             commands_ai::ai_ask,
@@ -69,7 +97,7 @@ fn main() {
             commands_crud::update_phase,
             commands_crud::set_active_phase,
             commands_crud::delete_daily_note,
-            commands_crud::write_daily_note,
+            commands_crud::write_daily_note, // Async now
             // Audit & Prompt commands (Phase 6A)
             commands_crud::create_audit,
             commands_crud::update_audit,

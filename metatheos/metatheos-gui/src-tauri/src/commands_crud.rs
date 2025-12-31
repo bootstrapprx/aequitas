@@ -303,7 +303,14 @@ pub fn delete_daily_note(date: String, state: State<AppState>) -> Result<(), Str
 
 /// Enhanced version of update_daily_note using DailyWriter
 #[tauri::command]
-pub fn write_daily_note(date: String, content: String, state: State<AppState>) -> Result<(), String> {
+pub async fn write_daily_note(date: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
+/*
+    let db_mutex = state.db.lock().unwrap();
+    if let Some(store) = db_mutex.as_ref() {
+        // ... (DB logic commented out due to build issues)
+    }
+*/
+
     let root = state.governance_root.lock().unwrap();
     let writer = DailyWriter::new(root.clone());
 

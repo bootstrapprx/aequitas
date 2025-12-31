@@ -19,3 +19,5 @@ chrono.workspace = true
 anyhow.workspace = true
 regex.workspace = true
 walkdir.workspace = true
+surrealdb = { version = "2.0", features = ["kv-surrealkv"] }
+tokio = { version = "1", features = ["full"] }
