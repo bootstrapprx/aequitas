@@ -37,6 +37,7 @@
       "capabilities": [
         "default"
       ]
-    }
+    },
+    "withGlobalTauri": true
   }
 }

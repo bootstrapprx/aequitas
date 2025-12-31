@@ -16,14 +16,16 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             // Default to governance folder in Aequitas project
-            let home = std::env::var("HOME").expect("HOME not set");
-            PathBuf::from(home)
-                .join("Documents/workfolder/aequitas/governance")
+            #[cfg(target_os = "linux")]
+            let home = std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/home/actpm".to_string()));
+            #[cfg(not(target_os = "linux"))]
+             let home = std::path::PathBuf::from("/"); // Fallback for safety
+
+            home.join("Documents/workfolder/aequitas/governance")
         });
-    let repo_root = governance_root
-        .parent()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| governance_root.clone());
+    
+    // Assume repo root is the parent of governance root
+    let repo_root = governance_root.parent().unwrap_or(&governance_root).to_path_buf();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())

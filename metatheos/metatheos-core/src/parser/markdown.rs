@@ -38,6 +38,8 @@ impl MarkdownParser {
 
         let phase = FrontmatterParser::get_string(&frontmatter, "phase");
         let owner = FrontmatterParser::get_string(&frontmatter, "owner");
+        let parent_id = FrontmatterParser::get_string(&frontmatter, "parent_id");
+        let level = FrontmatterParser::get_string(&frontmatter, "level").or(Some("goal".to_string()));
 
         let mut dependencies = FrontmatterParser::get_array(&frontmatter, "dependencies");
         if dependencies.is_empty() {
@@ -53,6 +55,8 @@ impl MarkdownParser {
             status,
             phase,
             owner,
+            parent_id,
+            level,
             dependencies,
             canon,
             updated,

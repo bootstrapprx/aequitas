@@ -1,116 +1,125 @@
 <script>
-  import { onMount, onDestroy } from 'svelte'
-  import { chatDockStore } from './stores/chatDock'
-  import { defaultProviders } from './chat/providers'
-  import { invoke } from '@tauri-apps/api/core'
-  import { get } from 'svelte/store'
+  import { onMount, onDestroy } from "svelte";
+  import { chatDockStore } from "./stores/chatDock";
+  import { defaultProviders } from "./chat/providers";
+  import { invoke } from "@tauri-apps/api/core";
+  import { get } from "svelte/store";
 
-  export let onSwitchToAssistant = () => {}
+  export let onSwitchToAssistant = () => {};
 
-  let state
-  const unsubscribe = chatDockStore.subscribe((v) => (state = v))
+  let state;
+  const unsubscribe = chatDockStore.subscribe((v) => (state = v));
 
-  let dragging = false
-  let startY = 0
-  let startX = 0
-  let startSize = 40
+  let dragging = false;
+  let startY = 0;
+  let startX = 0;
+  let startSize = 40;
 
-  let copyStatus = ''
+  let copyStatus = "";
 
-  onDestroy(() => unsubscribe())
+  onDestroy(() => unsubscribe());
 
   onMount(() => {
     const handler = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.code === 'Space') {
-        toggleOpen()
+      if (e.ctrlKey && e.shiftKey && e.code === "Space") {
+        toggleOpen();
       }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  })
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  });
 
   function toggleOpen() {
-    chatDockStore.setOpen(!(state?.open && state?.mode !== 'hidden'))
+    chatDockStore.setOpen(!(state?.open && state?.mode !== "hidden"));
   }
 
   function setMode(mode) {
-    chatDockStore.setMode(mode)
+    chatDockStore.setMode(mode);
   }
 
   function setProvider(id) {
-    if (id === 'ollama-assistant') {
-      onSwitchToAssistant()
-      chatDockStore.setMode('hidden')
-      return
+    if (id === "ollama-assistant") {
+      onSwitchToAssistant();
+      chatDockStore.setMode("hidden");
+      return;
     }
-    chatDockStore.setProvider(id)
+    chatDockStore.setProvider(id);
   }
 
   function currentProvider() {
-    const p = defaultProviders.find((p) => p.id === state?.provider)
-    return p || defaultProviders[0]
+    const p = defaultProviders.find((p) => p.id === state?.provider);
+    return p || defaultProviders[0];
   }
 
   function currentUrl() {
-    const p = currentProvider()
+    const p = currentProvider();
     if (state?.customUrls && state.customUrls[p.id]) {
-      return state.customUrls[p.id]
+      return state.customUrls[p.id];
     }
-    return p.url
+    return p.url;
   }
 
   async function copyContext() {
     try {
-      const payload = await invoke('get_context_clipboard_payload', {
+      const payload = await invoke("get_context_clipboard_payload", {
         selected_goals: state.selectedGoals || [],
         current_path: state.lastPath || null,
-      })
-      await navigator.clipboard.writeText(payload)
-      copyStatus = 'Copied'
-      setTimeout(() => (copyStatus = ''), 1500)
+      });
+      await navigator.clipboard.writeText(payload);
+      copyStatus = "Copied";
+      setTimeout(() => (copyStatus = ""), 1500);
     } catch (err) {
-      copyStatus = `Error: ${err}`
+      copyStatus = `Error: ${err}`;
     }
   }
 
   function startDrag(event) {
-    dragging = true
-    startY = event.clientY
-    startX = event.clientX
-    startSize = state.size || 40
-    window.addEventListener('mousemove', onDrag)
-    window.addEventListener('mouseup', endDrag)
+    dragging = true;
+    startY = event.clientY;
+    startX = event.clientX;
+    startSize = state.size || 40;
+    window.addEventListener("mousemove", onDrag);
+    window.addEventListener("mouseup", endDrag);
   }
 
   function onDrag(event) {
-    if (!dragging) return
-    let delta
-    if (state.mode === 'bottom') {
-      delta = startY - event.clientY
+    if (!dragging) return;
+    let delta;
+    if (state.mode === "bottom") {
+      delta = startY - event.clientY;
     } else {
-      delta = event.clientX - startX
+      delta = event.clientX - startX;
     }
-    const newSize = Math.min(80, Math.max(20, startSize + delta / 5))
-    chatDockStore.setSize(newSize)
+    const newSize = Math.min(80, Math.max(20, startSize + delta / 5));
+    chatDockStore.setSize(newSize);
   }
 
   function endDrag() {
-    dragging = false
-    window.removeEventListener('mousemove', onDrag)
-    window.removeEventListener('mouseup', endDrag)
+    dragging = false;
+    window.removeEventListener("mousemove", onDrag);
+    window.removeEventListener("mouseup", endDrag);
   }
 </script>
 
-{#if state && state.mode !== 'hidden'}
-  <div class={`chat-dock ${state.mode}`} style={state.mode === 'bottom'
+{#if state && state.mode !== "hidden"}
+  <div
+    class={`chat-dock ${state.mode}`}
+    style={state.mode === "bottom"
       ? `height:${state.size}vh`
-      : state.mode === 'right'
+      : state.mode === "right"
         ? `width:${state.size}vw`
-        : ''}>
+        : ""}
+  >
     <div class="chat-dock__header">
       <div class="left">
-        <button class="btn-icon" title="Hide dock" on:click={toggleOpen}>✕</button>
-        <select class="provider" bind:value={state.provider} on:change={(e) => setProvider(e.target.value)}>
+        <button class="btn-icon" title="Hide dock" on:click={toggleOpen}
+          >✕</button
+        >
+        <select
+          class="provider"
+          bind:value={state.provider}
+          on:change={(e) => setProvider(e.target.value)}
+        >
           {#each defaultProviders as provider}
             <option value={provider.id}>{provider.label}</option>
           {/each}
@@ -131,13 +140,16 @@
           <option value="hidden">Hide</option>
         </select>
         {#if copyStatus}
-          <span class="text-xs text-green-600 dark:text-green-300">{copyStatus}</span>
+          <span class="text-xs text-green-600 dark:text-green-300"
+            >{copyStatus}</span
+          >
         {/if}
       </div>
     </div>
 
     <div class="banner">
-      <strong>Web Chat:</strong> no governance context. Copy/paste context manually. Do not request auto-writes; drafts only.
+      <strong>Web Chat:</strong> no governance context. Copy/paste context manually.
+      Do not request auto-writes; drafts only.
     </div>
 
     {#if currentProvider().webOnly}
@@ -150,14 +162,37 @@
         ></iframe>
       </div>
     {:else}
-      <div class="chat-dock__body flex items-center justify-center text-sm text-gray-700 dark:text-gray-200">
+      <div
+        class="chat-dock__body flex items-center justify-center text-sm text-gray-700 dark:text-gray-200"
+      >
         Use the Governance Assistant tab for vault-aware reasoning.
       </div>
     {/if}
 
+    <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
-      class={`resize-handle ${state.mode === 'bottom' ? 'horizontal' : 'vertical'}`}
+      class={`resize-handle ${state.mode === "bottom" ? "horizontal" : "vertical"}`}
+      role="separator"
+      tabindex="0"
+      aria-orientation={state.mode === "bottom" ? "horizontal" : "vertical"}
+      aria-valuenow={state.size}
+      aria-valuemin="20"
+      aria-valuemax="80"
       on:mousedown={startDrag}
+      on:keydown={(e) => {
+        if (state.mode === "bottom") {
+          if (e.key === "ArrowUp")
+            chatDockStore.setSize(Math.min(80, state.size + 5));
+          if (e.key === "ArrowDown")
+            chatDockStore.setSize(Math.max(20, state.size - 5));
+        } else {
+          if (e.key === "ArrowLeft")
+            chatDockStore.setSize(Math.min(80, state.size + 5));
+          if (e.key === "ArrowRight")
+            chatDockStore.setSize(Math.max(20, state.size - 5));
+        }
+      }}
     ></div>
   </div>
 {/if}
@@ -167,10 +202,10 @@
     position: fixed;
     background: #0b1220;
     color: #e5e7eb;
-    border-top: 1px solid rgba(255,255,255,0.06);
-    border-left: 1px solid rgba(255,255,255,0.04);
-    border-right: 1px solid rgba(255,255,255,0.04);
-    box-shadow: 0 -6px 18px rgba(0,0,0,0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 1px solid rgba(255, 255, 255, 0.04);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.3);
     z-index: 50;
   }
   .chat-dock.bottom {
@@ -196,8 +231,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background: rgba(255,255,255,0.04);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
   .chat-dock__header .left,
   .chat-dock__header .right {
@@ -217,7 +252,7 @@
     border-bottom: 1px solid #dcbf6c;
   }
   .btn-icon {
-    border: 1px solid rgba(255,255,255,0.15);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     background: transparent;
     color: #e5e7eb;
     width: 28px;
@@ -228,18 +263,18 @@
   .btn-secondary {
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
     color: #e5e7eb;
     font-size: 12px;
   }
   .select,
   .provider {
-    border: 1px solid rgba(255,255,255,0.14);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 6px;
     padding: 4px 6px;
     font-size: 12px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
     color: #e5e7eb;
   }
   .resize-handle {

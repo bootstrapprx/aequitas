@@ -21,6 +21,8 @@ pub struct GoalCreateRequest {
     pub status: String,
     pub phase: Option<String>,
     pub owner: Option<String>,
+    pub parent_id: Option<String>,
+    pub level: Option<String>,
     pub dependencies: Vec<String>,
     pub canon: Vec<String>,
     pub tags: Vec<String>,
@@ -33,6 +35,8 @@ pub struct GoalUpdateRequest {
     pub status: Option<String>,
     pub phase: Option<String>,
     pub owner: Option<String>,
+    pub parent_id: Option<String>,
+    pub level: Option<String>,
     pub dependencies: Option<Vec<String>>,
     pub canon: Option<Vec<String>>,
     pub tags: Option<String>,
@@ -84,6 +88,8 @@ pub fn create_goal(
         status,
         phase: request.phase,
         owner: request.owner,
+        parent_id: request.parent_id,
+        level: request.level,
         dependencies: request.dependencies,
         canon: request.canon,
         tags: request.tags,
@@ -132,6 +138,12 @@ pub fn update_goal(
     }
     if let Some(owner) = request.owner {
         goal.owner = Some(owner);
+    }
+    if let Some(parent_id) = request.parent_id {
+        goal.parent_id = Some(parent_id);
+    }
+    if let Some(level) = request.level {
+        goal.level = Some(level);
     }
     if let Some(deps) = request.dependencies {
         goal.dependencies = deps;

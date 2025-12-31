@@ -50,11 +50,13 @@ pub struct GoalDto {
     pub status: String,
     pub phase: Option<String>,
     pub owner: Option<String>,
+    pub parent_id: Option<String>,
     pub dependencies: Vec<String>,
     pub canon: Vec<String>,
     pub tags: Vec<String>,
     pub updated: Option<String>,
     pub file_path: String,
+    pub completion_pct: u8,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,6 +66,7 @@ pub struct EnrichedGoalDto {
     pub status: String,
     pub phase: Option<String>,
     pub owner: Option<String>,
+    pub parent_id: Option<String>,
     pub dependencies: Vec<String>,
     pub canon: Vec<String>,
     pub tags: Vec<String>,
@@ -76,21 +79,29 @@ pub struct EnrichedGoalDto {
     pub daily_references: Vec<String>,
     pub is_canonical: bool,
     pub completion_blocked: bool,
+    pub completion_pct: u8,
 }
 
 impl From<&Goal> for GoalDto {
     fn from(goal: &Goal) -> Self {
+        let completion_pct = match goal.status {
+            GoalStatus::Done | GoalStatus::Archived => 100,
+            GoalStatus::Partial => 50,
+            _ => 0,
+        };
         Self {
             goal_id: goal.goal_id.clone(),
             title: goal.title.clone(),
             status: goal.status.to_string(),
             phase: goal.phase.clone(),
             owner: goal.owner.clone(),
+            parent_id: goal.parent_id.clone(),
             dependencies: goal.dependencies.clone(),
             canon: goal.canon.clone(),
             tags: goal.tags.clone(),
             updated: goal.updated.map(|d| d.to_string()),
             file_path: goal.file_path.to_string_lossy().to_string(),
+            completion_pct,
         }
     }
 }
@@ -296,6 +307,9 @@ pub struct DashboardData {
     pub active_goals: Vec<GoalDto>,
     pub blocked_goals: Vec<GoalDto>,
     pub total_goals: usize,
+    pub completed_goals: usize,
+    pub planned_goals: usize,
+    pub archived_goals: usize,
     pub today_exists: bool,
     pub today_path: String,
     pub today_mode: Option<String>,
@@ -447,6 +461,17 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
         }
     }
 
+    // Build parent map for sub-goals
+    let mut children_map: std::collections::HashMap<String, Vec<&Goal>> = std::collections::HashMap::new();
+    for goal in &ctx.state.goals {
+        if let Some(parent) = &goal.parent_id {
+            children_map
+                .entry(parent.clone())
+                .or_insert_with(Vec::new)
+                .push(goal);
+        }
+    }
+
     let enriched_goals: Vec<EnrichedGoalDto> = ctx
         .state
         .goals
@@ -488,12 +513,33 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
             let is_canonical = !goal.canon.is_empty();
             let completion_blocked = !blocked_by.is_empty();
 
+            // Calculate completion
+            let children = children_map.get(&goal.goal_id).map(|v| v.as_slice()).unwrap_or(&[]);
+            let completion_pct = if !children.is_empty() {
+                let total_children = children.len();
+                let sum_pct: u32 = children.iter().map(|c| {
+                     match c.status {
+                        GoalStatus::Done | GoalStatus::Archived => 100,
+                        GoalStatus::Partial => 50,
+                        _ => 0,
+                    }
+                }).sum();
+                (sum_pct / total_children as u32) as u8
+            } else {
+                 match goal.status {
+                    GoalStatus::Done | GoalStatus::Archived => 100,
+                    GoalStatus::Partial => 50,
+                    _ => 0,
+                }
+            };
+
             EnrichedGoalDto {
                 goal_id: goal.goal_id.clone(),
                 title: goal.title.clone(),
                 status: goal.status.to_string(),
                 phase: goal.phase.clone(),
                 owner: goal.owner.clone(),
+                parent_id: goal.parent_id.clone(),
                 dependencies: goal.dependencies.clone(),
                 canon: goal.canon.clone(),
                 tags: goal.tags.clone(),
@@ -505,6 +551,7 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
                 daily_references,
                 is_canonical,
                 completion_blocked,
+                completion_pct,
             }
         })
         .collect();
@@ -595,11 +642,36 @@ pub fn get_dashboard_data(state: State<AppState>) -> Result<DashboardData, Strin
 
     let summary = ctx.summary();
 
+    // Calculate additional stats
+    let completed_count = ctx
+        .state
+        .goals
+        .iter()
+        .filter(|g| g.status == GoalStatus::Done)
+        .count();
+    
+    let planned_count = ctx
+        .state
+        .goals
+        .iter()
+        .filter(|g| g.status == GoalStatus::Planned)
+        .count();
+
+    let archived_count = ctx
+        .state
+        .goals
+        .iter()
+        .filter(|g| g.status == GoalStatus::Archived)
+        .count();
+
     Ok(DashboardData {
         current_phase: summary.current_phase.as_ref().map(PhaseDto::from),
         active_goals: summary.active_goals.iter().map(GoalDto::from).collect(),
         blocked_goals: summary.blocked_goals.iter().map(GoalDto::from).collect(),
         total_goals: summary.total_goals,
+        completed_goals: completed_count,
+        planned_goals: planned_count,
+        archived_goals: archived_count,
         today_exists: summary.today_exists,
         today_path: summary.today_path.to_string_lossy().to_string(),
         today_mode: summary.today_mode.clone(),
@@ -779,6 +851,7 @@ pub struct DailyNoteDto {
     pub decisions: Vec<String>,
     pub divergences: Vec<String>,
     pub content: String,
+    pub raw_content: Option<String>,
 }
 
 impl From<&metatheos_core::DailyNote> for DailyNoteDto {
@@ -792,6 +865,7 @@ impl From<&metatheos_core::DailyNote> for DailyNoteDto {
             decisions: d.decisions.clone(),
             divergences: d.divergences.clone(),
             content: d.content.clone(),
+            raw_content: None,
         }
     }
 }
@@ -805,7 +879,20 @@ pub fn get_daily_note(date: String, state: State<AppState>) -> Result<Option<Dai
         NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
 
     let daily = ctx.get_daily(parsed_date);
-    Ok(daily.map(|d| DailyNoteDto::from(&d)))
+    
+    match daily {
+        Some(d) => {
+            let mut dto = DailyNoteDto::from(d);
+            // Read raw content to preserve full frontmatter
+            if d.file_path.exists() {
+                 if let Ok(raw) = std::fs::read_to_string(&d.file_path) {
+                     dto.raw_content = Some(raw);
+                 }
+            }
+            Ok(Some(dto))
+        },
+        None => Ok(None)
+    }
 }
 
 #[tauri::command]

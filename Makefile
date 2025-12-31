@@ -107,6 +107,17 @@ dev: preflight ## Start all Docker services
 	@echo "Ollama: http://localhost:11435"
 	@echo "Postgres: localhost:5432"
 
+metatheos-dev: ## Start Metatheos GUI (Tauri)
+	@echo "Starting Metatheos GUI..."
+	cd metatheos/metatheos-gui && cargo tauri dev
+
+dev-all: ## Start Aequitas (Docker) and Metatheos (Tauri) concurrently
+	@echo "Starting Aequitas + Metatheos..."
+	@echo "NOTE: This runs 'make dev' in the background. Use 'make stop' to kill Docker services."
+	make dev & \
+	sleep 10 && \
+	make metatheos-dev
+
 stop:
 	@echo "Stopping Unified Dev Mode..."
 	@if [ -L "dev_sessions/latest" ]; then \

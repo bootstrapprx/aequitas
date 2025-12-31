@@ -14,10 +14,20 @@
   let status = goal?.status || "planned";
   let phase = goal?.phase || "";
   let owner = goal?.owner || "";
+  let parentId = goal?.parent_id || "";
+  let level = goal?.level || "goal";
   let dependencies = goal?.dependencies?.join(", ") || "";
-  let canon = goal?.canon?.join(", ") || "";
+  let canonList = goal?.canon || [];
   let tags = goal?.tags?.join(", ") || "";
   let content = goal?.content || "";
+
+  function addCanonRef() {
+    canonList = [...canonList, ""];
+  }
+
+  function removeCanonRef(index: number) {
+    canonList = canonList.filter((_, i) => i !== index);
+  }
 
   // UI state
   let showPreview = false;
@@ -97,8 +107,10 @@
             status,
             phase: phase.trim() || null,
             owner: owner.trim() || null,
+            parent_id: parentId.trim() || null,
+            level: level || "goal",
             dependencies: parseList(dependencies),
-            canon: parseList(canon),
+            canon: canonList.filter((s) => s.trim().length > 0),
             tags: tags.trim(),
             content: content.trim(),
           },
@@ -112,8 +124,10 @@
             status,
             phase: phase.trim() || null,
             owner: owner.trim() || null,
+            parent_id: parentId.trim() || null,
+            level: level || "goal",
             dependencies: parseList(dependencies),
-            canon: parseList(canon),
+            canon: canonList.filter((s) => s.trim().length > 0),
             tags: parseList(tags),
             content: content.trim(),
           },
@@ -300,61 +314,112 @@
           </div>
         </div>
 
-        <!-- Owner -->
-        <div>
-          <label
-            for="goal-owner"
-            class="block text-sm font-medium text-gray-300 mb-1"
-          >
-            Owner
-          </label>
-          <input
-            id="goal-owner"
-            type="text"
-            bind:value={owner}
-            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Team or person responsible"
-          />
+        <!-- Level and Owner (side by side) -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              for="goal-level"
+              class="block text-sm font-medium text-gray-300 mb-1"
+            >
+              Level
+            </label>
+            <select
+              id="goal-level"
+              bind:value={level}
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="objective">Objective</option>
+              <option value="goal">Goal</option>
+              <option value="task">Task</option>
+            </select>
+          </div>
+
+          <div>
+            <label
+              for="goal-owner"
+              class="block text-sm font-medium text-gray-300 mb-1"
+            >
+              Owner
+            </label>
+            <input
+              id="goal-owner"
+              type="text"
+              bind:value={owner}
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Team or person responsible"
+            />
+          </div>
         </div>
 
-        <!-- Dependencies -->
-        <div>
-          <label
-            for="goal-dependencies"
-            class="block text-sm font-medium text-gray-300 mb-1"
-          >
-            Dependencies
-          </label>
-          <input
-            id="goal-dependencies"
-            type="text"
-            bind:value={dependencies}
-            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Comma-separated goal IDs (e.g., G-100, G-101)"
-          />
-          <p class="text-gray-400 text-sm mt-1">
-            Goals that must be completed before this one
-          </p>
+        <!-- Parent Goal and Dependencies -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              for="goal-parent"
+              class="block text-sm font-medium text-gray-300 mb-1"
+            >
+              Parent Goal
+            </label>
+            <input
+              id="goal-parent"
+              type="text"
+              bind:value={parentId}
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Parent ID (e.g. G-000)"
+            />
+          </div>
+
+          <div>
+            <label
+              for="goal-dependencies"
+              class="block text-sm font-medium text-gray-300 mb-1"
+            >
+              Dependencies
+            </label>
+            <input
+              id="goal-dependencies"
+              type="text"
+              bind:value={dependencies}
+              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Comma-separated IDs"
+            />
+          </div>
         </div>
 
-        <!-- Canon References -->
+        <!-- Canon References (List Builder) -->
         <div>
-          <label
-            for="goal-canon"
-            class="block text-sm font-medium text-gray-300 mb-1"
-          >
+          <label class="block text-sm font-medium text-gray-300 mb-2">
             Canon References
           </label>
-          <input
-            id="goal-canon"
-            type="text"
-            bind:value={canon}
-            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Comma-separated references"
-          />
-          <p class="text-gray-400 text-sm mt-1">
-            Related canonical documents or sources
-          </p>
+
+          <div class="space-y-2 mb-2">
+            {#each canonList as ref, i}
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  bind:value={canonList[i]}
+                  class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Reference (e.g. CANON-I)"
+                />
+                <button
+                  type="button"
+                  on:click={() => removeCanonRef(i)}
+                  class="px-3 py-2 bg-red-900/50 hover:bg-red-900 text-red-200 rounded transition-colors"
+                  aria-label="Remove reference"
+                >
+                  ✕
+                </button>
+              </div>
+            {/each}
+          </div>
+
+          <button
+            type="button"
+            on:click={addCanonRef}
+            class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+          >
+            <span>+ Add Reference</span>
+          </button>
         </div>
 
         <!-- Tags -->
@@ -422,14 +487,24 @@
     >
       <div>
         {#if isEditMode}
-          <button
-            type="button"
-            on:click={handleDelete}
-            disabled={saving}
-            class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
-          >
-            Delete Goal
-          </button>
+          <div class="flex gap-2">
+            <button
+              type="button"
+              on:click={handleDelete}
+              disabled={saving}
+              class="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              on:click={() => dispatch("create-subgoal", { parentId: goalId })}
+              disabled={saving}
+              class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded transition-colors"
+            >
+              Add Sub-goal
+            </button>
+          </div>
         {/if}
       </div>
 

@@ -3,7 +3,7 @@ use metatheos_core::{
 };
 use metatheos_core::reasoner::{ReasoningEngine, ReasonerContextUsed, Intent};
 use metatheos_core::llm::runtime::OllamaRuntimeController;
-use metatheos_core::reasoner::DraftArtifact;
+
 use metatheos_core::llm::LLMClient;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

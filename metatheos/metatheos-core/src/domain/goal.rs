@@ -84,12 +84,19 @@ pub struct Goal {
     pub status: GoalStatus,
     pub phase: Option<String>,
     pub owner: Option<String>,
+    pub parent_id: Option<String>,
+    #[serde(default = "default_level")]
+    pub level: Option<String>,
     pub dependencies: Vec<String>,
     pub canon: Vec<String>,
     pub updated: Option<NaiveDate>,
     pub tags: Vec<String>,
     pub file_path: PathBuf,
     pub content: String,
+}
+
+fn default_level() -> Option<String> {
+    Some("goal".to_string())
 }
 
 impl Goal {

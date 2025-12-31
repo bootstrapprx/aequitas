@@ -159,6 +159,8 @@
     });
 </script>
 
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
     class="markdown-body prose dark:prose-invert max-w-none"
     bind:this={container}

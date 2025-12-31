@@ -51,7 +51,7 @@ pub fn get_governance_git_status(state: State<AppState>) -> Result<GitStatus, St
             current_branch: None,
             is_clean: true,
             modified_files: vec![],
-            error: Some("Governance directory is not a Git repository".to_string()),
+            error: Some("Repository is not a Git repository".to_string()),
         });
     }
 
