@@ -1,0 +1,406 @@
+{
+  "name": "metatheos",
+  "version": "0.3.0",
+  "description": "Metatheos is the governance bridge and meta-application for Aequitas. It operates on the /governance folder as its source of truth, providing deterministic validation, goal management, and architectural oversight. Metatheos cannot be perceived by Aequitas by design—it is the architect's cockpit.",
+
+  "philosophy": {
+    "core_principles": [
+      "Local-first & Deterministic: Must work fully offline with deterministic behavior (same input → same governance state)",
+      "Built for Architects: Information density > whitespace, precision > friendliness, power-user efficiency over hand-holding",
+      "Calm Design: No gamification, no badges, no confetti. Progress shown via rigorous charts/data. Interface feels like a cockpit or IDE",
+      "Validation-First: Every write operation must pass through metatheos-core validation logic",
+      "CLI-First Development: Core → CLI → GUI. The GUI is a view, not the system itself",
+      "Canon Safety: AI proposes changes to Canon, never overwrites directly. Amendment Protocol required for 00_MASTER modifications",
+      "Information Quality: All details matter, including the quality and precision of information presented and stored"
+    ],
+    "non_goals": [
+      "Never suggest features that gamify work or introduce hidden cloud dependencies",
+      "No 'magic' AI features that silently alter data without audit trails",
+      "Never implement features that bypass governance invariants",
+      "No wizard-style hand-holding for core features",
+      "No general-purpose note-taking or multi-user collaboration"
+    ]
+  },
+
+  "system_boundary": {
+    "metatheos_vs_aequitas": "Metatheos CANNOT be perceived by Aequitas by design. This is a strict security and architectural boundary.",
+    "data_exchange_protocol": {
+      "description": "The ONLY direct exchange between systems is through analyzed and translated data: crash logs, tickets, suggestions",
+      "security_constraint": "Data exchange is NOT direct for security reasons",
+      "translation_layer": "Data from Aequitas must be ANALYZED and TRANSLATED into metatheos's database schema before storage",
+      "database_isolation": "Metatheos DB (SurrealDB embedded) is completely separate from Aequitas DB. Different schemas, different semantics",
+      "data_types": [
+        "Crash logs from Aequitas (analyzed for governance issues)",
+        "User tickets (translated into Goals or Decisions)",
+        "Feature suggestions (evaluated against governance constraints)"
+      ]
+    },
+    "task_detection": {
+      "maintenance_mode": "If task is about metatheos itself (bug fix, feature addition, refactoring metatheos code)",
+      "problem_handling_mode": "If task is handling user-reported problems via crash logs, tickets, or suggestions from Aequitas",
+      "detection_method": "Claude should identify mode from task context before proceeding"
+    }
+  },
+
+  "scope": {
+    "primary": {
+      "path": "/metatheos",
+      "access": "read-write",
+      "description": "Tooling Space. Active development strictly confined to this directory (core, cli, gui)"
+    },
+    "data": {
+      "path": "/governance",
+      "access": "read-write",
+      "description": "State Space. The tool manages the state, but state usually outlives the tool. Changes to storage formats (markdown structure) must be backward compatible",
+      "restrictions": {
+        "00_MASTER": "READ-ONLY by default. Changes require Amendment Protocol (human intervention or dedicated CLI command). AI should propose changes (draft/PR), not overwrite",
+        "01_DAILY": "read-write",
+        "02_PHASES": "read-write",
+        "03_GOALS_EPICS": "read-write",
+        "04_DECISIONS": "read-write (immutable after finalized)",
+        "05_AUDITS": "read-write",
+        "06_PROMPTS": "read-write (AI prompts stored and versioned here)"
+      }
+    },
+    "reference": {
+      "path": "/aequitas",
+      "access": "read-only",
+      "description": "Managed System. Metatheos may read aequitas code to perform audits or generate mapping, but should NOT modify aequitas source code directly unless explicitly running a 'scaffold' or 'refactor' command defined in a valid Phase"
+    }
+  },
+
+  "tech_stack": {
+    "backend": {
+      "language": "Rust 1.92+",
+      "focus": "Safety, correctness, type-system validation of governance rules",
+      "libraries": [
+        "surrealdb (embedded) - Local-first data persistence",
+        "serde - Serialization/deserialization",
+        "tokio - Async runtime",
+        "thiserror - Error handling",
+        "walkdir - Filesystem traversal",
+        "clap - CLI argument parsing",
+        "comfy-table - Terminal table formatting"
+      ]
+    },
+    "frontend": {
+      "framework": "Svelte 5",
+      "languages": ["TypeScript", "HTML", "CSS"],
+      "styling": "Tailwind CSS",
+      "build": "Vite 6",
+      "focus": "Reactivity, 'Calm' UI, high information density for architects",
+      "design_constraints": [
+        "Dark mode default",
+        "Monospaced data display where appropriate",
+        "Clear hierarchy and visual structure",
+        "Architect-grade aesthetics (cockpit/IDE feel)"
+      ]
+    },
+    "bridge": {
+      "framework": "Tauri 2",
+      "focus": "Security, efficient serialization between Rust/JS, desktop application delivery"
+    }
+  },
+
+  "architecture": {
+    "workflow": "CLI-First Development Pattern",
+    "layers": [
+      "1. Core (metatheos-core): Implement domain logic, validation, persistence",
+      "2. CLI (metatheos-cli): Expose functionality for verification and scriptability",
+      "3. GUI (metatheos-gui): Wrap core logic in Tauri commands for desktop interface"
+    ],
+    "rationale": "This ensures the GUI is just a 'view' into the system. If the GUI breaks, the CLI still governs"
+  },
+
+  "file_organization": {
+    "metatheos-core": {
+      "src/domain/": "Pure Rust types (Goal, DailyNote, Decision, Phase)",
+      "src/store/": "Database interactions (SurrealDB embedded)",
+      "src/validation/": "Business rules and governance invariants",
+      "src/parser/": "Markdown frontmatter parsing",
+      "tests/": "Unit tests (mandatory for governance logic) and integration tests for store migrations"
+    },
+    "metatheos-cli": {
+      "src/main.rs": "CLI entry point and command routing",
+      "src/commands/": "Individual command implementations (audit, goals, today, phase)",
+      "src/output/": "Formatters (markdown, JSON, table)"
+    },
+    "metatheos-gui": {
+      "src-tauri/src/commands.rs": "API layer - Tauri commands exposing core functionality",
+      "src-tauri/src/state.rs": "Application state management",
+      "src/lib/components/": "Reusable Svelte UI components (atoms, molecules)",
+      "src/routes/": "Application pages/views",
+      "src/lib/stores/": "Svelte stores for UI state"
+    }
+  },
+
+  "governance_invariants": [
+    "Every Goal must have a valid status (active, blocked, completed, archived)",
+    "Every Decision must be immutable after finalizing",
+    "No Orphaned Goals (must belong to a Phase or reference Canon)",
+    "Goal dependencies must reference existing goals",
+    "Goal status transitions must be valid (active→blocked/completed/archived, blocked→active/archived, completed→archived)",
+    "Goal IDs match pattern G-XXX, Decision IDs match pattern D-XXX",
+    "Files under docs/canonical/ (Canon) are read-only via automation",
+    "All write operations must pass through validation layer"
+  ],
+
+  "ai_integration": {
+    "status": "Phase 4 (Planned)",
+    "model": "self_governance",
+    "constraints": [
+      "AI is a SUBJECT of the governance system, not above it",
+      "AI prompts must be stored in 06_PROMPTS and versioned",
+      "AI outputs (reasoning) must be logged/audited if they lead to decisions",
+      "AI suggests, Human decides (Governed Advisor pattern)",
+      "AI CANNOT perform Executive Actions (finalize Phase, approve Budget) without explicit human confirmation",
+      "No background AI processes that silently alter data",
+      "All AI features must be explicit tools invoked by the user"
+    ]
+  },
+
+  "common_commands": {
+    "development": {
+      "build_cli": "cargo build --release",
+      "build_gui": "cd metatheos-gui && npm install && npm run build && cargo tauri build",
+      "run_gui_dev": "cd metatheos-gui && cargo tauri dev",
+      "run_tests": "cargo test",
+      "lint": "cargo clippy && cargo fmt --check"
+    },
+    "governance": {
+      "audit": "cargo run --bin metatheos-cli -- audit --root ../governance",
+      "list_goals": "cargo run --bin metatheos-cli -- goals --root ../governance",
+      "today": "cargo run --bin metatheos-cli -- today --root ../governance",
+      "phase_status": "cargo run --bin metatheos-cli -- phase current --root ../governance"
+    },
+    "aliases": {
+      "recommended_alias": "alias meta='cargo run --bin metatheos-cli -- --root /path/to/governance'",
+      "production_symlink": "sudo ln -s /path/to/metatheos/target/release/metatheos-cli /usr/local/bin/meta",
+      "usage": "After setup, use 'meta audit', 'meta goals', etc. from any directory"
+    }
+  },
+
+  "validation_strictness": {
+    "pre_implementation": {
+      "bigger_tasks": "Run 'meta audit' FIRST before implementing changes on larger/complex tasks",
+      "smaller_tasks": "Skip pre-validation for small, isolated changes",
+      "criteria": "Bigger tasks = multi-file changes, governance-critical logic, new features affecting invariants"
+    },
+    "post_implementation": {
+      "auto_validate": false,
+      "responsibility": "Leave validation to the developer. Claude should NOT auto-run 'meta audit' after making changes",
+      "recommendation": "Suggest running 'meta audit' at the end, but do not execute automatically"
+    }
+  },
+
+  "cross_boundary_operations": {
+    "description": "Operations that affect both metatheos AND aequitas (e.g., 'Generate Phase 5 API stubs in aequitas')",
+    "primary_behavior": "REFUSE and ask for explicit permission. This is the preferred governance method",
+    "alternative_behavior": "Propose a two-step workflow (metatheos plan → aequitas scaffold) when this is more beneficial",
+    "exception": "Execute directly if the operation is part of a documented Phase with explicit scope",
+    "rationale": "Maintains strict boundary between governance tool (metatheos) and managed system (aequitas)"
+  },
+
+  "amendment_protocol": {
+    "target": "Changes to Canon (00_MASTER directory - Constitution, foundational documents)",
+    "workflow": {
+      "step_1": "Claude identifies proposed change to Canon",
+      "step_2": "Use draft PR mechanism (GitHub draft pull request) to propose the amendment",
+      "step_3": "Human reviews, discusses, and approves/rejects the amendment",
+      "step_4": "If approved, human merges the PR to finalize the amendment"
+    },
+    "forbidden_approaches": [
+      "DO NOT create proposal files in the repository (pollutes the repo)",
+      "DO NOT directly edit Canon files",
+      "DO NOT auto-commit Canon changes"
+    ],
+    "fallback": "If draft PR mechanism is unavailable or inappropriate, refuse and instruct user to manually edit Canon with full awareness of constitutional implications"
+  },
+
+  "error_handling": {
+    "style": "Descriptive and technical, not vague",
+    "requirements": [
+      "Use thiserror for structured error types",
+      "Propagate errors to CLI/GUI with context",
+      "Never silently fail governance validation",
+      "Exit codes: 0 = success, 1 = errors (or warnings in strict mode)"
+    ]
+  },
+
+  "testing_requirements": {
+    "unit_tests": "Mandatory for all governance logic in metatheos-core",
+    "integration_tests": "Required for store migrations and multi-component workflows",
+    "validation_tests": "Must cover all governance invariants",
+    "regression_tests": "For backward compatibility of storage formats"
+  },
+
+  "agent_specializations": {
+    "rust_backend": {
+      "scope": "metatheos-core, metatheos-cli, src-tauri backend",
+      "focus": [
+        "Strict type checking and ownership patterns",
+        "Comprehensive error handling with thiserror",
+        "Business logic validation and governance invariants",
+        "SurrealDB embedded patterns and queries",
+        "Async/await patterns with tokio"
+      ]
+    },
+    "gui_frontend": {
+      "scope": "metatheos-gui Svelte frontend",
+      "focus": [
+        "Svelte 5 runes ($state, $derived, $effect)",
+        "Responsive but information-dense layouts",
+        "Architect-grade aesthetics (dark mode, monospaced data, clear hierarchy)",
+        "Tauri IPC patterns (invoke commands, event listeners)",
+        "TypeScript type safety for all Tauri command interfaces"
+      ]
+    }
+  },
+
+  "code_style": {
+    "rust": {
+      "formatter": "cargo fmt",
+      "linter": "cargo clippy",
+      "conventions": [
+        "Use idiomatic Rust patterns (iterators, pattern matching, Result/Option)",
+        "Prefer composition over inheritance",
+        "Keep functions focused and small",
+        "Use descriptive variable names (no single letters except iterators)"
+      ]
+    },
+    "typescript_svelte": {
+      "formatter": "prettier",
+      "conventions": [
+        "Use Svelte 5 runes for reactivity",
+        "Type all function signatures and props",
+        "Prefer composition (small components) over large monoliths",
+        "Use Tailwind utility classes (avoid custom CSS unless necessary)"
+      ]
+    }
+  },
+
+  "core_mission": {
+    "priority_1": "Finish Aequitas - Primary objective: Bring the Aequitas accounting system to production completion",
+    "priority_2": "Leave a Trace - Secondary objective: Maintain governance records, decisions, audit trails, and architectural documentation",
+    "priority_3": "Continue Evolution - Tertiary objective: Provide ongoing assistance and upgrades after Aequitas reaches production",
+    "principle": "Everything else is secondary to these three pillars. All metatheos features must serve at least one of these objectives."
+  },
+
+  "current_roadmap": {
+    "phase_1_stabilize_core": {
+      "status": "IN_PROGRESS",
+      "priority": "HIGH",
+      "objective": "Make existing goal/phase/daily workflows rock-solid before adding new features",
+      "tasks": [
+        "Resolve markdown vs SurrealDB persistence strategy (choose one, remove dual state)",
+        "Test all CLI commands (audit, goals, today, phase) with integration tests",
+        "Verify Git integration commands work end-to-end (status, commit, history)",
+        "Audit GUI component data flows (ensure two-way binding works for all editors)",
+        "Fix any broken Tauri commands or stale data issues"
+      ]
+    },
+    "phase_2_aequitas_dashboard": {
+      "status": "PLANNED",
+      "priority": "HIGH",
+      "objective": "Build custom dashboard to track 'Finish Aequitas' mission progress",
+      "tasks": [
+        "Design dashboard metrics (completion %, phase status, blockers, critical path)",
+        "Implement dashboard calculator in metatheos-core",
+        "Create Tauri command get_aequitas_dashboard",
+        "Build AequitasDashboard.svelte component with real-time updates",
+        "Wire dashboard to governance folder data sources"
+      ]
+    },
+    "phase_3_information_consolidation": {
+      "status": "PLANNED",
+      "priority": "MEDIUM",
+      "objective": "Create single source of truth documentation",
+      "tasks": [
+        "Merge 10+ scattered .md files into comprehensive README.md",
+        "Create /docs folder for design documentation (architecture, ai-integration, aequitas-bridge)",
+        "Archive historical docs (FOLDER_CLEANUP, ICONS_SETUP, INFORMATION_ENRICHMENT)",
+        "Remove duplicate/outdated information"
+      ]
+    },
+    "phase_4_ai_integration": {
+      "status": "DEFERRED",
+      "priority": "LOW",
+      "objective": "Wire up reasoner and LLM modules after core stability achieved",
+      "tasks": [
+        "Connect ReasoningEngine to CLI (meta reason <query>)",
+        "Wire AIService to GUI Assistant component",
+        "Implement governed prompts (stored in 06_PROMPTS/)",
+        "Complete LLM context builder and prompt logger integration"
+      ]
+    }
+  },
+
+  "known_issues": {
+    "llm_ai_reasoning": "Reasoner and LLM modules exist but not fully wired to GUI workflows or CLI commands",
+    "surrealdb_persistence": "Database schema defined but migration from markdown incomplete. Risk of dual state management inconsistency",
+    "git_integration": "Commands exist but may not be fully tested or integrated into workflows",
+    "gui_data_flows": "Some Svelte components may have broken two-way data binding with Tauri backend"
+  },
+
+  "context_notes": [
+    "Metatheos operates as a governance bridge—it sits BETWEEN the human architect and the Aequitas codebase",
+    "The /governance folder is the single source of truth for project state, decisions, and phases",
+    "Storage format changes must be backward compatible—the state outlives the tool",
+    "When in doubt about governance rules, run 'meta audit' to validate compliance (especially on bigger tasks)",
+    "The CLI must remain functional even if the GUI breaks (separation of concerns)",
+    "All AI-generated content must be auditable and traceable to specific prompts",
+    "Canon (00_MASTER) represents constitutional law—changes require formal amendment protocol via draft PR",
+    "Metatheos and Aequitas have separate databases and schemas. Data exchange requires translation, not direct import",
+    "Task detection matters: distinguish between metatheos maintenance vs. problem handling from Aequitas",
+    "Cross-boundary operations (affecting both systems) require explicit permission unless part of documented Phase",
+    "Information quality is paramount—precision in data, documentation, and communication is non-negotiable",
+    "Current focus: Phase 1 (Stabilize Core) - do not add new features until existing workflows are reliable",
+    "See OPTIMIZATION_PLAN.md for detailed roadmap and week-by-week tasks"
+  ],
+
+  "workflow_examples": {
+    "example_1_maintenance": {
+      "scenario": "User asks: 'Add a new CLI command to export goals as CSV'",
+      "detection": "This is metatheos maintenance (adding feature to metatheos itself)",
+      "approach": [
+        "1. Identify as maintenance mode",
+        "2. Determine if it's a bigger task (yes - multi-file: core, CLI, tests)",
+        "3. Run 'meta audit' first to ensure current state is clean",
+        "4. Implement: metatheos-core (CSV formatter) → metatheos-cli (command) → tests",
+        "5. Suggest user run 'meta audit' and test the new command"
+      ]
+    },
+    "example_2_problem_handling": {
+      "scenario": "User provides: 'Aequitas crash log shows null pointer in /api/journals endpoint'",
+      "detection": "This is problem handling mode (data from Aequitas)",
+      "approach": [
+        "1. Identify as problem handling mode",
+        "2. Analyze crash log for governance implications",
+        "3. Translate into metatheos domain: Create ticket in governance/05_AUDITS or goal in 03_GOALS",
+        "4. DO NOT directly modify Aequitas code (read-only boundary)",
+        "5. Store analyzed data in metatheos DB with proper categorization"
+      ]
+    },
+    "example_3_cross_boundary": {
+      "scenario": "User asks: 'Generate Phase 5 API endpoints for budget module in Aequitas'",
+      "detection": "Cross-boundary operation (metatheos plan + aequitas scaffold)",
+      "approach": [
+        "1. Check if Phase 5 is documented in governance/02_PHASES",
+        "2a. If documented with explicit scope: Execute two-step workflow (metatheos plan → propose aequitas changes)",
+        "2b. If NOT documented or scope unclear: REFUSE and ask for explicit permission + Phase documentation",
+        "3. Never silently modify Aequitas code without governance backing"
+      ]
+    },
+    "example_4_canon_amendment": {
+      "scenario": "User suggests: 'We should update the Canon to allow AI to auto-approve low-risk decisions'",
+      "detection": "Canon amendment request (00_MASTER change)",
+      "approach": [
+        "1. Identify as Canon amendment (constitutional change)",
+        "2. Prepare draft PR with proposed changes to relevant Canon document",
+        "3. Include rationale, governance implications, and risk analysis in PR description",
+        "4. Submit draft PR for human review",
+        "5. DO NOT merge or commit directly"
+      ]
+    }
+  }
+}

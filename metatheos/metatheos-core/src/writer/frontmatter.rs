@@ -113,6 +113,8 @@ mod tests {
             status: GoalStatus::Active,
             phase: Some("P1".to_string()),
             owner: Some("@alice".to_string()),
+            parent_id: None,
+            level: Some("goal".to_string()),
             dependencies: vec!["goal-dep1".to_string(), "goal-dep2".to_string()],
             canon: vec!["doc.md".to_string()],
             tags: vec!["tag1".to_string(), "tag2".to_string()],

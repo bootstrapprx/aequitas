@@ -29,7 +29,7 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
                 if let Ok(note) = MarkdownParser::parse_daily(entry.path()) {
                     let id = format!("daily_notes:{}", note.date.format("%Y-%m-%d"));
                     let _: std::result::Result<Option<crate::DailyNote>, _> = store.db
-                        .create((&id))
+                        .create(&id)
                         .content(note)
                         .await;
                 }
@@ -37,8 +37,8 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
         }
     }
 
-    // GOALS
-    let goals_dir = root.join("03_GOALS");
+    // GOALS (03_GOALS_EPICS directory)
+    let goals_dir = root.join("03_GOALS_EPICS");
     if goals_dir.exists() {
         for entry in WalkDir::new(&goals_dir).into_iter().filter_map(|e| e.ok()) {
             if entry.path().extension().map_or(false, |e| e == "md") {
@@ -46,7 +46,7 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
                      // ID likely "goals:G-25-..."
                      let id = format!("goals:{}", goal.goal_id);
                      let _: std::result::Result<Option<crate::Goal>, _> = store.db
-                        .create((&id))
+                        .create(&id)
                         .content(goal)
                         .await;
                 }
@@ -54,16 +54,16 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
         }
     }
 
-    // PHASES
-    let master_dir = root.join("00_MASTER");
-    if master_dir.exists() {
-         for entry in WalkDir::new(&master_dir).into_iter().filter_map(|e| e.ok()) {
+    // PHASES (02_PHASES directory)
+    let phases_dir = root.join("02_PHASES");
+    if phases_dir.exists() {
+         for entry in WalkDir::new(&phases_dir).into_iter().filter_map(|e| e.ok()) {
             let fname = entry.file_name().to_string_lossy();
             if fname.starts_with("PHASE") && fname.ends_with(".md") {
                 if let Ok(phase) = MarkdownParser::parse_phase(entry.path()) {
                      let id = format!("phases:{}", phase.phase_id);
                      let _: std::result::Result<Option<crate::Phase>, _> = store.db
-                        .create((&id))
+                        .create(&id)
                         .content(phase)
                         .await;
                 }
@@ -81,7 +81,7 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
                     let stem = entry.path().file_stem().unwrap().to_string_lossy();
                     let id = format!("audits:{}", stem);
                     let _: std::result::Result<Option<crate::AuditRecord>, _> = store.db
-                        .create((&id))
+                        .create(&id)
                         .content(audit)
                         .await;
                 }

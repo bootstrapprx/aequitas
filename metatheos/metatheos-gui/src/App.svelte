@@ -1,4 +1,5 @@
 <script>
+  import AequitasDashboard from "./lib/AequitasDashboard.svelte";
   import Dashboard from "./lib/Dashboard.svelte";
   import GovernanceExplorer from "./lib/GovernanceExplorer.svelte";
   import GoalExplorer from "./lib/GoalExplorer.svelte";
@@ -36,6 +37,15 @@
   function openDock() {
     chatDockStore.setMode("bottom");
     chatDockStore.setOpen(true);
+  }
+
+  function handleDashboardNav(event) {
+    const { view, filter, goalId } = event.detail;
+    if (view) {
+      currentView = view;
+      // TODO: Apply filters/goalId when navigating to goals view
+      console.log("Navigate to:", view, { filter, goalId });
+    }
   }
 </script>
 
@@ -120,7 +130,7 @@
     {:else}
       <div class="p-8 overflow-y-auto h-full">
         {#if currentView === "dashboard"}
-          <Dashboard />
+          <AequitasDashboard on:navigate={handleDashboardNav} />
         {:else if currentView === "daily"}
           <DailyEditor />
         {:else if currentView === "current-day"}

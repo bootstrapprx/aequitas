@@ -32,9 +32,18 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::new(governance_root.clone(), repo_root))
         .setup(move |app| {
+             // PHASE 1 CRITICAL: SurrealDB enabled as read-only cache for dashboard performance
+             // See PERSISTENCE_STRATEGY.md and SURREALDB_MIGRATION.md for design
+             //
+             // Architecture:
+             // - Markdown files remain the single source of truth
+             // - SurrealDB provides fast, indexed queries for dashboard
+             // - GUI writes to markdown → migration updates DB
+             // - File watcher keeps DB synchronized
+
              let handle = app.handle().clone();
              let gov_root = governance_root.clone();
-             
+
              tauri::async_runtime::spawn(async move {
                  let state = handle.state::<AppState>();
                  let db_path = gov_root.join(".metatheos.db"); // Embedded DB folder
@@ -42,12 +51,15 @@ fn main() {
                  match metatheos_core::store::SurrealStore::init(db_path).await {
                      Ok(store) => {
                          let store = std::sync::Arc::new(store);
-                         
+
                          // Run Migration
+                         println!("Running SurrealDB migration...");
                          if let Err(e) = metatheos_core::store::migration::migrate_all(&store, &gov_root).await {
                              eprintln!("Migration failed: {}", e);
+                         } else {
+                             println!("Migration complete - DB cache ready");
                          }
-                         
+
                          // Set state
                          *state.db.lock().unwrap() = Some(store);
                          println!("SurrealDB initialized and state updated.");
@@ -55,6 +67,8 @@ fn main() {
                      Err(e) => eprintln!("Failed to init SurrealDB: {}", e),
                  }
              });
+
+             println!("Metatheos GUI started (SurrealDB caching mode)");
              Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -73,6 +87,7 @@ fn main() {
             commands::get_goals_by_status,
             commands::get_goals_by_phase,
             commands::get_dashboard_data,
+            commands::get_aequitas_dashboard,
             commands::get_daily_context,
             commands::update_goal_status,
             commands::create_daily_note,

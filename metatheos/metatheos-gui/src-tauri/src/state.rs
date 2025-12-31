@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 use std::path::PathBuf;
+use std::sync::Arc;
 use metatheos_core::store::SurrealStore;
 
 pub struct AppState {

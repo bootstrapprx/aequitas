@@ -294,6 +294,8 @@ mod tests {
             status: GoalStatus::Active,
             phase: Some("P1".to_string()),
             owner: None,
+            parent_id: None,
+            level: Some("goal".to_string()),
             dependencies: vec![],
             canon: vec![],
             tags: vec![],
