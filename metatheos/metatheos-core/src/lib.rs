@@ -10,6 +10,7 @@ pub mod writer;
 pub mod reasoner;
 pub mod store;
 pub mod dashboard;
+pub mod watcher;
 
 pub use domain::*;
 pub use governance::{
@@ -24,3 +25,4 @@ pub use llm::{AIService, AIResponse, StatusSuggestion, ClaudeClient, ContextBuil
 pub use writer::{GoalWriter, PhaseWriter, DailyWriter};
 pub use reasoner::{ReasoningEngine, StructuredResult};
 pub use dashboard::{AequitasDashboard, DashboardCalculator};
+pub use watcher::{FileWatcher, FileChangeEvent, EntityType, ChangeKind};

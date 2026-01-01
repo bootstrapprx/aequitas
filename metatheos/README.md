@@ -1,39 +1,24 @@
-# Aequitas Meta Engine
+# Metatheos
 
-**Version:** 0.3.0 (Phase 3 - Write Operations Complete)
+**Version:** 2.0.0 (Consolidation Release)
 **Status:** Production Ready ✅
 
-A local-first, deterministic governance tool for the Aequitas project.
+A local-first, deterministic governance engine for the Aequitas project.
 
 ## Overview
 
-The Meta Engine operates on the `/governance` folder as its source of truth. It provides:
+Metatheos operates on markdown files in the `/governance` folder as its single source of truth, with an optional SurrealDB read-cache for performance. It provides:
 
 - **Governance validation** — Enforce invariants, detect gaps, surface inconsistencies
-- **Goal management** — Query, filter, and **update** goals by status/phase (read & write)
-- **Daily workflow** — Create and manage daily notes (with template generation)
+- **Goal management** — Query, filter, and update goals by status/phase
+- **Daily workflow** — Create and manage daily notes with templates
 - **Phase tracking** — Monitor phase coherence and transitions
 - **Canon boundary enforcement** — Read-only access to canonical documents
-- **Desktop GUI** — Full-featured Tauri app with real-time updates and notifications
-- **Write Operations** — Update goal statuses, create daily notes (Phase 3 ✅)
+- **Desktop GUI** — Full-featured Tauri app with real-time updates
+- **CLI Tools** — Command-line interface for automation and scripting
+- **SurrealDB Caching** — Optional high-performance read cache (markdown remains authoritative)
 
-## Architecture
-
-```
-meta-engine/
-├── meta-core/       # Core library (domain models, parser, validator, query)
-├── meta-cli/        # Command-line interface
-└── meta-gui/        # Desktop GUI (Tauri + Svelte)
-    ├── src-tauri/   # Rust backend
-    └── src/         # Svelte frontend
-```
-
-**Built with:**
-- **Core:** Rust 1.92+, Serde, Walkdir
-- **CLI:** Clap, Comfy-table
-- **GUI:** Tauri 2, Svelte 5, Vite 6, Tailwind CSS
-
-## Installation
+## Quick Start
 
 ### Prerequisites
 
@@ -43,417 +28,181 @@ meta-engine/
 
 **For GUI (additional):**
 - Node.js 18+ and npm
-- System dependencies for Tauri (see [Tauri Prerequisites](https://tauri.app/v2/guides/prerequisites/))
+- Tauri prerequisites ([see guide](https://tauri.app/v2/guides/prerequisites/))
 
-### Build CLI from Source
+### Build from Source
 
 ```bash
-cd meta-engine
+# Clone repository (if not already)
+cd /path/to/aequitas/metatheos
+
+# Build CLI
 cargo build --release
-```
 
-The CLI binary will be at: `target/release/meta-cli`
-
-### Build GUI from Source
-
-```bash
-cd meta-engine/meta-gui
-
-# Install npm dependencies
+# Build GUI
+cd metatheos-gui
 npm install
-
-# Run in development mode
-npm run dev
-
-# Or build for production
 npm run build
 cargo tauri build
 ```
 
-The desktop app will be in: `src-tauri/target/release/`
+**Binaries:**
+- CLI: `metatheos/metatheos-cli/target/release/metatheos`
+- GUI: `metatheos/metatheos-gui/src-tauri/target/release/metatheos-gui`
 
 ### Create Alias (Recommended)
 
-Add to your `.bashrc` or `.zshrc`:
+Add to `.bashrc` or `.zshrc`:
 
 ```bash
-alias meta="/path/to/aequitas/meta-engine/target/release/meta-cli --root /path/to/aequitas/governance"
+alias metatheos="/path/to/aequitas/metatheos/metatheos-cli/target/release/metatheos --root /path/to/aequitas/governance"
 ```
 
-Or create a symlink:
+Or symlink:
 
 ```bash
-sudo ln -s /path/to/aequitas/meta-engine/target/release/meta-cli /usr/local/bin/meta
+sudo ln -s /path/to/aequitas/metatheos/metatheos-cli/target/release/metatheos /usr/local/bin/metatheos
 ```
 
-## Usage
+## Architecture
 
-### Commands
-
-#### `meta audit`
-
-Validate governance integrity.
-
-```bash
-# Run audit with markdown output
-meta audit
-
-# JSON output
-meta audit --format json
-
-# Table output
-meta audit --format table
-
-# Treat warnings as errors
-meta audit --strict
+```
+metatheos/
+├── metatheos-core/    # Core library (models, parser, validator, store)
+├── metatheos-cli/     # Command-line interface
+└── metatheos-gui/     # Desktop GUI (Tauri + Svelte)
+    ├── src-tauri/     # Rust backend
+    └── src/           # Svelte frontend
 ```
 
-**Exit codes:**
-- `0` — No errors
-- `1` — Errors found (or warnings in strict mode)
+**Philosophy:** Markdown Authoritative, DB Read-Cache
+- Markdown files are the single source of truth
+- SurrealDB provides fast read-cache (optional)
+- All writes go to filesystem first, then DB async
 
-#### `meta goals`
+**Built with:**
+- **Core:** Rust, Serde, SurrealDB
+- **CLI:** Clap, Comfy-table, Tokio
+- **GUI:** Tauri 2, Svelte 5, Vite 6, Tailwind CSS, D3.js
 
-List goals with filtering.
+## Documentation
 
-```bash
-# List all goals
-meta goals
+- **[User Guide](docs/USER_GUIDE.md)** — Daily workflows and command usage
+- **[Architecture](docs/ARCHITECTURE.md)** — Technical design and persistence strategy
+- **[Contributing](docs/CONTRIBUTING.md)** — Development guidelines
+- **[Changelog](docs/CHANGELOG.md)** — Version history and migration notes
 
-# Filter by status
-meta goals --status active
-meta goals --status blocked
-meta goals --status completed
+## Key Features
 
-# Filter by phase
-meta goals --phase 4
-
-# Filter by tag
-meta goals --tag backend
-
-# Combine filters
-meta goals --status active --phase 4
-
-# Output formats
-meta goals --format table   # default
-meta goals --format markdown
-meta goals --format json
-```
-
-#### `meta goal <action>`
-
-Operate on individual goals.
+### CLI Commands
 
 ```bash
-# Show goal details
-meta goal show G-042
+# Validate governance integrity
+metatheos scan
+
+# List and filter goals
+metatheos goals --status active
+metatheos goals --phase 4
 
 # Update goal status
-meta goal set G-042 completed
-meta goal set G-043 blocked
+metatheos goal set G-042 done
 
-# Show dependency tree
-meta goal deps G-042
+# Create/open today's daily note
+metatheos today
+
+# Phase management
+metatheos phase current
+metatheos phase list
+
+# Migrate markdown → SurrealDB cache
+metatheos migrate
 ```
 
-**Valid status transitions:**
-- `active` → `blocked`, `completed`, `archived`
-- `blocked` → `active`, `archived`
-- `completed` → `archived`
+### Desktop GUI
 
-#### `meta today`
+- **Aequitas Dashboard** — Real-time project completion and health metrics
+- **Goal Explorer** — Browse, filter, update goal statuses with live refresh
+- **Audit Viewer** — Validation results with errors and warnings
+- **File Browser** — Navigate governance folder with syntax highlighting
+- **Write Operations** — Full CRUD for goals, phases, audits, prompts, daily notes
+- **Toast Notifications** — User-friendly feedback for all operations
 
-Initialize or open today's daily note.
-
-```bash
-# Create/open today's note in $EDITOR
-meta today
-
-# Show path without opening
-meta today --show
-```
-
-**Template created:**
-```markdown
----
-date: 2025-12-28
-phase:
----
-
-# Daily Log — 2025-12-28
-
-## Goals Worked
--
-
-## Decisions Made
--
-
-## Divergences Noted
--
-```
-
-#### `meta phase <action>`
-
-Phase information and management.
-
-```bash
-# Show current active phase
-meta phase current
-
-# List all phases with goal counts
-meta phase list
-
-# Validate phase coherence
-meta phase validate
-```
-
-### Global Flags
-
-```bash
---root <PATH>     # Path to governance folder (default: ./governance)
--v, --verbose     # Enable verbose output
--q, --quiet       # Suppress non-error output
--h, --help        # Print help
--V, --version     # Print version
-```
-
-## Governance Folder Structure
-
-The Meta Engine expects this structure:
+### Governance Folder Structure
 
 ```
 governance/
-├── 00_MASTER/
-├── 01_DAILY/
-│   └── YYYY-MM-DD.md
-├── 02_PHASES/
-│   └── PHASE_N_*.md
-├── 03_GOALS_EPICS/
-│   └── G-XXX_*.md
-├── 04_DECISIONS/
-│   └── D-XXX_*.md
-├── 05_AUDITS/
-│   └── AUDIT_*.md
-├── 06_PROMPTS/
-│   └── PROMPT_*.md
-└── docs/
-    └── canonical/
-        ├── CANON_I_*.md
-        ├── CANON_II_*.md
-        ├── CANON_III_*.md
-        ├── CANON_IV_*.md
-        └── KERNEL_*.md
+├── 00_MASTER/              # Master charts and canon
+├── 01_DAILY/               # Daily notes (YYYY-MM-DD.md)
+├── 02_PHASES/              # Phase definitions
+├── 03_GOALS_EPICS/         # Goals (G-XXX_*.md)
+├── 04_DECISIONS/           # Decisions (D-XXX_*.md)
+├── 05_AUDITS/              # Audit records
+└── 06_PROMPTS/             # LLM prompts and logs
 ```
 
-## Frontmatter Requirements
+## Philosophy
 
-### Goals (03_GOALS_EPICS/)
+**Data Outlives the Tool**
+- Markdown is the authoritative source of truth
+- Database is a high-performance read cache
+- External edits to markdown are respected
+- Tool failure never corrupts governance data
 
-**Required:**
-```yaml
-goal_id: G-XXX
-status: active | blocked | completed | archived
-```
-
-**Optional:**
-```yaml
-title: "Goal title"
-phase: 4
-owner: "architect"
-dependencies: [G-001, G-002]
-tags: [backend, frontend]
-```
-
-### Decisions (04_DECISIONS/)
-
-**Required:**
-```yaml
-decision_id: D-XXX
-status: active | superseded | abandoned
-date: YYYY-MM-DD
-```
-
-**Optional:**
-```yaml
-title: "Decision title"
-rationale: "Why this decision was made"
-```
-
-### Daily Notes (01_DAILY/)
-
-**Required:**
-```yaml
-date: YYYY-MM-DD
-```
-
-**Optional:**
-```yaml
-phase: 4
-goals_worked: [G-042, G-043]
-decisions_made: [D-015]
-divergences: []
-```
-
-## Validation Invariants
-
-The Meta Engine enforces:
-
-### Structural Invariants
-1. Goal IDs match pattern `G-XXX`
-2. Decision IDs match pattern `D-XXX`
-3. Status values are valid
-4. All required frontmatter fields present
-
-### Logical Invariants
-5. Goal dependencies reference existing goals
-6. Goal status transitions are valid
-7. Phase coherence (warning if active goals in wrong phase)
-
-### Canon Boundary
-8. Files under `docs/canonical/` are read-only
-9. Canon cannot be modified via Meta Engine
-10. Canon can only be referenced, not interpreted
-
-## Examples
-
-### Daily Workflow
-
-```bash
-# Morning: Create today's note
-meta today
-
-# Check current work
-meta goals --status active
-
-# Update goal status
-meta goal set G-042 completed
-
-# Validate governance
-meta audit
-```
-
-### Goal Management
-
-```bash
-# Find blocked goals
-meta goals --status blocked
-
-# Check dependencies
-meta goal deps G-042
-
-# Move goal forward
-meta goal set G-042 active
-```
-
-### Phase Transitions
-
-```bash
-# Check current phase
-meta phase current
-
-# Validate coherence
-meta phase validate
-
-# List phase distribution
-meta phase list
-```
-
-## Development
-
-### Run Tests
-
-```bash
-cargo test
-```
-
-### Build Debug Version
-
-```bash
-cargo build
-./target/debug/meta-cli --help
-```
-
-### Lint and Format
-
-```bash
-cargo clippy
-cargo fmt
-```
-
-## Desktop GUI
-
-### Features
-
-**The desktop application provides:**
-
-- **Dashboard** — Overview of current phase, active/blocked goals, governance health, daily note creation
-- **Goal Explorer** — Browse, filter, and **update goal statuses** with real-time UI refresh
-- **Audit Viewer** — Real-time validation results with errors, warnings, and info
-- **Write Operations** — Update goal statuses with server-side validation, create daily notes
-- **Toast Notifications** — User-friendly success/error feedback for all operations
-- **Status Transitions** — Enforced workflow rules (planned → active → done, etc.)
-
-### Launch GUI
-
-```bash
-cd meta-engine/meta-gui
-cargo tauri dev
-```
-
-This will:
-1. Start Vite dev server on port 5174
-2. Build Rust backend
-3. Launch desktop application
-4. Load governance files from `/governance`
-
-**Note:** Use `cargo tauri dev` (not `npm run dev`) to run the full Tauri application.
-
-### GUI Screenshots
-
-The GUI provides a calm, professional interface optimized for architects:
-- Dark mode support
-- Keyboard navigation
-- Real-time data from governance folder
+**Local-First**
 - No network requests or telemetry
+- No cloud services or auth
+- Works offline completely
+- Fast, deterministic, reproducible
 
-## Roadmap
-
-### Phase 1 ✅ (Complete)
-- Core engine + CLI
-- Commands: audit, goals, goal, today, phase
-- Validation engine
-- Output formatters (markdown, JSON, table)
-
-### Phase 2 ✅ (Complete)
-- Tauri GUI foundation
-- Dashboard view (read-only)
-- Goal explorer (read-only)
-- Audit viewer (read-only)
-
-### Phase 3 ✅ (Complete)
-- Write operations from GUI
-- Goal status updates with validation
-- Daily note creation with templates
-- Toast notifications
-- Real-time UI updates
-- Server-side validation
-
-### Phase 4 (Future)
-- LLM integration
-- Prompt logging
-- Context assembly
-- Governed AI advisor
+**Calm Technology**
+- Professional, architect-focused interface
+- Keyboard-driven workflows
+- No distractions or animations
+- Dark mode optimized for long sessions
 
 ## Non-Goals
 
-This tool explicitly does **NOT**:
+Metatheos explicitly does **NOT**:
 - Act as a general-purpose note-taking app
 - Support multi-user collaboration
-- Provide autonomous AI "insights"
+- Provide autonomous AI "insights" without governance
 - Replace architect's judgment
 - Support arbitrary governance schemas
 - Provide web access or mobile apps
 - Auto-modify Canon documents
+
+## Roadmap
+
+### Phase 1 ✅ Complete (Foundation)
+- Core engine + CLI
+- Governance validation
+- Desktop GUI with read/write operations
+- SurrealDB caching
+- Dual-write persistence pattern
+
+### Phase 2 (Real-Time Sync - Weeks 3-4)
+- File watcher for external markdown edits
+- Dashboard live updates
+- Dependency graph visualization
+- Conflict resolution
+
+### Phase 3 (Dev Experience - Weeks 5-6)
+- Comprehensive test coverage
+- Documentation cleanup
+- Error message improvements
+- Developer tooling
+
+### Phase 4 (Intelligence - Weeks 7-8)
+- Ollama integration for reasoning
+- Prompt logging and governance
+- Context assembly for AI
+- Canon-aligned LLM advisor
+
+### Phase 5 (Polish - Weeks 9-10)
+- Performance optimization
+- UX refinements
+- Final documentation
+- v2.0 release
 
 ## License
 
@@ -461,13 +210,7 @@ MIT
 
 ## Contributing
 
-This is an internal Aequitas governance tool. Changes must align with Canon and Kernel requirements.
-
-Before contributing:
-1. Read `governance/docs/canonical/`
-2. Run `meta audit` to ensure compliance
-3. Never modify Canon documents
-4. Respect governance invariants
+This is an internal Aequitas governance tool. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
 
 ---
 

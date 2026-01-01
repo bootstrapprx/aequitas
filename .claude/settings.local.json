@@ -65,7 +65,11 @@
       "Bash(OLLAMA_HOST=127.0.0.1:11435 ollama pull:*)",
       "Bash(cargo test:*)",
       "Bash(cargo run:*)",
-      "Bash(cargo clean:*)"
+      "Bash(cargo clean:*)",
+      "Bash(rm:*)",
+      "Bash(./metatheos/metatheos-cli/target/release/metatheos:*)",
+      "Bash(./metatheos/target/release/metatheos:*)",
+      "Bash(cargo tarpaulin:*)"
     ],
     "deny": [],
     "ask": []

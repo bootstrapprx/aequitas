@@ -65,9 +65,8 @@ impl SurrealStore {
     }
 
     pub async fn save_daily_note(&self, note: DailyNote) -> Result<()> {
-        let id = format!("daily_notes:{}", note.date.format("%Y-%m-%d"));
-        // Inspecting update return: accept Vec<Value> which seems to correspond to what the driver returns
-        let _: Vec<serde_json::Value> = self.db.update((&id))
+        let date_str = note.date.format("%Y-%m-%d").to_string();
+        let _: Option<DailyNote> = self.db.update(("daily_notes", date_str.as_str()))
             .content(note)
             .await
             .map_err(|e| MetaError::SystemError(format!("DB Save Error: {}", e)))?;

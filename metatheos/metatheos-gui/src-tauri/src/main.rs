@@ -6,6 +6,7 @@ mod commands_ai;
 mod commands_crud;
 mod commands_git;
 mod state;
+mod watcher_handler;
 
 use state::AppState;
 use std::path::PathBuf;
@@ -61,14 +62,59 @@ fn main() {
                          }
 
                          // Set state
-                         *state.db.lock().unwrap() = Some(store);
+                         *state.db.lock().unwrap() = Some(store.clone());
                          println!("SurrealDB initialized and state updated.");
+
+                         // PHASE 2.1: Initialize file watcher for real-time sync
+                         println!("Initializing file watcher...");
+                         match metatheos_core::FileWatcher::new(&gov_root) {
+                             Ok(watcher) => {
+                                 *state.watcher.lock().unwrap() = Some(watcher);
+                                 println!("File watcher initialized");
+
+                                 // Spawn background task to handle file change events
+                                 let handle_clone = handle.clone();
+                                 let store_clone = store.clone();
+                                 let gov_root_clone = gov_root.clone();
+
+                                 tauri::async_runtime::spawn(async move {
+                                     loop {
+                                         // Poll for file change events
+                                         let event_opt = {
+                                             // Scope to ensure mutex guard is dropped before await
+                                             if let Some(mut watcher) = handle_clone.state::<AppState>().watcher.lock().unwrap().take() {
+                                                 let event = watcher.next_event();
+                                                 // Put watcher back immediately
+                                                 *handle_clone.state::<AppState>().watcher.lock().unwrap() = Some(watcher);
+                                                 event
+                                             } else {
+                                                 None
+                                             }
+                                         };
+
+                                         // Handle event if any (mutex is now released)
+                                         if let Some(event) = event_opt {
+                                             watcher_handler::handle_file_change(
+                                                 event,
+                                                 store_clone.clone(),
+                                                 gov_root_clone.clone(),
+                                                 handle_clone.clone(),
+                                             ).await;
+                                         }
+
+                                         // Sleep to avoid busy-waiting
+                                         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                                     }
+                                 });
+                             }
+                             Err(e) => eprintln!("Failed to init file watcher: {}", e),
+                         }
                      },
                      Err(e) => eprintln!("Failed to init SurrealDB: {}", e),
                  }
              });
 
-             println!("Metatheos GUI started (SurrealDB caching mode)");
+             println!("Metatheos GUI started (SurrealDB caching mode + file watcher)");
              Ok(())
         })
         .invoke_handler(tauri::generate_handler![

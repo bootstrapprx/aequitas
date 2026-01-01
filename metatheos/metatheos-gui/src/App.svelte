@@ -10,6 +10,7 @@
   import ChatDock from "./lib/ChatDock.svelte";
   import CurrentDay from "./lib/CurrentDay.svelte";
   import ChatDockToggle from "./lib/ChatDockToggle.svelte";
+  import LiveUpdateIndicator from "./lib/LiveUpdateIndicator.svelte";
   import { chatDockStore } from "./lib/stores/chatDock";
 
   let currentView = "dashboard";
@@ -150,6 +151,9 @@
 
   <ChatDock onSwitchToAssistant={handleSwitchToAssistant} />
   <ChatDockToggle />
+
+  <!-- PHASE 2.3: Live update notifications -->
+  <LiveUpdateIndicator />
 </div>
 
 <style>

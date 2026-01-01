@@ -42,6 +42,11 @@ fn main() -> Result<()> {
             commands::run_phase(&cli.root, &action)?;
             0
         }
+
+        Commands::Migrate => {
+            commands::run_migrate(&cli.root)?;
+            0
+        }
     };
 
     std::process::exit(exit_code);

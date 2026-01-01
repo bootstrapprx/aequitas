@@ -1,7 +1,8 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { createEventDispatcher } from "svelte";
+  import { setupLiveUpdates, cleanupLiveUpdates } from "./stores/governance";
 
   const dispatch = createEventDispatcher();
 
@@ -11,6 +12,22 @@
 
   onMount(async () => {
     await loadDashboard();
+
+    // PHASE 2.3: Setup live updates for real-time dashboard refresh
+    await setupLiveUpdates({
+      onGoalChange: async () => {
+        console.log('[Dashboard] Goal changed, reloading...');
+        await loadDashboard();
+      },
+      onPhaseChange: async () => {
+        console.log('[Dashboard] Phase changed, reloading...');
+        await loadDashboard();
+      }
+    });
+  });
+
+  onDestroy(async () => {
+    await cleanupLiveUpdates();
   });
 
   async function loadDashboard() {

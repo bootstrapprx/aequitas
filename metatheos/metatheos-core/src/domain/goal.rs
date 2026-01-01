@@ -43,6 +43,9 @@ impl GoalStatus {
             | (GoalStatus::Partial, GoalStatus::Active)
             | (GoalStatus::Partial, GoalStatus::Blocked)
             | (GoalStatus::Partial, GoalStatus::Done)
+            | (GoalStatus::Done, GoalStatus::Active)
+            | (GoalStatus::Done, GoalStatus::Partial)
+            | (GoalStatus::Done, GoalStatus::Blocked)
             | (GoalStatus::Done, GoalStatus::Archived)
             | (GoalStatus::Archived, GoalStatus::Done) => true,
             (GoalStatus::Unknown(_), _) | (_, GoalStatus::Unknown(_)) => true,

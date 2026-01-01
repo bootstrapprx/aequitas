@@ -30,9 +30,9 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
             for entry in WalkDir::new(&daily_dir).into_iter().filter_map(|e| e.ok()) {
                 if entry.path().extension().map_or(false, |e| e == "md") {
                     if let Ok(note) = MarkdownParser::parse_daily(entry.path()) {
-                        let id = format!("daily_notes:{}", note.date.format("%Y-%m-%d"));
+                        let date_str = note.date.format("%Y-%m-%d").to_string();
                         let _: std::result::Result<Option<crate::DailyNote>, _> = store.db
-                            .create(&id)
+                            .create(("daily_notes", date_str.as_str()))
                             .content(note)
                             .await;
                     }
@@ -52,8 +52,7 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
                 if entry.path().extension().map_or(false, |e| e == "md") {
                     match MarkdownParser::parse_goal(entry.path()) {
                         Ok(goal) => {
-                            let id = format!("goals:{}", goal.goal_id);
-                            match store.db.create::<Option<crate::Goal>>(&id).content(goal.clone()).await {
+                            match store.db.create::<Option<crate::Goal>>(("goals", goal.goal_id.as_str())).content(goal.clone()).await {
                                 Ok(_) => {
                                     success_count += 1;
                                     println!("  ✓ Migrated goal: {}", goal.goal_id);
@@ -84,9 +83,8 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
                 let fname = entry.file_name().to_string_lossy();
                 if fname.starts_with("PHASE") && fname.ends_with(".md") {
                     if let Ok(phase) = MarkdownParser::parse_phase(entry.path()) {
-                         let id = format!("phases:{}", phase.phase_id);
                          let _: std::result::Result<Option<crate::Phase>, _> = store.db
-                            .create(&id)
+                            .create(("phases", phase.phase_id.as_str()))
                             .content(phase)
                             .await;
                     }
@@ -103,10 +101,9 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
             for entry in WalkDir::new(&audits_dir).into_iter().filter_map(|e| e.ok()) {
                  if entry.path().extension().map_or(false, |e| e == "md") {
                     if let Ok(audit) = MarkdownParser::parse_audit(entry.path()) {
-                        let stem = entry.path().file_stem().unwrap().to_string_lossy();
-                        let id = format!("audits:{}", stem);
+                        let stem = entry.path().file_stem().unwrap().to_string_lossy().to_string();
                         let _: std::result::Result<Option<crate::AuditRecord>, _> = store.db
-                            .create(&id)
+                            .create(("audits", stem.as_str()))
                             .content(audit)
                             .await;
                     }
@@ -123,9 +120,8 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
             for entry in WalkDir::new(&decisions_dir).into_iter().filter_map(|e| e.ok()) {
                  if entry.path().extension().map_or(false, |e| e == "md") {
                     if let Ok(decision) = MarkdownParser::parse_decision(entry.path()) {
-                        let id = format!("decisions:{}", decision.decision_id);
                         let _: std::result::Result<Option<crate::Decision>, _> = store.db
-                            .create(&id)
+                            .create(("decisions", decision.decision_id.as_str()))
                             .content(decision)
                             .await;
                     }
@@ -142,10 +138,9 @@ pub async fn migrate_all(store: &SurrealStore, root: &Path) -> Result<()> {
             for entry in WalkDir::new(&prompts_dir).into_iter().filter_map(|e| e.ok()) {
                  if entry.path().extension().map_or(false, |e| e == "md") {
                     if let Ok(prompt) = MarkdownParser::parse_prompt(entry.path()) {
-                        let stem = entry.path().file_stem().unwrap().to_string_lossy();
-                        let id = format!("prompts:{}", stem);
+                        let stem = entry.path().file_stem().unwrap().to_string_lossy().to_string();
                         let _: std::result::Result<Option<crate::Prompt>, _> = store.db
-                            .create(&id)
+                            .create(("prompts", stem.as_str()))
                             .content(prompt)
                             .await;
                     }

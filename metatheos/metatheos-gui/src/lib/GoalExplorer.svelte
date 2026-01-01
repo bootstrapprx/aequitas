@@ -1,8 +1,9 @@
 <script>
   import { invoke } from "@tauri-apps/api/core";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import Toast from "./Toast.svelte";
   import GoalEditor from "./GoalEditor.svelte";
+  import { setupLiveUpdates, cleanupLiveUpdates } from "./stores/governance";
 
   let loading = true;
   let error = null;
@@ -58,6 +59,19 @@
     }
     await verifyLayout();
     await loadGoals();
+
+    // PHASE 2.3: Setup live updates for real-time sync
+    await setupLiveUpdates({
+      onGoalChange: async () => {
+        console.log('[GoalExplorer] Goal changed, reloading...');
+        await loadGoals();
+      }
+    });
+  });
+
+  onDestroy(async () => {
+    // Clean up event listeners when component is destroyed
+    await cleanupLiveUpdates();
   });
 
   async function verifyLayout() {

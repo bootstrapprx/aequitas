@@ -75,6 +75,9 @@ pub enum Commands {
         #[command(subcommand)]
         action: PhaseAction,
     },
+
+    /// Migrate markdown files to SurrealDB cache
+    Migrate,
 }
 
 #[derive(Subcommand)]
