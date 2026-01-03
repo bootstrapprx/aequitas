@@ -1,6 +1,6 @@
 use crate::domain::*;
 use crate::errors::{MetaError, Result};
-use crate::parser::{LinkExtractor, MarkdownParser};
+use crate::parser::LinkExtractor;
 use chrono::{Duration, Local, NaiveDate};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -32,6 +32,37 @@ pub struct GovernanceState {
     pub protocols: Vec<ProtocolDoc>,
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ReadOnlyPhase {
+    pub id: String,
+    pub title: String,
+    pub start_date: Option<String>,
+    pub target_date: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ReadOnlyGoal {
+    pub id: String,
+    pub title: String,
+    pub status: String,
+    pub phase: Option<String>,
+    pub parent_id: Option<String>,
+    pub is_blocked: bool,
+    pub level: Option<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ReadOnlyGovernanceContext {
+    pub date: String,
+    pub active_phase: Option<ReadOnlyPhase>,
+    pub active_goals: Vec<ReadOnlyGoal>,
+    pub blocked_goals: Vec<ReadOnlyGoal>,
+    pub recent_work: Vec<String>,
+}
+
+pub use GovernanceWarningKind::*; // Re-export warning kind if used externally usually but not needed here
+
+/// Phase is the canonical scope root for all governance state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GovernanceWarningKind {
     MissingDailyNote,
@@ -70,6 +101,7 @@ pub struct DailyContext {
     pub date: NaiveDate,
     pub note: Option<DailyNote>,
     pub active_phase: Option<Phase>,
+    pub phase_defined: bool,
     pub in_phase_goals: Vec<Goal>,
     pub out_of_phase_goals: Vec<Goal>,
     pub goal_relations: HashMap<String, GoalRelations>,
@@ -112,6 +144,24 @@ pub struct GovernanceSummary {
     pub warnings: Vec<GovernanceWarning>,
 }
 
+#[derive(Debug, Clone)]
+pub struct PhaseMetrics {
+    pub phase_id: Option<String>,
+    pub total_goals: usize,
+    pub active: usize,
+    pub blocked: usize,
+    pub done: usize,
+    pub completion_pct: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct PhaseScope {
+    pub active_phase: Option<Phase>,
+    pub goals: Vec<Goal>,
+    pub metrics: PhaseMetrics,
+    pub phase_defined: bool,
+}
+
 impl std::fmt::Display for GovernanceWarningKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let label = match self {
@@ -137,73 +187,9 @@ impl GovernanceScanner {
         }
     }
 
-    pub fn scan(&self) -> Result<GovernanceState> {
-        if !self.root.exists() {
-            return Err(MetaError::GovernanceFolderNotFound(
-                self.root.to_string_lossy().to_string(),
-            ));
-        }
+    // NOTE: scan() removed - use from_store() instead (DB-only architecture)
 
-        let phases = self.scan_markdown("02_PHASES", |p| MarkdownParser::parse_phase(p))?;
-        let goals = self.scan_markdown("03_GOALS_EPICS", |p| MarkdownParser::parse_goal(p))?;
-        let decisions = self.scan_markdown("04_DECISIONS", |p| MarkdownParser::parse_decision(p))?;
-        let daily_notes = self.scan_markdown("01_DAILY", |p| MarkdownParser::parse_daily(p))?;
-        let audits = self.scan_markdown("05_AUDITS", |p| MarkdownParser::parse_audit(p))?;
-        let prompts = self.scan_markdown("06_PROMPTS/library", |p| MarkdownParser::parse_prompt(p))?;
-        let canon_docs = self.scan_canon()?;
-        let protocols = self.scan_protocols()?;
-
-        Ok(GovernanceState {
-            phases,
-            goals,
-            decisions,
-            daily_notes,
-            audits,
-            prompts,
-            canon_docs,
-            protocols,
-        })
-    }
-
-    fn scan_markdown<T, F>(&self, folder: &str, parser: F) -> Result<Vec<T>>
-    where
-        F: Fn(&Path) -> Result<T>,
-    {
-        let dir = self.root.join(folder);
-        if !dir.exists() {
-            return Ok(Vec::new());
-        }
-
-        let mut items = Vec::new();
-        for entry in WalkDir::new(&dir)
-            .into_iter()
-            .filter_map(|e| e.ok())
-            .filter(|e| e.path().is_file())
-        {
-            let path = entry.path();
-            if path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .map(|name| name.starts_with('_'))
-                .unwrap_or(false)
-            {
-                continue;
-            }
-
-            if path.extension().and_then(|s| s.to_str()) != Some("md") {
-                continue;
-            }
-
-            match parser(path) {
-                Ok(item) => items.push(item),
-                Err(err) => {
-                    eprintln!("Warning: failed to parse {:?}: {}", path, err);
-                }
-            }
-        }
-
-        Ok(items)
-    }
+    // NOTE: scan_markdown() removed - DB is source of truth for entities
 
     fn scan_canon(&self) -> Result<Vec<CanonDoc>> {
         let canon_root = self.root.join("CONSTITUTION");
@@ -248,7 +234,10 @@ impl GovernanceScanner {
             .filter(|e| e.path().is_file())
         {
             let path = entry.path();
-            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or_default();
+            let name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or_default();
             if !name.to_ascii_uppercase().contains("PROTOCOL") {
                 continue;
             }
@@ -280,20 +269,22 @@ pub struct GovernanceContext {
 }
 
 impl GovernanceContext {
+    /// Sync wrapper for load - opens DB inline and returns context
+    /// NOTE: Prefer from_store() with shared AppState for production usage
     pub fn load<P: AsRef<Path>>(root: P) -> Result<Self> {
-        let scanner = GovernanceScanner::new(root);
-        let root = scanner.root.clone();
-        let state = scanner.scan()?;
+        let root_path = root.as_ref().to_path_buf();
+        let db_path = root_path.join(".metatheos.db");
 
-        let mut ctx = Self {
-            root,
-            state,
-            goals_index: HashMap::new(),
-            decisions_index: HashMap::new(),
-        };
+        // Create a new runtime or use existing handle
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| crate::errors::MetaError::SystemError(format!("Runtime error: {}", e)))?;
 
-        ctx.build_indexes();
-        Ok(ctx)
+        rt.block_on(async {
+            let store = crate::store::SurrealStore::init(db_path).await?;
+            Self::from_store(&store, root_path).await
+        })
     }
 
     /// Load context from SurrealStore (hybrid DB + FS for Canon/Protocols)
@@ -308,7 +299,7 @@ impl GovernanceContext {
 
         // Fetch FS data (Canon + Protocols) via Scanner
         let scanner = GovernanceScanner::new(&root);
-        let canon_docs = scanner.scan_canon()?; 
+        let canon_docs = scanner.scan_canon()?;
         let protocols = scanner.scan_protocols()?;
 
         let state = GovernanceState {
@@ -335,8 +326,7 @@ impl GovernanceContext {
 
     fn build_indexes(&mut self) {
         for (idx, goal) in self.state.goals.iter().enumerate() {
-            self.goals_index
-                .insert(goal.goal_id.to_lowercase(), idx);
+            self.goals_index.insert(goal.goal_id.to_lowercase(), idx);
         }
 
         for (idx, decision) in self.state.decisions.iter().enumerate() {
@@ -361,6 +351,40 @@ impl GovernanceContext {
         link_norm.contains(&dec_norm) || dec_norm.contains(&link_norm)
     }
 
+    fn resolve_goal_phase_with_seen(
+        &self,
+        goal: &Goal,
+        seen: &mut HashSet<String>,
+    ) -> Option<String> {
+        if let Some(phase) = goal.phase.as_ref().filter(|p| !p.trim().is_empty()) {
+            return Some(phase.clone());
+        }
+
+        if let Some(parent_id) = &goal.parent_id {
+            let key = parent_id.to_lowercase();
+            if !seen.insert(key) {
+                // Prevent cycles
+                return None;
+            }
+            if let Some(parent) = self.get_goal(parent_id) {
+                return self.resolve_goal_phase_with_seen(parent, seen);
+            }
+        }
+
+        None
+    }
+
+    pub fn resolve_goal_phase(&self, goal: &Goal) -> Option<String> {
+        let mut seen = HashSet::new();
+        self.resolve_goal_phase_with_seen(goal, &mut seen)
+    }
+
+    pub fn goal_with_effective_phase(&self, goal: &Goal) -> Goal {
+        let mut cloned = goal.clone();
+        cloned.phase = self.resolve_goal_phase(goal);
+        cloned
+    }
+
     #[allow(dead_code)]
     fn resolve_goal_links(&self, link: &str) -> Option<Goal> {
         self.state
@@ -382,16 +406,16 @@ impl GovernanceContext {
         let mut map = HashMap::new();
 
         for goal in &self.state.goals {
+            let goal_with_phase = self.goal_with_effective_phase(goal);
             let mut decisions = Vec::new();
             let mut audits = Vec::new();
             let mut daily_refs = Vec::new();
 
-            for link in LinkExtractor::extract_decision_links(&goal.content) {
+            for link in LinkExtractor::extract_decision_links(&goal_with_phase.content) {
                 if let Some(decision) = self.resolve_decision_links(&link) {
-                    if !decisions
-                        .iter()
-                        .any(|d: &Decision| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
-                    {
+                    if !decisions.iter().any(|d: &Decision| {
+                        d.decision_id.eq_ignore_ascii_case(&decision.decision_id)
+                    }) {
                         decisions.push(decision);
                     }
                 }
@@ -401,7 +425,7 @@ impl GovernanceContext {
                 let goal_links = LinkExtractor::extract_goal_links(&decision.content);
                 if goal_links
                     .iter()
-                    .any(|link| Self::goal_match(link, &goal.goal_id))
+                    .any(|link| Self::goal_match(link, &goal_with_phase.goal_id))
                 {
                     if !decisions
                         .iter()
@@ -416,7 +440,7 @@ impl GovernanceContext {
                 let goal_links = LinkExtractor::extract_goal_links(&audit.content);
                 if goal_links
                     .iter()
-                    .any(|link| Self::goal_match(link, &goal.goal_id))
+                    .any(|link| Self::goal_match(link, &goal_with_phase.goal_id))
                 {
                     if !audits
                         .iter()
@@ -431,15 +455,15 @@ impl GovernanceContext {
                 let linked = daily
                     .linked_goals
                     .iter()
-                    .any(|g| Self::goal_match(g, &goal.goal_id));
+                    .any(|g| Self::goal_match(g, &goal_with_phase.goal_id));
                 let in_frontmatter = daily
                     .goals
                     .iter()
-                    .any(|g| Self::goal_match(g, &goal.goal_id))
+                    .any(|g| Self::goal_match(g, &goal_with_phase.goal_id))
                     || daily
                         .goals_worked
                         .iter()
-                        .any(|g| Self::goal_match(g, &goal.goal_id));
+                        .any(|g| Self::goal_match(g, &goal_with_phase.goal_id));
                 if linked || in_frontmatter {
                     if !daily_refs.iter().any(|d: &DailyNote| d.date == daily.date) {
                         daily_refs.push(daily.clone());
@@ -447,25 +471,55 @@ impl GovernanceContext {
                 }
             }
 
-            let missing_dependencies: Vec<String> = goal
+            let missing_dependencies: Vec<String> = goal_with_phase
                 .dependencies
                 .iter()
                 .filter(|dep| self.get_goal(dep).is_none())
                 .cloned()
                 .collect();
 
-            let out_of_phase = match (active_phase, goal.phase.as_ref()) {
-                (Some(active), Some(goal_phase)) => {
-                    !goal_phase.eq_ignore_ascii_case(active)
+            let mut is_in_phase = false;
+            if let Some(active) = active_phase {
+                // 1. Direct phase match
+                if let Some(p) = &goal_with_phase.phase {
+                    if p.eq_ignore_ascii_case(active) {
+                        is_in_phase = true;
+                    }
                 }
-                (Some(_), None) => true,
-                _ => false,
-            };
+                // 2. Hierarchy Check
+                if !is_in_phase {
+                    let mut current = &goal_with_phase;
+                    while let Some(parent_id) = &current.parent_id {
+                        let mut found_parent = None;
+                        for pg in &self.state.goals {
+                            if pg.goal_id == *parent_id {
+                                found_parent = Some(pg);
+                                break;
+                            }
+                        }
+                        if let Some(parent) = found_parent {
+                            if let Some(pp) = &parent.phase {
+                                if pp.eq_ignore_ascii_case(active) {
+                                    is_in_phase = true;
+                                    break;
+                                }
+                            }
+                            current = parent;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                is_in_phase = true;
+            }
+
+            let out_of_phase = !is_in_phase;
 
             map.insert(
-                goal.goal_id.to_lowercase(),
+                goal_with_phase.goal_id.to_lowercase(),
                 GoalRelations {
-                    goal: goal.clone(),
+                    goal: goal_with_phase,
                     decisions,
                     audits,
                     daily_refs,
@@ -519,7 +573,10 @@ impl GovernanceContext {
                     .or_default()
                     .push(goal.clone());
             } else {
-                grouped.entry("".to_string()).or_default().push(goal.clone());
+                grouped
+                    .entry("".to_string())
+                    .or_default()
+                    .push(goal.clone());
             }
         }
         grouped
@@ -529,7 +586,13 @@ impl GovernanceContext {
         self.state
             .goals
             .iter()
-            .filter(|g| g.phase.is_none() || g.phase.as_ref().map(|p| p.trim().is_empty()).unwrap_or(true))
+            .filter(|g| {
+                g.phase.is_none()
+                    || g.phase
+                        .as_ref()
+                        .map(|p| p.trim().is_empty())
+                        .unwrap_or(true)
+            })
             .cloned()
             .collect()
     }
@@ -563,28 +626,123 @@ impl GovernanceContext {
     }
 
     pub fn active_phase(&self) -> Option<Phase> {
-        // Prefer explicit active/in-progress status if present
-        if let Some(found) = self
+        self.resolve_active_phase(chrono::Local::now().date_naive(), None)
+    }
+
+    pub fn resolve_active_phase(
+        &self,
+        date: NaiveDate,
+        explicit_phase_id: Option<&str>,
+    ) -> Option<Phase> {
+        // 0. Use explicit phase ID if provided and valid
+        if let Some(phase_id) = explicit_phase_id {
+            if let Some(phase) = self.state.phases.iter().find(|p| p.phase_id == phase_id) {
+                return Some(phase.clone());
+            }
+        }
+
+        // 1. Try to find a phase that strictly covers this date
+        let date_match = self
             .state
             .phases
             .iter()
-            .find(|p| p.status.to_lowercase().contains("active"))
-        {
-            return Some(found.clone());
+            .find(|p| {
+                if let (Some(start), Some(target)) = (p.start_date, p.target_date) {
+                    date >= start && date <= target
+                } else {
+                    false
+                }
+            })
+            .cloned();
+
+        if date_match.is_some() {
+            return date_match;
+        }
+
+        // 2. Fallback: Priority checking
+        fn phase_priority(status: &str) -> u8 {
+            let s = status.to_lowercase();
+            if s.contains("active") || s.contains("in-progress") {
+                0
+            } else if s.contains("partial") {
+                1
+            } else if s.contains("planned") {
+                2
+            } else if s.contains("done") || s.contains("completed") {
+                3
+            } else if s.contains("archived") || s.contains("inactive") {
+                4
+            } else {
+                5
+            }
         }
 
         let mut phases = self.state.phases.clone();
         phases.sort_by(|a, b| {
-            Self::mtime(&b.file_path)
-                .cmp(&Self::mtime(&a.file_path))
+            phase_priority(&a.status)
+                .cmp(&phase_priority(&b.status))
+                .then_with(|| Self::mtime(&b.file_path).cmp(&Self::mtime(&a.file_path)))
                 .then_with(|| b.number().cmp(&a.number()))
         });
         phases.into_iter().next()
     }
 
-    pub fn active_goals(&self) -> Vec<Goal> {
-        let mut goals: Vec<Goal> = self
+    pub fn phase_scope(&self, date: NaiveDate, explicit_phase_id: Option<&str>) -> PhaseScope {
+        let active_phase = self.resolve_active_phase(date, explicit_phase_id);
+        let active_phase_id = active_phase.as_ref().map(|p| p.phase_id.clone());
+
+        let goals_with_phase: Vec<Goal> = self
             .state
+            .goals
+            .iter()
+            .map(|g| self.goal_with_effective_phase(g))
+            .collect();
+
+        let phase_goals: Vec<Goal> = goals_with_phase
+            .iter()
+            .cloned()
+            .filter(|g| {
+                active_phase_id
+                    .as_ref()
+                    .map(|pid| {
+                        g.phase
+                            .as_ref()
+                            .map(|p| p.eq_ignore_ascii_case(pid))
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        let total_goals = phase_goals.len();
+        let active = phase_goals.iter().filter(|g| g.is_active()).count();
+        let blocked = phase_goals.iter().filter(|g| g.is_blocked()).count();
+        let done = phase_goals.iter().filter(|g| g.is_done()).count();
+
+        let metrics = PhaseMetrics {
+            phase_id: active_phase_id.clone(),
+            total_goals,
+            active,
+            blocked,
+            done,
+            completion_pct: if total_goals > 0 {
+                (done as f64 / total_goals as f64) * 100.0
+            } else {
+                0.0
+            },
+        };
+
+        PhaseScope {
+            active_phase,
+            goals: phase_goals,
+            metrics,
+            phase_defined: active_phase_id.is_some(),
+        }
+    }
+
+    pub fn active_goals(&self) -> Vec<Goal> {
+        let scope = self.phase_scope(chrono::Local::now().date_naive(), None);
+        let mut goals: Vec<Goal> = scope
             .goals
             .iter()
             .filter(|g| g.is_active())
@@ -596,11 +754,11 @@ impl GovernanceContext {
     }
 
     pub fn blocked_goals(&self) -> Vec<Goal> {
-        let mut goals: Vec<Goal> = self
-            .state
+        let scope = self.phase_scope(chrono::Local::now().date_naive(), None);
+        let mut goals: Vec<Goal> = scope
             .goals
             .iter()
-            .filter(|g| g.status == GoalStatus::Blocked)
+            .filter(|g| g.is_blocked())
             .cloned()
             .collect();
         goals.sort_by(|a, b| b.updated.cmp(&a.updated));
@@ -622,54 +780,75 @@ impl GovernanceContext {
         decisions.sort_by(|a, b| {
             let a_date = a.updated.or(a.date);
             let b_date = b.updated.or(b.date);
-            b_date
-                .cmp(&a_date)
-                .then_with(|| Self::mtime(b.file_path.as_path()).cmp(&Self::mtime(a.file_path.as_path())))
+            b_date.cmp(&a_date).then_with(|| {
+                Self::mtime(b.file_path.as_path()).cmp(&Self::mtime(a.file_path.as_path()))
+            })
         });
         decisions
     }
 
     pub fn daily_context(&self, date: NaiveDate) -> DailyContext {
-        let active_phase = self.active_phase();
-        let active_phase_cloned = active_phase.clone();
-        let active_phase_id = active_phase_cloned.as_ref().map(|p| p.phase_id.as_str());
-
-        let relations = self.goal_relations_map(active_phase_id);
-        let in_phase_goals: Vec<Goal> = self
-            .state
-            .goals
-            .iter()
-            .filter(|g| {
-                if let Some(active) = active_phase_id {
-                    g.phase
-                        .as_ref()
-                        .map(|p| p.eq_ignore_ascii_case(active))
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            })
-            .cloned()
-            .collect();
-
-        let out_of_phase_goals: Vec<Goal> = self
-            .state
-            .goals
-            .iter()
-            .filter(|g| {
-                if let Some(active) = active_phase_id {
-                    !g.phase
-                        .as_ref()
-                        .map(|p| p.eq_ignore_ascii_case(active))
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            })
-            .cloned()
-            .collect();
-
         let note = self.get_daily(date);
+
+        // Allow the daily note to pin a phase; otherwise fall back to the inferred active phase
+        // Default to phase active on that date
+        // Resolve active phase (Explicit > Date > Priority)
+        let phase_override = note.as_ref().and_then(|n| n.phase.as_deref());
+        let scope = self.phase_scope(date, phase_override);
+        let active_phase = scope.active_phase.clone();
+        let active_phase_id = scope.active_phase.as_ref().map(|p| p.phase_id.clone());
+
+        // Work with phase-resolved goals so children inherit their parent's phase
+        let goals_with_phase: Vec<Goal> = self
+            .state
+            .goals
+            .iter()
+            .map(|g| self.goal_with_effective_phase(g))
+            .collect();
+
+        let relations = if scope.phase_defined {
+            self.goal_relations_map(active_phase_id.as_deref())
+        } else {
+            HashMap::new()
+        };
+        let mut in_phase_goals = Vec::new();
+        let mut out_of_phase_goals = Vec::new();
+
+        if let Some(active) = active_phase_id.as_deref() {
+            for g in &goals_with_phase {
+                let mut is_in_phase = false;
+                if let Some(p) = &g.phase {
+                    if p.eq_ignore_ascii_case(active) {
+                        is_in_phase = true;
+                    }
+                }
+                if !is_in_phase {
+                    let mut current = g;
+                    while let Some(parent_id) = &current.parent_id {
+                        if let Some(parent) =
+                            goals_with_phase.iter().find(|pg| pg.goal_id == *parent_id)
+                        {
+                            if let Some(pp) = &parent.phase {
+                                if pp.eq_ignore_ascii_case(active) {
+                                    is_in_phase = true;
+                                    break;
+                                }
+                            }
+                            current = parent;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                if is_in_phase {
+                    in_phase_goals.push(g.clone());
+                } else {
+                    out_of_phase_goals.push(g.clone());
+                }
+            }
+        }
+
         let selected_goals: Vec<String> = note
             .as_ref()
             .map(|n| {
@@ -686,23 +865,18 @@ impl GovernanceContext {
         let mut dependency_gaps = Vec::new();
 
         for goal_id in &selected_goals {
-            if let Some(rel) = relations
-                .get(&goal_id.to_lowercase())
-                .cloned()
-            {
+            if let Some(rel) = relations.get(&goal_id.to_lowercase()).cloned() {
                 for decision in rel.decisions {
-                    if !linked_decisions
-                        .iter()
-                        .any(|d: &Decision| d.decision_id.eq_ignore_ascii_case(&decision.decision_id))
-                    {
+                    if !linked_decisions.iter().any(|d: &Decision| {
+                        d.decision_id.eq_ignore_ascii_case(&decision.decision_id)
+                    }) {
                         linked_decisions.push(decision);
                     }
                 }
                 for audit in rel.audits {
-                    if !linked_audits
-                        .iter()
-                        .any(|a: &AuditRecord| a.title == audit.title && a.file_path == audit.file_path)
-                    {
+                    if !linked_audits.iter().any(|a: &AuditRecord| {
+                        a.title == audit.title && a.file_path == audit.file_path
+                    }) {
                         linked_audits.push(audit);
                     }
                 }
@@ -719,36 +893,63 @@ impl GovernanceContext {
             date,
             note,
             active_phase,
+            phase_defined: scope.phase_defined,
             in_phase_goals,
             out_of_phase_goals,
             goal_relations: relations,
             recent_decisions: self.decisions_within_days(30),
             linked_decisions,
             linked_audits,
-            blocked_goals: self.blocked_goals(),
+            blocked_goals: scope
+                .goals
+                .iter()
+                .filter(|g| g.is_blocked())
+                .cloned()
+                .collect(),
             dependency_gaps,
-            active_goal_count: self
-                .state
-                .goals
+            active_goal_count: scope.metrics.active,
+            blocked_goal_count: scope.metrics.blocked,
+        }
+    }
+
+    pub fn get_read_only_context(&self, date: NaiveDate) -> ReadOnlyGovernanceContext {
+        let ctx = self.daily_context(date);
+
+        ReadOnlyGovernanceContext {
+            date: ctx.date.to_string(),
+            active_phase: ctx.active_phase.map(|p| ReadOnlyPhase {
+                id: p.phase_id,
+                title: p.title,
+                start_date: p.start_date.map(|d| d.to_string()),
+                target_date: p.target_date.map(|d| d.to_string()),
+            }),
+            active_goals: ctx
+                .in_phase_goals
                 .iter()
-                .filter(|g| {
-                    let in_phase = active_phase_id
-                        .map(|p| g.phase.as_ref().map(|gp| gp.eq_ignore_ascii_case(p)).unwrap_or(false))
-                        .unwrap_or(true);
-                    in_phase && g.is_active()
+                .map(|g| ReadOnlyGoal {
+                    id: g.goal_id.clone(),
+                    title: g.title.clone(),
+                    status: g.status.to_string(),
+                    phase: g.phase.clone(),
+                    parent_id: g.parent_id.clone(),
+                    is_blocked: g.is_blocked(),
+                    level: g.level.clone(),
                 })
-                .count(),
-            blocked_goal_count: self
-                .state
-                .goals
+                .collect(),
+            blocked_goals: ctx
+                .blocked_goals
                 .iter()
-                .filter(|g| {
-                    let in_phase = active_phase_id
-                        .map(|p| g.phase.as_ref().map(|gp| gp.eq_ignore_ascii_case(p)).unwrap_or(false))
-                        .unwrap_or(true);
-                    in_phase && g.is_blocked()
+                .map(|g| ReadOnlyGoal {
+                    id: g.goal_id.clone(),
+                    title: g.title.clone(),
+                    status: g.status.to_string(),
+                    phase: g.phase.clone(),
+                    parent_id: g.parent_id.clone(),
+                    is_blocked: true,
+                    level: g.level.clone(),
                 })
-                .count(),
+                .collect(),
+            recent_work: ctx.note.map(|n| n.goals_worked).unwrap_or_default(),
         }
     }
 
@@ -794,7 +995,8 @@ impl GovernanceContext {
             .map(|d| d.divergences.clone())
             .unwrap_or_default();
 
-        let current_phase = self.active_phase();
+        let scope = self.phase_scope(today, None);
+        let current_phase = scope.active_phase.clone();
         let recent_decisions = self.recent_decisions(5);
         let warnings = self.compute_warnings();
         let mut canon_docs = self.state.canon_docs.clone();
@@ -803,41 +1005,15 @@ impl GovernanceContext {
         protocols.sort_by(|a, b| a.title.cmp(&b.title));
 
         let mut active_by_phase: Vec<PhaseGoalBreakdown> = Vec::new();
-        for phase in &self.state.phases {
-            let active_goals: Vec<Goal> = self
-                .state
+        if let Some(phase) = &scope.active_phase {
+            let active_goals: Vec<Goal> = scope
                 .goals
                 .iter()
-                .filter(|g| g.phase.as_ref().map(|p| p.eq_ignore_ascii_case(&phase.phase_id)).unwrap_or(false))
                 .filter(|g| g.is_active())
                 .cloned()
                 .collect();
             active_by_phase.push(PhaseGoalBreakdown {
                 phase: phase.clone(),
-                active_goals,
-            });
-        }
-
-        // Include goals with an unknown phase as their own bucket
-        if self.state.phases.is_empty() && !self.state.goals.is_empty() {
-            let active_goals: Vec<Goal> = self
-                .state
-                .goals
-                .iter()
-                .filter(|g| g.is_active())
-                .cloned()
-                .collect();
-            active_by_phase.push(PhaseGoalBreakdown {
-                phase: Phase {
-                    phase_id: "Unassigned".to_string(),
-                    title: "Unassigned".to_string(),
-                    status: "unknown".to_string(),
-                    start_date: None,
-                    target_date: None,
-                    dependencies: Vec::new(),
-                    file_path: PathBuf::new(),
-                    content: String::new(),
-                },
                 active_goals,
             });
         }
@@ -856,7 +1032,7 @@ impl GovernanceContext {
             current_phase,
             active_goals: self.active_goals(),
             blocked_goals: self.blocked_goals(),
-            total_goals: self.state.goals.len(),
+            total_goals: scope.metrics.total_goals,
             today_exists,
             today_path,
             today_mode,
@@ -881,9 +1057,9 @@ impl GovernanceContext {
         decisions.sort_by(|a, b| {
             let a_date = a.updated.or(a.date);
             let b_date = b.updated.or(b.date);
-            b_date
-                .cmp(&a_date)
-                .then_with(|| Self::mtime(b.file_path.as_path()).cmp(&Self::mtime(a.file_path.as_path())))
+            b_date.cmp(&a_date).then_with(|| {
+                Self::mtime(b.file_path.as_path()).cmp(&Self::mtime(a.file_path.as_path()))
+            })
         });
         decisions.into_iter().take(count).collect()
     }
@@ -951,12 +1127,10 @@ updated:
     pub fn set_daily_mode(&self, date: NaiveDate, mode: Option<String>) -> Result<PathBuf> {
         let path = self.ensure_daily_note(date)?;
         let content = fs::read_to_string(&path)?;
-        let (mut frontmatter, body) = crate::parser::frontmatter::FrontmatterParser::parse(&content)?;
+        let (mut frontmatter, body) =
+            crate::parser::frontmatter::FrontmatterParser::parse(&content)?;
         if let Some(mode_value) = mode {
-            frontmatter.insert(
-                "mode".to_string(),
-                serde_json::Value::String(mode_value),
-            );
+            frontmatter.insert("mode".to_string(), serde_json::Value::String(mode_value));
         } else {
             frontmatter.remove("mode");
         }
@@ -988,10 +1162,7 @@ updated:
             if mode_value.is_empty() {
                 frontmatter.remove("mode");
             } else {
-                frontmatter.insert(
-                    "mode".to_string(),
-                    serde_json::Value::String(mode_value),
-                );
+                frontmatter.insert("mode".to_string(), serde_json::Value::String(mode_value));
             }
         }
 
@@ -1063,7 +1234,11 @@ updated:
     }
 
     pub fn get_daily(&self, date: NaiveDate) -> Option<DailyNote> {
-        self.state.daily_notes.iter().find(|d| d.date == date).cloned()
+        self.state
+            .daily_notes
+            .iter()
+            .find(|d| d.date == date)
+            .cloned()
     }
 
     pub fn list_daily(&self) -> Vec<DailyNote> {
@@ -1085,14 +1260,14 @@ updated:
         }
 
         let content = fs::read_to_string(&goal.file_path)?;
-        let (mut frontmatter, body) = crate::parser::frontmatter::FrontmatterParser::parse(&content)?;
+        let (mut frontmatter, body) =
+            crate::parser::frontmatter::FrontmatterParser::parse(&content)?;
         frontmatter.insert(
             "status".to_string(),
             serde_json::Value::String(new_status.to_string()),
         );
 
-        let updated_frontmatter =
-            serde_yaml::to_string(&frontmatter).map_err(MetaError::Yaml)?;
+        let updated_frontmatter = serde_yaml::to_string(&frontmatter).map_err(MetaError::Yaml)?;
         let new_content = format!("---\n{}---\n\n{}", updated_frontmatter, body);
         fs::write(&goal.file_path, new_content)?;
 
@@ -1115,7 +1290,12 @@ updated:
         }
 
         for goal in &self.state.goals {
-            if goal.phase.as_ref().map(|p| p.trim().is_empty()).unwrap_or(true) {
+            if goal
+                .phase
+                .as_ref()
+                .map(|p| p.trim().is_empty())
+                .unwrap_or(true)
+            {
                 warnings.push(GovernanceWarning {
                     kind: GovernanceWarningKind::GoalMissingPhase,
                     message: format!("{} has no phase assigned", goal.title),
@@ -1140,11 +1320,7 @@ updated:
                 continue;
             }
 
-            for goal_id in daily
-                .goals_worked
-                .iter()
-                .chain(daily.linked_goals.iter())
-            {
+            for goal_id in daily.goals_worked.iter().chain(daily.linked_goals.iter()) {
                 referenced_goals.insert(goal_id.to_lowercase());
             }
         }
@@ -1181,10 +1357,7 @@ updated:
             {
                 warnings.push(GovernanceWarning {
                     kind: GovernanceWarningKind::DecisionUnlinked,
-                    message: format!(
-                        "{} is not referenced by any goal",
-                        decision.title
-                    ),
+                    message: format!("{} is not referenced by any goal", decision.title),
                     related: vec![decision.decision_id.clone()],
                 });
             }
@@ -1207,10 +1380,7 @@ updated:
             if active_count == 0 {
                 warnings.push(GovernanceWarning {
                     kind: GovernanceWarningKind::PhaseWithoutActiveGoals,
-                    message: format!(
-                        "Phase {} has no active goals",
-                        phase.title
-                    ),
+                    message: format!("Phase {} has no active goals", phase.title),
                     related: vec![phase.phase_id.clone()],
                 });
             }

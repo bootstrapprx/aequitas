@@ -1,8 +1,7 @@
 use chrono::NaiveDate;
 use metatheos_core::{
-    AuditRecord, DailyWriter, Goal, GoalStatus, GoalWriter, Phase, PhaseWriter, Prompt,
-    parser::MarkdownParser,
     writer::{AuditWriter, PromptWriter},
+    AuditRecord, DailyWriter, Goal, GoalStatus, GoalWriter, Phase, PhaseWriter, Prompt,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -70,26 +69,60 @@ pub struct PhaseUpdateRequest {
 
 /// Create a new goal
 #[tauri::command]
-pub fn create_goal(
-    request: GoalCreateRequest,
-    state: State<AppState>,
-) -> Result<String, String> {
+pub fn create_goal(request: GoalCreateRequest, state: State<AppState>) -> Result<String, String> {
     let root = state.governance_root.lock().unwrap();
+    let ctx = metatheos_core::GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
     let writer = GoalWriter::new(root.clone());
+
+    if !Goal::validate_id(&request.goal_id) {
+        return Err(format!("Invalid goal id '{}'", request.goal_id));
+    }
 
     // Parse status
     let status = GoalStatus::from_str(&request.status)
         .ok_or_else(|| format!("Invalid status: {}", request.status))?;
+
+    // Validate parent and inherit phase/level where needed
+    let mut derived_phase = request.phase.clone();
+    let mut derived_level = request.level.clone();
+    if let Some(parent_id) = &request.parent_id {
+        let parent = ctx
+            .get_goal(parent_id)
+            .ok_or_else(|| format!("Parent goal '{}' not found", parent_id))?;
+        let parent_phase = parent.phase.clone().ok_or_else(|| {
+            "Parent goal is missing a phase; phase is the canonical scope root".to_string()
+        })?;
+        if derived_phase.is_none() {
+            derived_phase = Some(parent_phase.clone());
+        } else if !derived_phase
+            .as_ref()
+            .map(|p| p.eq_ignore_ascii_case(&parent_phase))
+            .unwrap_or(false)
+        {
+            return Err(
+                "Parent → child phase mismatch: child must inherit parent's phase".to_string(),
+            );
+        }
+        if derived_level.is_none() {
+            derived_level = Some("subgoal".to_string());
+        }
+    } else if derived_level.is_none() {
+        derived_level = Some("goal".to_string());
+    }
+
+    if derived_phase.is_none() {
+        return Err("Goal must belong to a phase (phase is the canonical scope root)".to_string());
+    }
 
     // Build goal
     let goal = Goal {
         goal_id: request.goal_id.clone(),
         title: request.title,
         status,
-        phase: request.phase,
+        phase: derived_phase,
         owner: request.owner,
         parent_id: request.parent_id,
-        level: request.level,
+        level: derived_level,
         dependencies: request.dependencies,
         canon: request.canon,
         tags: request.tags,
@@ -99,16 +132,15 @@ pub fn create_goal(
     };
 
     // Create goal in markdown (source of truth)
-    writer
-        .create_goal(&goal)
-        .map_err(|e| e.to_string())?;
+    writer.create_goal(&goal).map_err(|e| e.to_string())?;
 
     // Add to SurrealDB cache if available
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         let goal_clone = goal.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .create::<Option<metatheos_core::Goal>>(("goals", goal_clone.goal_id.as_str()))
                 .content(goal_clone)
                 .await;
@@ -152,7 +184,11 @@ pub fn update_goal(
         goal.owner = Some(owner);
     }
     if let Some(parent_id) = request.parent_id {
-        goal.parent_id = Some(parent_id);
+        if parent_id.trim().is_empty() {
+            goal.parent_id = None;
+        } else {
+            goal.parent_id = Some(parent_id);
+        }
     }
     if let Some(level) = request.level {
         goal.level = Some(level);
@@ -170,6 +206,55 @@ pub fn update_goal(
         goal.content = content;
     }
 
+    // Validate parent exists and inherit phase/level when missing
+    if let Some(parent_id) = &goal.parent_id {
+        let parent = ctx
+            .get_goal(parent_id)
+            .ok_or_else(|| format!("Parent goal '{}' not found", parent_id))?;
+        let parent_phase = parent.phase.clone().ok_or_else(|| {
+            "Parent goal is missing a phase; phase is the canonical scope root".to_string()
+        })?;
+        if goal.phase.is_none() {
+            goal.phase = Some(parent_phase.clone());
+        } else if !goal
+            .phase
+            .as_ref()
+            .map(|p| p.eq_ignore_ascii_case(&parent_phase))
+            .unwrap_or(false)
+        {
+            return Err(
+                "Parent → child phase mismatch: child must inherit parent's phase".to_string(),
+            );
+        }
+        if goal.level.is_none() {
+            goal.level = Some("subgoal".to_string());
+        }
+    } else if goal.level.is_none() {
+        goal.level = Some("goal".to_string());
+    }
+
+    if goal.phase.is_none() {
+        return Err("Goal must belong to a phase (phase is the canonical scope root)".to_string());
+    }
+
+    // Guard against children drifting across phases
+    let children_out_of_phase: Vec<&Goal> = ctx
+        .state
+        .goals
+        .iter()
+        .filter(|g| g.parent_id.as_deref() == Some(goal.goal_id.as_str()))
+        .filter(|child| {
+            if let (Some(child_phase), Some(goal_phase)) = (&child.phase, &goal.phase) {
+                !child_phase.eq_ignore_ascii_case(goal_phase)
+            } else {
+                false
+            }
+        })
+        .collect();
+    if !children_out_of_phase.is_empty() {
+        return Err("Parent-child phase mismatch detected: update child tasks/sub-goals to the parent phase before saving".to_string());
+    }
+
     goal.updated = Some(chrono::Utc::now().naive_utc().date());
 
     // Write updated goal to markdown (source of truth)
@@ -181,7 +266,8 @@ pub fn update_goal(
         let store = store.clone();
         let goal_clone = goal.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .update::<Option<metatheos_core::Goal>>(("goals", goal_clone.goal_id.as_str()))
                 .content(goal_clone)
                 .await;
@@ -204,7 +290,8 @@ pub fn delete_goal(goal_id: String, state: State<AppState>) -> Result<(), String
         let store = store.clone();
         let goal_id_clone = goal_id.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .delete::<Option<metatheos_core::Goal>>(("goals", goal_id_clone.as_str()))
                 .await;
         });
@@ -219,10 +306,7 @@ pub fn delete_goal(goal_id: String, state: State<AppState>) -> Result<(), String
 
 /// Create a new phase
 #[tauri::command]
-pub fn create_phase(
-    request: PhaseCreateRequest,
-    state: State<AppState>,
-) -> Result<String, String> {
+pub fn create_phase(request: PhaseCreateRequest, state: State<AppState>) -> Result<String, String> {
     let root = state.governance_root.lock().unwrap();
     let writer = PhaseWriter::new(root.clone());
 
@@ -250,16 +334,15 @@ pub fn create_phase(
     };
 
     // Create phase in markdown (source of truth)
-    writer
-        .create_phase(&phase)
-        .map_err(|e| e.to_string())?;
+    writer.create_phase(&phase).map_err(|e| e.to_string())?;
 
     // Add to SurrealDB cache if available
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         let phase_clone = phase.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .create::<Option<metatheos_core::Phase>>(("phases", phase_clone.phase_id.as_str()))
                 .content(phase_clone)
                 .await;
@@ -317,7 +400,8 @@ pub fn update_phase(
         let store = store.clone();
         let phase_clone = phase.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .update::<Option<metatheos_core::Phase>>(("phases", phase_clone.phase_id.as_str()))
                 .content(phase_clone)
                 .await;
@@ -347,8 +431,12 @@ pub fn set_active_phase(phase_id: String, state: State<AppState>) -> Result<(), 
             // Reload phases from filesystem to get updated statuses
             if let Ok(ctx) = metatheos_core::GovernanceContext::load(&root_clone) {
                 for phase in ctx.all_phases() {
-                    let _ = store.get_db()
-                        .update::<Option<metatheos_core::Phase>>(("phases", phase.phase_id.as_str()))
+                    let _ = store
+                        .get_db()
+                        .update::<Option<metatheos_core::Phase>>((
+                            "phases",
+                            phase.phase_id.as_str(),
+                        ))
                         .content(phase.clone())
                         .await;
                 }
@@ -382,7 +470,8 @@ pub fn delete_daily_note(date: String, state: State<AppState>) -> Result<(), Str
         let store = store.clone();
         let date_clone = date.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .delete::<Option<metatheos_core::DailyNote>>(("daily_notes", date_clone.as_str()))
                 .await;
         });
@@ -393,7 +482,11 @@ pub fn delete_daily_note(date: String, state: State<AppState>) -> Result<(), Str
 
 /// Enhanced version of update_daily_note using DailyWriter
 #[tauri::command]
-pub async fn write_daily_note(date: String, content: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn write_daily_note(
+    date: String,
+    content: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let root = state.governance_root.lock().unwrap().clone();
     let writer = DailyWriter::new(root.clone());
 
@@ -410,14 +503,33 @@ pub async fn write_daily_note(date: String, content: String, state: State<'_, Ap
         let store = store.clone();
         let date_clone = date.clone();
         tauri::async_runtime::spawn(async move {
-            // Re-parse the daily note to get full structure
+            // Re-parse the daily note to get full structure (Manual construction due to parser removal)
             let daily_path = root.join("01_DAILY").join(format!("{}.md", date_clone));
-            if let Ok(note) = metatheos_core::parser::MarkdownParser::parse_daily(&daily_path) {
-                let _ = store.get_db()
-                    .update::<Option<metatheos_core::DailyNote>>(("daily_notes", date_clone.as_str()))
-                    .content(note)
-                    .await;
-            }
+
+            // Basic DailyNote construction for cache update
+            // Full parsing is disabled in DB-only mode, but we keep content in sync
+            let note = metatheos_core::DailyNote {
+                date: NaiveDate::from_str(&date_clone).unwrap_or_default(),
+                content: content.clone(), // Use the content we just wrote
+                file_path: daily_path,
+                phase: None,
+                mode: None,
+                protocol: None,
+                goals_worked: vec![],
+                decisions_made: vec![],
+                divergences: vec![],
+                goals: vec![],
+                blockers: vec![],
+                decisions: vec![],
+                linked_goals: vec![],
+                extra: std::collections::HashMap::new(),
+            };
+
+            let _ = store
+                .get_db()
+                .update::<Option<metatheos_core::DailyNote>>(("daily_notes", date_clone.as_str()))
+                .content(note)
+                .await;
         });
     }
 
@@ -454,10 +566,7 @@ pub struct AuditUpdateRequest {
 
 /// Create a new audit record
 #[tauri::command]
-pub fn create_audit(
-    request: AuditCreateRequest,
-    state: State<AppState>,
-) -> Result<String, String> {
+pub fn create_audit(request: AuditCreateRequest, state: State<AppState>) -> Result<String, String> {
     let root = state.governance_root.lock().unwrap();
     let writer = AuditWriter::new(root.clone());
 
@@ -480,7 +589,12 @@ pub fn create_audit(
         file_path: std::path::PathBuf::new(), // Will be set by writer
     };
 
-    if audit.summary.as_ref().map(|s| s.trim().is_empty()).unwrap_or(true) {
+    if audit
+        .summary
+        .as_ref()
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(true)
+    {
         return Err("Audit summary is required to describe the claim being verified.".to_string());
     }
 
@@ -493,12 +607,14 @@ pub fn create_audit(
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         let audit_clone = audit.clone();
-        let stem = file_path.file_stem()
+        let stem = file_path
+            .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("unknown")
             .to_string();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .create::<Option<metatheos_core::AuditRecord>>(("audits", stem.as_str()))
                 .content(audit_clone)
                 .await;
@@ -510,67 +626,9 @@ pub fn create_audit(
 
 /// Update an existing audit record
 #[tauri::command]
-pub fn update_audit(
-    request: AuditUpdateRequest,
-    state: State<AppState>,
-) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-    let writer = AuditWriter::new(root.clone());
-
-    // Load existing audit
-    let file_path = std::path::PathBuf::from(&request.file_path);
-    let mut audit = MarkdownParser::parse_audit(&file_path)
-        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
-
-    // Apply updates
-    if let Some(title) = request.title {
-        audit.title = title;
-    }
-    if let Some(date_str) = request.date {
-        audit.date = NaiveDate::parse_from_str(&date_str, "%Y-%m-%d").ok();
-    }
-    if let Some(scope) = request.scope {
-        audit.scope = Some(scope);
-    }
-    if let Some(risk) = request.risk {
-        audit.risk = Some(risk);
-    }
-    if let Some(auditor) = request.auditor {
-        audit.auditor = Some(auditor);
-    }
-    if let Some(status) = request.status {
-        audit.status = Some(status);
-    }
-    if let Some(evidence) = request.summary.clone() {
-        audit.evidence = Some(evidence);
-    }
-    if let Some(summary) = request.summary {
-        audit.summary = Some(summary);
-    }
-    if let Some(content) = request.content {
-        audit.content = content;
-    }
-
-    // Update audit in markdown (source of truth)
-    writer.update_audit(&audit).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
-
-    // Update SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let audit_clone = audit.clone();
-        let stem = file_path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
-                .update::<Option<metatheos_core::AuditRecord>>(("audits", stem.as_str()))
-                .content(audit_clone)
-                .await;
-        });
-    }
-
-    Ok(())
+pub fn update_audit(_request: AuditUpdateRequest, _state: State<AppState>) -> Result<(), String> {
+    // TODO: Rewrite to use DB directly - MarkdownParser removed in DB-only architecture
+    Err("update_audit deprecated: MarkdownParser removed. Use DB directly.".to_string())
 }
 
 /// Delete an audit record
@@ -580,19 +638,23 @@ pub fn delete_audit(file_path: String, state: State<AppState>) -> Result<(), Str
     let writer = AuditWriter::new(root.clone());
 
     let path = std::path::PathBuf::from(&file_path);
-    let stem = path.file_stem()
+    let stem = path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("unknown")
         .to_string();
 
     // Archive markdown (source of truth)
-    writer.delete_audit(&path).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+    writer
+        .delete_audit(&path)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
 
     // Remove from SurrealDB cache if available
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .delete::<Option<metatheos_core::AuditRecord>>(("audits", stem.as_str()))
                 .await;
         });
@@ -666,12 +728,14 @@ pub fn create_prompt(
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         let prompt_clone = prompt.clone();
-        let stem = file_path.file_stem()
+        let stem = file_path
+            .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("unknown")
             .to_string();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .create::<Option<metatheos_core::Prompt>>(("prompts", stem.as_str()))
                 .content(prompt_clone)
                 .await;
@@ -683,70 +747,9 @@ pub fn create_prompt(
 
 /// Update an existing prompt
 #[tauri::command]
-pub fn update_prompt(
-    request: PromptUpdateRequest,
-    state: State<AppState>,
-) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-    let writer = PromptWriter::new(root.clone());
-
-    // Load existing prompt
-    let file_path = std::path::PathBuf::from(&request.file_path);
-    let mut prompt = MarkdownParser::parse_prompt(&file_path)
-        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
-
-    // Apply updates
-    if let Some(title) = request.title {
-        prompt.title = title;
-    }
-    if let Some(prompt_id) = request.prompt_id {
-        prompt.prompt_id = Some(prompt_id);
-    }
-    if let Some(agent) = request.agent {
-        prompt.agent = Some(agent);
-    }
-    if let Some(purpose) = request.purpose {
-        prompt.purpose = Some(purpose);
-    }
-    if let Some(ref origin) = request.origin {
-        prompt.origin = Some(origin.clone());
-    }
-    if let Some(ref status) = request.status {
-        prompt.status = Some(status.clone());
-    }
-    if let Some(prompt_text) = request.prompt_text {
-        prompt.prompt_text = Some(prompt_text);
-    }
-    if let Some(content) = request.content {
-        prompt.content = content;
-    }
-    if prompt.origin.is_none() {
-        prompt.origin = Some(request.origin.unwrap_or_else(|| "unspecified".to_string()));
-    }
-    if prompt.status.is_none() {
-        prompt.status = Some(request.status.unwrap_or_else(|| "draft".to_string()));
-    }
-
-    // Update prompt in markdown (source of truth)
-    writer.update_prompt(&prompt).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
-
-    // Update SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let prompt_clone = prompt.clone();
-        let stem = file_path.file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
-                .update::<Option<metatheos_core::Prompt>>(("prompts", stem.as_str()))
-                .content(prompt_clone)
-                .await;
-        });
-    }
-
-    Ok(())
+pub fn update_prompt(_request: PromptUpdateRequest, _state: State<AppState>) -> Result<(), String> {
+    // TODO: Rewrite to use DB directly - MarkdownParser removed in DB-only architecture
+    Err("update_prompt deprecated: MarkdownParser removed. Use DB directly.".to_string())
 }
 
 /// Delete a prompt
@@ -756,19 +759,23 @@ pub fn delete_prompt(file_path: String, state: State<AppState>) -> Result<(), St
     let writer = PromptWriter::new(root.clone());
 
     let path = std::path::PathBuf::from(&file_path);
-    let stem = path.file_stem()
+    let stem = path
+        .file_stem()
         .and_then(|s| s.to_str())
         .unwrap_or("unknown")
         .to_string();
 
     // Archive markdown (source of truth)
-    writer.delete_prompt(&path).map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
+    writer
+        .delete_prompt(&path)
+        .map_err(|e: metatheos_core::errors::MetaError| e.to_string())?;
 
     // Remove from SurrealDB cache if available
     if let Some(store) = state.db.lock().unwrap().as_ref() {
         let store = store.clone();
         tauri::async_runtime::spawn(async move {
-            let _ = store.get_db()
+            let _ = store
+                .get_db()
                 .delete::<Option<metatheos_core::Prompt>>(("prompts", stem.as_str()))
                 .await;
         });

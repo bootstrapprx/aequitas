@@ -17,29 +17,12 @@ impl GovernanceValidator {
                 audit.add_result(result);
             }
 
-            // Phase coherence (assume current phase is max active goal phase)
-            let current_phase = ctx
-                .all_goals()
-                .iter()
-                .filter(|g| g.is_active())
-                .filter_map(|g| {
-                    g.phase
-                        .as_ref()
-                        .and_then(|p| p.trim_start_matches('P').parse::<u32>().ok())
-                })
-                .max();
-
-            let phase_results = GoalValidator::validate_phase_coherence(goal, current_phase);
+            // Phase coherence (phase is canonical scope root)
+            let active_phase = ctx.active_phase().map(|p| p.phase_id);
+            let phase_results =
+                GoalValidator::validate_phase_coherence(goal, ctx, active_phase.as_deref());
             for result in phase_results {
                 audit.add_result(result);
-            }
-
-            // Validate required fields presence (already done in parsing, but double-check)
-            if goal.phase.is_none() {
-                audit.add_result(ValidationResult::warning(
-                    goal.file_path.clone(),
-                    "Missing optional field: phase".to_string(),
-                ));
             }
         }
 

@@ -6,11 +6,6 @@ pub struct FrontmatterParser;
 
 impl FrontmatterParser {
     /// Extract YAML frontmatter from markdown content
-    /// Expected format:
-    /// ---
-    /// key: value
-    /// ---
-    /// content
     pub fn parse(content: &str) -> Result<(HashMap<String, Value>, String)> {
         let trimmed = content.trim_start();
 
@@ -32,35 +27,26 @@ impl FrontmatterParser {
         }
     }
 
-    pub fn get_string(
-        frontmatter: &HashMap<String, Value>,
-        key: &str,
-    ) -> Option<String> {
-        frontmatter.get(key).and_then(|v| v.as_str()).map(String::from)
+    pub fn get_string(frontmatter: &HashMap<String, Value>, key: &str) -> Option<String> {
+        frontmatter
+            .get(key)
+            .and_then(|v| v.as_str())
+            .map(String::from)
     }
 
-    pub fn get_u32(
-        frontmatter: &HashMap<String, Value>,
-        key: &str,
-    ) -> Option<u32> {
+    pub fn get_date(frontmatter: &HashMap<String, Value>, key: &str) -> Option<chrono::NaiveDate> {
         frontmatter.get(key).and_then(|v| {
-            v.as_u64().map(|n| n as u32)
+            if let Some(s) = v.as_str() {
+                chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok()
+            } else {
+                let s = v.to_string();
+                let trimmed = s.trim_matches('"');
+                chrono::NaiveDate::parse_from_str(trimmed, "%Y-%m-%d").ok()
+            }
         })
     }
 
-    pub fn get_date(
-        frontmatter: &HashMap<String, Value>,
-        key: &str,
-    ) -> Option<chrono::NaiveDate> {
-        frontmatter.get(key).and_then(|v| v.as_str()).and_then(|value| {
-            chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()
-        })
-    }
-
-    pub fn get_array(
-        frontmatter: &HashMap<String, Value>,
-        key: &str,
-    ) -> Vec<String> {
+    pub fn get_array(frontmatter: &HashMap<String, Value>, key: &str) -> Vec<String> {
         frontmatter
             .get(key)
             .and_then(|v| v.as_array())
@@ -70,16 +56,5 @@ impl FrontmatterParser {
                     .collect()
             })
             .unwrap_or_default()
-    }
-
-    pub fn require_string(
-        frontmatter: &HashMap<String, Value>,
-        key: &str,
-        file: &str,
-    ) -> Result<String> {
-        Self::get_string(frontmatter, key).ok_or_else(|| MetaError::MissingFrontmatter {
-            field: key.to_string(),
-            file: file.to_string(),
-        })
     }
 }

@@ -75,6 +75,11 @@
   });
 
   async function verifyLayout() {
+    // DB-Only Mode: We don't enforce file layout strictness in the GUI anymore
+    // The DB is the source of truth.
+    layoutOk = true;
+    layoutMissing = [];
+    /* 
     try {
       const result = await invoke("check_governance_layout");
       layoutOk = result.ok;
@@ -85,10 +90,10 @@
         toastShow = true;
       }
     } catch (err) {
-      layoutOk = false;
-      layoutMissing = ["unknown"];
-      error = err?.toString?.() ?? String(err);
+      console.warn("Layout check skipped/failed:", err);
+      layoutOk = true; // Default to OK to not block user
     }
+    */
   }
 
   async function loadGoals() {

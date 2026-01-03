@@ -1,6 +1,6 @@
-use anyhow::Result;
-use metatheos_core::{GovernanceContext, GoalStatus};
 use crate::args::PhaseAction;
+use anyhow::Result;
+use metatheos_core::{GoalStatus, GovernanceContext};
 
 pub fn run_phase(root: &str, action: &PhaseAction) -> Result<()> {
     let ctx = GovernanceContext::load(root)?;
@@ -8,10 +8,7 @@ pub fn run_phase(root: &str, action: &PhaseAction) -> Result<()> {
     match action {
         PhaseAction::Current => {
             if let Some(phase) = ctx.active_phase() {
-                println!(
-                    "Current Phase: {} — {}",
-                    phase.phase_id, phase.title
-                );
+                println!("Current Phase: {} — {}", phase.phase_id, phase.title);
             } else {
                 println!("No active goals with phase information");
             }
@@ -22,12 +19,16 @@ pub fn run_phase(root: &str, action: &PhaseAction) -> Result<()> {
             phases.sort_by(|a, b| a.phase_id.cmp(&b.phase_id));
             println!("Phases found:");
             for phase in phases {
-                let goal_count = ctx.state.goals
+                let goal_count = ctx
+                    .state
+                    .goals
                     .iter()
-                    .filter(|g| g.phase
-                        .as_ref()
-                        .map(|p| p.eq_ignore_ascii_case(&phase.phase_id))
-                        .unwrap_or(false))
+                    .filter(|g| {
+                        g.phase
+                            .as_ref()
+                            .map(|p| p.eq_ignore_ascii_case(&phase.phase_id))
+                            .unwrap_or(false)
+                    })
                     .count();
 
                 println!("  {} ({} goals)", phase.phase_id, goal_count);
@@ -66,9 +67,7 @@ pub fn run_phase(root: &str, action: &PhaseAction) -> Result<()> {
                 for goal in mismatched {
                     println!(
                         "  {} (Phase {:?}): {}",
-                        goal.goal_id,
-                        goal.phase,
-                        goal.title
+                        goal.goal_id, goal.phase, goal.title
                     );
                 }
             }

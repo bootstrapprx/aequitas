@@ -1,7 +1,7 @@
-use anyhow::{Result, anyhow};
-use metatheos_core::{GovernanceContext, GoalQuery};
-use crate::output::{MarkdownFormatter, JsonFormatter, TableFormatter};
 use crate::args::parse_goal_status;
+use crate::output::{JsonFormatter, MarkdownFormatter, TableFormatter};
+use anyhow::{anyhow, Result};
+use metatheos_core::{GoalQuery, GovernanceContext};
 
 pub fn run_goals(
     root: &str,

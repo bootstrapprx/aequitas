@@ -1,6 +1,6 @@
+use crate::output::{JsonFormatter, MarkdownFormatter, TableFormatter};
 use anyhow::Result;
 use metatheos_core::GovernanceContext;
-use crate::output::{MarkdownFormatter, JsonFormatter, TableFormatter};
 
 pub fn run_audit(root: &str, format: &str) -> Result<i32> {
     let ctx = GovernanceContext::load(root)?;

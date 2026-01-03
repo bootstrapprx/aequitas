@@ -1,8 +1,8 @@
+use crate::domain::GoalStatus;
 use crate::errors::Result;
 use crate::governance::GovernanceContext;
-use crate::llm::{LLMClient, ContextBuilder, PromptLogger};
 use crate::llm::logger::InteractionMetadata;
-use crate::domain::GoalStatus;
+use crate::llm::{ContextBuilder, LLMClient, PromptLogger};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;
@@ -72,7 +72,8 @@ impl AIService {
             duration_ms: Some(duration_ms),
         };
 
-        self.logger.log_interaction(query, &context, &response_text, metadata)?;
+        self.logger
+            .log_interaction(query, &context, &response_text, metadata)?;
 
         Ok(AIResponse {
             text: response_text,
@@ -86,11 +87,14 @@ impl AIService {
         goal_id: &str,
         ctx: &GovernanceContext,
     ) -> Result<StatusSuggestion> {
-        let goal = ctx.get_goal(goal_id)
+        let goal = ctx
+            .get_goal(goal_id)
             .ok_or_else(|| crate::errors::MetaError::InvalidGoalId(goal_id.to_string()))?;
 
         // Build context for this specific goal
-        let context = self.context_builder.for_goal(ctx, goal_id)
+        let context = self
+            .context_builder
+            .for_goal(ctx, goal_id)
             .ok_or_else(|| crate::errors::MetaError::InvalidGoalId(goal_id.to_string()))?;
 
         // Get allowed transitions
@@ -125,7 +129,8 @@ impl AIService {
         let response_text = self.client.complete(&prompt).await?;
 
         // Parse response
-        let suggestion = self.parse_status_suggestion(goal_id, &goal.status.to_string(), &response_text);
+        let suggestion =
+            self.parse_status_suggestion(goal_id, &goal.status.to_string(), &response_text);
 
         Ok(suggestion)
     }
@@ -141,10 +146,16 @@ Your responses should:
 - Never suggest modifying Canon documents
 - Respect phase boundaries and dependencies
 
-Remember: You suggest, the human decides. Never be prescriptive."#.to_string()
+Remember: You suggest, the human decides. Never be prescriptive."#
+            .to_string()
     }
 
-    fn parse_status_suggestion(&self, goal_id: &str, current_status: &str, response: &str) -> StatusSuggestion {
+    fn parse_status_suggestion(
+        &self,
+        goal_id: &str,
+        current_status: &str,
+        response: &str,
+    ) -> StatusSuggestion {
         let mut suggested_status = current_status.to_string();
         let mut reasoning = "No clear suggestion provided".to_string();
         let mut confidence = "low".to_string();

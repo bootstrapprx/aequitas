@@ -1,9 +1,12 @@
+use anyhow::{Context, Result};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::time::{Duration, SystemTime};
-use std::collections::HashMap;
-use anyhow::{Result, Context};
+
+pub mod service;
+pub use service::{GovernanceUpdateEvent, WatcherService};
 
 /// Type of entity that changed
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -41,7 +44,10 @@ impl FileChangeEvent {
         let path_str = path.to_string_lossy();
 
         // Check if it's a canon file
-        if path_str.contains("docs/canonical") || path_str.contains("CANON_") || path_str.contains("KERNEL_") {
+        if path_str.contains("docs/canonical")
+            || path_str.contains("CANON_")
+            || path_str.contains("KERNEL_")
+        {
             return EntityType::Canon;
         }
 
@@ -118,9 +124,7 @@ impl Debouncer {
     /// Clean up old entries to prevent unbounded growth
     fn cleanup(&mut self, now: SystemTime) {
         let cutoff = now - Duration::from_secs(60); // Remove entries older than 1 minute
-        self.last_events.retain(|_, &mut time| {
-            time > cutoff
-        });
+        self.last_events.retain(|_, &mut time| time > cutoff);
     }
 }
 
@@ -138,8 +142,7 @@ impl FileWatcher {
 
         let mut watcher = RecommendedWatcher::new(
             tx,
-            notify::Config::default()
-                .with_poll_interval(Duration::from_millis(100)),
+            notify::Config::default().with_poll_interval(Duration::from_millis(100)),
         )
         .context("Failed to create file watcher")?;
 
@@ -206,7 +209,10 @@ impl FileWatcher {
             // Skip temporary files and swap files
             if let Some(filename) = path.file_name() {
                 let filename_str = filename.to_string_lossy();
-                if filename_str.starts_with('.') || filename_str.ends_with('~') || filename_str.contains(".swp") {
+                if filename_str.starts_with('.')
+                    || filename_str.ends_with('~')
+                    || filename_str.contains(".swp")
+                {
                     continue;
                 }
             }
@@ -249,7 +255,10 @@ mod tests {
             ("governance/01_DAILY/2025-12-31.md", EntityType::DailyNote),
             ("governance/02_PHASES/PHASE_1.md", EntityType::Phase),
             ("governance/03_GOALS_EPICS/G-042_test.md", EntityType::Goal),
-            ("governance/04_DECISIONS/D-001_arch.md", EntityType::Decision),
+            (
+                "governance/04_DECISIONS/D-001_arch.md",
+                EntityType::Decision,
+            ),
             ("governance/05_AUDITS/AUDIT_001.md", EntityType::Audit),
             ("governance/06_PROMPTS/test.md", EntityType::Prompt),
             ("governance/docs/canonical/CANON_I.md", EntityType::Canon),

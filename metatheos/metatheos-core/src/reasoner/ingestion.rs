@@ -55,7 +55,11 @@ impl GovernanceIngestion {
             .all_audits()
             .iter()
             .map(|a| SummaryItem {
-                id: a.file_path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default(),
+                id: a
+                    .file_path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_default(),
                 status: a.status.clone(),
                 phase: None,
                 path: a.file_path.clone(),
@@ -76,7 +80,10 @@ impl GovernanceIngestion {
                 status: d.mode.clone(),
                 phase: d.phase.map(|p| format!("P{}", p)),
                 path: d.file_path.clone(),
-                summary: summarize(&d.mode.clone().unwrap_or_else(|| "daily".to_string()), &d.content),
+                summary: summarize(
+                    &d.mode.clone().unwrap_or_else(|| "daily".to_string()),
+                    &d.content,
+                ),
                 updated: Some(d.date),
             })
             .collect();
@@ -86,7 +93,10 @@ impl GovernanceIngestion {
         Ok(notes)
     }
 
-    pub fn filter_goals_by_ids(ctx: &GovernanceContext, ids: &[String]) -> Result<Vec<SummaryItem>> {
+    pub fn filter_goals_by_ids(
+        ctx: &GovernanceContext,
+        ids: &[String],
+    ) -> Result<Vec<SummaryItem>> {
         let set: std::collections::HashSet<String> = ids.iter().map(|s| s.to_lowercase()).collect();
         Ok(Self::load_goals(ctx)?
             .into_iter()
@@ -94,7 +104,10 @@ impl GovernanceIngestion {
             .collect())
     }
 
-    pub fn filter_decisions_by_ids(ctx: &GovernanceContext, ids: &[String]) -> Result<Vec<SummaryItem>> {
+    pub fn filter_decisions_by_ids(
+        ctx: &GovernanceContext,
+        ids: &[String],
+    ) -> Result<Vec<SummaryItem>> {
         let set: std::collections::HashSet<String> = ids.iter().map(|s| s.to_lowercase()).collect();
         Ok(Self::load_decisions(ctx)?
             .into_iter()
@@ -102,7 +115,10 @@ impl GovernanceIngestion {
             .collect())
     }
 
-    pub fn filter_audits_by_ids(ctx: &GovernanceContext, ids: &[String]) -> Result<Vec<SummaryItem>> {
+    pub fn filter_audits_by_ids(
+        ctx: &GovernanceContext,
+        ids: &[String],
+    ) -> Result<Vec<SummaryItem>> {
         let set: std::collections::HashSet<String> = ids.iter().map(|s| s.to_lowercase()).collect();
         Ok(Self::load_audits(ctx)?
             .into_iter()

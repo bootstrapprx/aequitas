@@ -41,8 +41,8 @@ fn test_cli_audit_command() {
 
     // Parse JSON output - should be an array of audit records
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("Failed to parse JSON output from audit command");
+    let result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Failed to parse JSON output from audit command");
 
     // Verify it's an array
     assert!(result.is_array(), "Audit output should be a JSON array");
@@ -85,8 +85,8 @@ fn test_cli_goals_command() {
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("Failed to parse JSON output from goals command");
+    let result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Failed to parse JSON output from goals command");
 
     // Verify it's an array
     assert!(result.is_array(), "Goals output should be a JSON array");
@@ -132,8 +132,8 @@ fn test_cli_goals_filter_by_status() {
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let result: serde_json::Value = serde_json::from_str(&stdout)
-        .expect("Failed to parse JSON output");
+    let result: serde_json::Value =
+        serde_json::from_str(&stdout).expect("Failed to parse JSON output");
 
     // Verify all returned goals have 'active' status
     if let Some(goals) = result.as_array() {
@@ -203,10 +203,7 @@ fn test_cli_help_flag() {
         .output()
         .expect("Failed to execute --help command");
 
-    assert!(
-        output.status.success(),
-        "--help command should succeed"
-    );
+    assert!(output.status.success(), "--help command should succeed");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -230,10 +227,7 @@ fn test_cli_version_flag() {
         .output()
         .expect("Failed to execute --version command");
 
-    assert!(
-        output.status.success(),
-        "--version command should succeed"
-    );
+    assert!(output.status.success(), "--version command should succeed");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(

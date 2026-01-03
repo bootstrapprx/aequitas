@@ -3,8 +3,8 @@ mod commands;
 mod output;
 
 use anyhow::Result;
-use clap::Parser;
 use args::{Cli, Commands};
+use clap::Parser;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

@@ -6,7 +6,6 @@
 /// - No auto-commits (all commits explicit and human-confirmed)
 /// - Canon/Constitution remain read-only
 /// - Git is historical memory of governance authority
-
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use tauri::State;
@@ -161,7 +160,11 @@ pub fn commit_governance_changes(
         .map_err(|e| format!("Failed to get commit hash: {}", e))?;
 
     let commit_hash = if hash_output.status.success() {
-        Some(String::from_utf8_lossy(&hash_output.stdout).trim().to_string())
+        Some(
+            String::from_utf8_lossy(&hash_output.stdout)
+                .trim()
+                .to_string(),
+        )
     } else {
         None
     };
@@ -250,7 +253,9 @@ pub fn get_last_governance_commit(state: State<AppState>) -> Result<Option<Strin
         return Ok(None);
     }
 
-    let hash = String::from_utf8_lossy(&log_output.stdout).trim().to_string();
+    let hash = String::from_utf8_lossy(&log_output.stdout)
+        .trim()
+        .to_string();
     if hash.is_empty() {
         Ok(None)
     } else {

@@ -10,28 +10,62 @@ impl FrontmatterSerializer {
     pub fn goal_to_yaml(goal: &Goal) -> Result<String> {
         let mut map = HashMap::new();
 
-        map.insert("goal_id".to_string(), serde_yaml::Value::String(goal.goal_id.clone()));
-        map.insert("title".to_string(), serde_yaml::Value::String(goal.title.clone()));
-        map.insert("status".to_string(), serde_yaml::Value::String(goal.status.as_str().to_string()));
+        map.insert(
+            "goal_id".to_string(),
+            serde_yaml::Value::String(goal.goal_id.clone()),
+        );
+        map.insert(
+            "title".to_string(),
+            serde_yaml::Value::String(goal.title.clone()),
+        );
+        map.insert(
+            "status".to_string(),
+            serde_yaml::Value::String(goal.status.as_str().to_string()),
+        );
 
         if let Some(ref phase) = goal.phase {
-            map.insert("phase".to_string(), serde_yaml::Value::String(phase.clone()));
+            map.insert(
+                "phase".to_string(),
+                serde_yaml::Value::String(phase.clone()),
+            );
         }
 
         if let Some(ref owner) = goal.owner {
-            map.insert("owner".to_string(), serde_yaml::Value::String(owner.clone()));
+            map.insert(
+                "owner".to_string(),
+                serde_yaml::Value::String(owner.clone()),
+            );
+        }
+
+        if let Some(ref parent_id) = goal.parent_id {
+            map.insert(
+                "parent_id".to_string(),
+                serde_yaml::Value::String(parent_id.clone()),
+            );
+        }
+
+        if let Some(ref level) = goal.level {
+            map.insert(
+                "level".to_string(),
+                serde_yaml::Value::String(level.clone()),
+            );
         }
 
         if !goal.dependencies.is_empty() {
-            let deps: Vec<serde_yaml::Value> = goal.dependencies
+            let deps: Vec<serde_yaml::Value> = goal
+                .dependencies
                 .iter()
                 .map(|d| serde_yaml::Value::String(d.clone()))
                 .collect();
-            map.insert("dependencies".to_string(), serde_yaml::Value::Sequence(deps));
+            map.insert(
+                "dependencies".to_string(),
+                serde_yaml::Value::Sequence(deps),
+            );
         }
 
         if !goal.canon.is_empty() {
-            let canon: Vec<serde_yaml::Value> = goal.canon
+            let canon: Vec<serde_yaml::Value> = goal
+                .canon
                 .iter()
                 .map(|c| serde_yaml::Value::String(c.clone()))
                 .collect();
@@ -39,7 +73,8 @@ impl FrontmatterSerializer {
         }
 
         if !goal.tags.is_empty() {
-            let tags: Vec<serde_yaml::Value> = goal.tags
+            let tags: Vec<serde_yaml::Value> = goal
+                .tags
                 .iter()
                 .map(|t| serde_yaml::Value::String(t.clone()))
                 .collect();
@@ -47,49 +82,75 @@ impl FrontmatterSerializer {
         }
 
         if let Some(updated) = goal.updated {
-            map.insert("updated".to_string(), serde_yaml::Value::String(updated.to_string()));
+            map.insert(
+                "updated".to_string(),
+                serde_yaml::Value::String(updated.to_string()),
+            );
         }
 
         // Convert HashMap<String, Value> to Mapping
         let mapping = serde_yaml::Mapping::from_iter(
-            map.into_iter().map(|(k, v)| (serde_yaml::Value::String(k), v))
+            map.into_iter()
+                .map(|(k, v)| (serde_yaml::Value::String(k), v)),
         );
         let value = serde_yaml::Value::Mapping(mapping);
-        serde_yaml::to_string(&value)
-            .map_err(|e| MetaError::ParseError(format!("Failed to serialize goal frontmatter: {}", e)))
+        serde_yaml::to_string(&value).map_err(|e| {
+            MetaError::ParseError(format!("Failed to serialize goal frontmatter: {}", e))
+        })
     }
 
     /// Serialize a Phase to YAML frontmatter
     pub fn phase_to_yaml(phase: &Phase) -> Result<String> {
         let mut map = HashMap::new();
 
-        map.insert("phase_id".to_string(), serde_yaml::Value::String(phase.phase_id.clone()));
-        map.insert("title".to_string(), serde_yaml::Value::String(phase.title.clone()));
-        map.insert("status".to_string(), serde_yaml::Value::String(phase.status.clone()));
+        map.insert(
+            "phase_id".to_string(),
+            serde_yaml::Value::String(phase.phase_id.clone()),
+        );
+        map.insert(
+            "title".to_string(),
+            serde_yaml::Value::String(phase.title.clone()),
+        );
+        map.insert(
+            "status".to_string(),
+            serde_yaml::Value::String(phase.status.clone()),
+        );
 
         if let Some(start) = phase.start_date {
-            map.insert("start_date".to_string(), serde_yaml::Value::String(start.to_string()));
+            map.insert(
+                "start_date".to_string(),
+                serde_yaml::Value::String(start.to_string()),
+            );
         }
 
         if let Some(target) = phase.target_date {
-            map.insert("target_date".to_string(), serde_yaml::Value::String(target.to_string()));
+            map.insert(
+                "target_date".to_string(),
+                serde_yaml::Value::String(target.to_string()),
+            );
         }
 
         if !phase.dependencies.is_empty() {
-            let deps: Vec<serde_yaml::Value> = phase.dependencies
+            let deps: Vec<serde_yaml::Value> = phase
+                .dependencies
                 .iter()
                 .map(|d| serde_yaml::Value::String(d.clone()))
                 .collect();
-            map.insert("dependencies".to_string(), serde_yaml::Value::Sequence(deps));
+            map.insert(
+                "dependencies".to_string(),
+                serde_yaml::Value::Sequence(deps),
+            );
         }
 
         // Convert HashMap<String, Value> to Mapping
         let mapping = serde_yaml::Mapping::from_iter(
-            map.into_iter().map(|(k, v)| (serde_yaml::Value::String(k), v))
+            map.into_iter()
+                .map(|(k, v)| (serde_yaml::Value::String(k), v)),
         );
         let value = serde_yaml::Value::Mapping(mapping);
-        serde_yaml::to_string(&value)
-            .map_err(|e| MetaError::ParseError(format!("Failed to serialize phase frontmatter: {}", e)))
+        serde_yaml::to_string(&value).map_err(|e| {
+            MetaError::ParseError(format!("Failed to serialize phase frontmatter: {}", e))
+        })
     }
 
     /// Build complete markdown file with frontmatter and content
@@ -101,9 +162,9 @@ impl FrontmatterSerializer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use crate::GoalStatus;
     use chrono::NaiveDate;
+    use std::path::PathBuf;
 
     #[test]
     fn test_goal_frontmatter_serialization() {

@@ -7,7 +7,10 @@ impl MarkdownFormatter {
     pub fn format_audit(audit: &Audit) -> String {
         let mut output = String::new();
 
-        output.push_str(&format!("# Governance Audit — {}\n\n", chrono::Local::now().format("%Y-%m-%d")));
+        output.push_str(&format!(
+            "# Governance Audit — {}\n\n",
+            chrono::Local::now().format("%Y-%m-%d")
+        ));
 
         let errors: Vec<_> = audit
             .results
@@ -30,10 +33,7 @@ impl MarkdownFormatter {
         if !errors.is_empty() {
             output.push_str(&format!("## Errors ({})\n\n", errors.len()));
             for result in errors {
-                let line_info = result
-                    .line
-                    .map(|l| format!(":{}",  l))
-                    .unwrap_or_default();
+                let line_info = result.line.map(|l| format!(":{}", l)).unwrap_or_default();
                 output.push_str(&format!(
                     "- {}{}  \n  {}\n\n",
                     result.file.display(),
@@ -46,10 +46,7 @@ impl MarkdownFormatter {
         if !warnings.is_empty() {
             output.push_str(&format!("## Warnings ({})\n\n", warnings.len()));
             for result in warnings {
-                let line_info = result
-                    .line
-                    .map(|l| format!(":{}", l))
-                    .unwrap_or_default();
+                let line_info = result.line.map(|l| format!(":{}", l)).unwrap_or_default();
                 output.push_str(&format!(
                     "- {}{}  \n  {}\n\n",
                     result.file.display(),
@@ -94,11 +91,7 @@ impl MarkdownFormatter {
 
             output.push_str(&format!(
                 "- **{}**: {}  \n  Status: {} | {} | Owner: {}\n\n",
-                goal.goal_id,
-                goal.title,
-                goal.status,
-                phase,
-                owner
+                goal.goal_id, goal.title, goal.status, phase, owner
             ));
         }
 
@@ -131,10 +124,7 @@ impl MarkdownFormatter {
             if let Some(summary) = &audit.summary {
                 output.push_str(&format!("- Summary: {}\n", summary));
             }
-            output.push_str(&format!(
-                "- File: {}\n\n",
-                audit.file_path.display()
-            ));
+            output.push_str(&format!("- File: {}\n\n", audit.file_path.display()));
         }
 
         output

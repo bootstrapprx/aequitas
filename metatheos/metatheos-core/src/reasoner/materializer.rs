@@ -17,7 +17,11 @@ pub struct DraftArtifact {
 pub struct MarkdownMaterializer;
 
 impl MarkdownMaterializer {
-    pub fn to_draft(doc: &Value, governance_root: &Path, ctx: &crate::governance::GovernanceContext) -> Result<DraftArtifact> {
+    pub fn to_draft(
+        doc: &Value,
+        governance_root: &Path,
+        ctx: &crate::governance::GovernanceContext,
+    ) -> Result<DraftArtifact> {
         let intent_str = doc["intent"]
             .as_str()
             .ok_or_else(|| MetaError::ValidationError("Missing intent field".to_string()))?;
@@ -44,7 +48,9 @@ impl MarkdownMaterializer {
             Intent::DraftDecision => Self::decision_draft(doc, governance_root),
             Intent::DraftAudit => Self::audit_draft(doc, governance_root),
             Intent::SummarizeState | Intent::AnalyzeBlockers | Intent::ExplainPhase => {
-                Err(MetaError::ValidationError("No materialization for analysis-only intents".to_string()))
+                Err(MetaError::ValidationError(
+                    "No materialization for analysis-only intents".to_string(),
+                ))
             }
         }
     }
@@ -53,10 +59,7 @@ impl MarkdownMaterializer {
         let id = doc["id"]
             .as_str()
             .ok_or_else(|| MetaError::ValidationError("Goal id missing".to_string()))?;
-        let title = doc["title"]
-            .as_str()
-            .unwrap_or("Untitled Goal")
-            .to_string();
+        let title = doc["title"].as_str().unwrap_or("Untitled Goal").to_string();
         let status_str = doc["status"].as_str().unwrap_or("planned");
         let status = GoalStatus::from_str(status_str).unwrap_or(GoalStatus::Planned);
         let phase = doc["phase"].as_str().map(|s| s.to_string());
@@ -78,10 +81,8 @@ impl MarkdownMaterializer {
             .unwrap_or_default();
         let body = doc["body"].as_str().unwrap_or("").to_string();
 
-        let target_path = ensure_under_root(
-            root,
-            root.join("03_GOALS_EPICS").join(format!("{}.md", id)),
-        )?;
+        let target_path =
+            ensure_under_root(root, root.join("03_GOALS_EPICS").join(format!("{}.md", id)))?;
 
         let goal = Goal {
             goal_id: id.to_string(),
@@ -108,15 +109,24 @@ impl MarkdownMaterializer {
         })
     }
 
-    fn goal_update(doc: &Value, _root: &Path, ctx: &crate::governance::GovernanceContext) -> Result<DraftArtifact> {
+    fn goal_update(
+        doc: &Value,
+        _root: &Path,
+        ctx: &crate::governance::GovernanceContext,
+    ) -> Result<DraftArtifact> {
         let id = doc["id"]
             .as_str()
             .ok_or_else(|| MetaError::ValidationError("Goal id missing".to_string()))?;
-        let goal = ctx.get_goal(id).ok_or_else(|| MetaError::ValidationError("Goal not found for update".to_string()))?;
+        let goal = ctx
+            .get_goal(id)
+            .ok_or_else(|| MetaError::ValidationError("Goal not found for update".to_string()))?;
         let title = goal.title.clone();
         let status_str = doc["status"].as_str().unwrap_or(goal.status.as_str());
         let status = GoalStatus::from_str(status_str).unwrap_or(goal.status.clone());
-        let phase = doc["phase"].as_str().map(|s| s.to_string()).or(goal.phase.clone());
+        let phase = doc["phase"]
+            .as_str()
+            .map(|s| s.to_string())
+            .or(goal.phase.clone());
         let depends = doc["depends_on"]
             .as_array()
             .map(|arr| {
@@ -191,10 +201,8 @@ impl MarkdownMaterializer {
         let rationale = doc["rationale"].as_str().unwrap_or("").to_string();
         let body = doc["body"].as_str().unwrap_or("").to_string();
 
-        let target_path = ensure_under_root(
-            root,
-            root.join("04_DECISIONS").join(format!("{}.md", id)),
-        )?;
+        let target_path =
+            ensure_under_root(root, root.join("04_DECISIONS").join(format!("{}.md", id)))?;
 
         let fm = build_frontmatter(&[
             ("decision_id", id),
@@ -202,7 +210,8 @@ impl MarkdownMaterializer {
             ("status", &status),
             ("phase", &phase),
             ("rationale", &rationale),
-        ]) + &collection_field("canon", &canon) + &collection_field("impacts", &impacts);
+        ]) + &collection_field("canon", &canon)
+            + &collection_field("impacts", &impacts);
 
         Ok(DraftArtifact {
             intent: Intent::DraftDecision,
@@ -265,7 +274,6 @@ impl MarkdownMaterializer {
             body,
         })
     }
-
 }
 
 fn ensure_under_root(root: &Path, target: PathBuf) -> Result<PathBuf> {

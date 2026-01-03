@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DailyNote {
     pub date: NaiveDate,
-    pub phase: Option<u32>,
+    pub phase: Option<String>,
     pub mode: Option<String>,
     pub protocol: Option<String>,
     pub goals_worked: Vec<String>,
@@ -27,7 +27,6 @@ impl DailyNote {
     }
 
     pub fn validate_file_name(name: &str) -> bool {
-        name.ends_with(".md")
-            && NaiveDate::parse_from_str(&name[..10], "%Y-%m-%d").is_ok()
+        name.ends_with(".md") && NaiveDate::parse_from_str(&name[..10], "%Y-%m-%d").is_ok()
     }
 }

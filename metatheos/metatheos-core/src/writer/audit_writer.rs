@@ -1,7 +1,7 @@
 use crate::domain::AuditRecord;
 use crate::errors::{MetaError, Result};
 use crate::writer::{ensure_governance_layout, MarkdownWriter};
-use chrono::{Utc, Datelike};
+use chrono::{Datelike, Utc};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -171,11 +171,15 @@ impl AuditWriter {
         }
 
         // Serialize frontmatter
-        let fm_str = serde_yaml::to_string(&frontmatter)
-            .map_err(|e| MetaError::ValidationError(format!("Failed to serialize frontmatter: {}", e)))?;
+        let fm_str = serde_yaml::to_string(&frontmatter).map_err(|e| {
+            MetaError::ValidationError(format!("Failed to serialize frontmatter: {}", e))
+        })?;
 
         // Build full markdown
-        let markdown = format!("---\n{}---\n\n# {}\n\n{}", fm_str, audit.title, audit.content);
+        let markdown = format!(
+            "---\n{}---\n\n# {}\n\n{}",
+            fm_str, audit.title, audit.content
+        );
 
         Ok(markdown)
     }
@@ -200,7 +204,8 @@ impl MarkdownWriter for AuditWriter {
 
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
         let file_name = path.file_name().unwrap();
-        let backup_path = backup_dir.join(format!("{}.{}.bak", file_name.to_string_lossy(), timestamp));
+        let backup_path =
+            backup_dir.join(format!("{}.{}.bak", file_name.to_string_lossy(), timestamp));
 
         fs::copy(path, &backup_path)?;
         Ok(Some(backup_path))

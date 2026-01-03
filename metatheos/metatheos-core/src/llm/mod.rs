@@ -1,11 +1,11 @@
 pub mod client;
 pub mod context;
 pub mod logger;
-pub mod service;
 pub mod runtime;
+pub mod service;
 
-pub use client::{LLMClient, ClaudeClient, OllamaClient, Message};
+pub use client::{ClaudeClient, LLMClient, Message, OllamaClient};
 pub use context::ContextBuilder;
 pub use logger::PromptLogger;
-pub use service::{AIService, AIResponse, StatusSuggestion};
-pub use runtime::{OllamaRuntimeController, OllamaStatus, ModelInfo};
+pub use runtime::{ModelInfo, OllamaRuntimeController, OllamaStatus};
+pub use service::{AIResponse, AIService, StatusSuggestion};

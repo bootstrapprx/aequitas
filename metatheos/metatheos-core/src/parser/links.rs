@@ -9,9 +9,7 @@ impl LinkExtractor {
             .into_iter()
             .filter(|link| {
                 let lower = link.to_lowercase();
-                lower.starts_with("g-")
-                    || lower.starts_with("goal-")
-                    || lower.contains("goal")
+                lower.starts_with("g-") || lower.starts_with("goal-") || lower.contains("goal")
             })
             .collect()
     }

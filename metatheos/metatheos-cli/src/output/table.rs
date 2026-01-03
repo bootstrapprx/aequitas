@@ -1,4 +1,4 @@
-use comfy_table::{Table, Cell, Color, Attribute, ContentArrangement};
+use comfy_table::{Attribute, Cell, Color, ContentArrangement, Table};
 use metatheos_core::{Audit, AuditRecord, Goal, ValidationSeverity};
 
 pub struct TableFormatter;
@@ -33,7 +33,8 @@ impl TableFormatter {
         let mut output = table.to_string();
         output.push_str("\n\n");
         output.push_str(&format!("Total files: {}\n", audit.total_files));
-        output.push_str(&format!("Errors: {}, Warnings: {}, Info: {}\n",
+        output.push_str(&format!(
+            "Errors: {}, Warnings: {}, Info: {}\n",
             audit.error_count(),
             audit.warning_count(),
             audit.info_count()
@@ -81,7 +82,12 @@ impl TableFormatter {
         for audit in audits {
             table.add_row(vec![
                 Cell::new(&audit.title).add_attribute(Attribute::Bold),
-                Cell::new(audit.date.map(|d| d.to_string()).unwrap_or_else(|| "-".to_string())),
+                Cell::new(
+                    audit
+                        .date
+                        .map(|d| d.to_string())
+                        .unwrap_or_else(|| "-".to_string()),
+                ),
                 Cell::new(audit.scope.clone().unwrap_or_else(|| "-".to_string())),
                 Cell::new(audit.risk.clone().unwrap_or_else(|| "-".to_string())),
                 Cell::new(audit.file_path.display().to_string()),
@@ -89,7 +95,13 @@ impl TableFormatter {
         }
 
         if audits.is_empty() {
-            table.add_row(vec![Cell::new("No audits found"), Cell::new(""), Cell::new(""), Cell::new(""), Cell::new("")]);
+            table.add_row(vec![
+                Cell::new("No audits found"),
+                Cell::new(""),
+                Cell::new(""),
+                Cell::new(""),
+                Cell::new(""),
+            ]);
         }
 
         table.to_string()

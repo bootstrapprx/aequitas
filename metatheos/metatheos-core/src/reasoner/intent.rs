@@ -33,7 +33,10 @@ impl IntentRouter {
         let intent = if lower.contains("update goal") || lower.contains("edit goal") {
             rules.push("keyword:update_goal".to_string());
             Some(Intent::UpdateGoal)
-        } else if lower.contains("new goal") || lower.contains("create goal") || lower.contains("goal draft") {
+        } else if lower.contains("new goal")
+            || lower.contains("create goal")
+            || lower.contains("goal draft")
+        {
             rules.push("keyword:draft_goal".to_string());
             Some(Intent::DraftGoal)
         } else if lower.contains("audit") {
@@ -45,10 +48,16 @@ impl IntentRouter {
         } else if lower.contains("blocker") || lower.contains("blocked") {
             rules.push("keyword:blocker".to_string());
             Some(Intent::AnalyzeBlockers)
-        } else if lower.contains("phase") || lower.contains("milestone") || lower.contains("timeline") {
+        } else if lower.contains("phase")
+            || lower.contains("milestone")
+            || lower.contains("timeline")
+        {
             rules.push("keyword:phase".to_string());
             Some(Intent::ExplainPhase)
-        } else if lower.contains("summarize") || lower.contains("overview") || lower.contains("state") {
+        } else if lower.contains("summarize")
+            || lower.contains("overview")
+            || lower.contains("state")
+        {
             rules.push("keyword:summarize".to_string());
             Some(Intent::SummarizeState)
         } else {
@@ -90,7 +99,8 @@ If unsure, choose summarize_state.\n\nUser: {}",
         }];
 
         let raw = client.chat(messages).await?;
-        let parsed: serde_json::Value = serde_json::from_str(&raw).unwrap_or_else(|_| serde_json::json!({}));
+        let parsed: serde_json::Value =
+            serde_json::from_str(&raw).unwrap_or_else(|_| serde_json::json!({}));
         let intent_str = parsed["intent"].as_str().unwrap_or("summarize_state");
         let intent = match intent_str {
             "draft_goal" => Intent::DraftGoal,
@@ -127,12 +137,27 @@ If unsure, choose summarize_state.\n\nUser: {}",
 
 fn default_required_inputs(intent: &Intent) -> Vec<String> {
     match intent {
-        Intent::DraftGoal => vec!["goal title", "phase", "status"].into_iter().map(|s| s.to_string()).collect(),
+        Intent::DraftGoal => vec!["goal title", "phase", "status"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
         Intent::UpdateGoal => vec!["goal id"].into_iter().map(|s| s.to_string()).collect(),
-        Intent::DraftDecision => vec!["decision title", "scope"].into_iter().map(|s| s.to_string()).collect(),
-        Intent::DraftAudit => vec!["targets", "scope"].into_iter().map(|s| s.to_string()).collect(),
-        Intent::AnalyzeBlockers => vec!["scope or goals"].into_iter().map(|s| s.to_string()).collect(),
-        Intent::ExplainPhase => vec!["phase id"].into_iter().map(|s| s.to_string()).collect(),
+        Intent::DraftDecision => vec!["decision title", "scope"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        Intent::DraftAudit => vec!["targets", "scope"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        Intent::AnalyzeBlockers => vec!["scope or goals"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+        Intent::ExplainPhase => vec!["phase id"]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
         Intent::SummarizeState => Vec::new(),
     }
 }

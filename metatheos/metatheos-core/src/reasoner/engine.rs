@@ -7,8 +7,8 @@ use crate::reasoner::intent::{Intent, IntentGuess, IntentRouter};
 use crate::reasoner::materializer::{DraftArtifact, MarkdownMaterializer};
 use crate::reasoner::prompts::PromptAssembler;
 use crate::reasoner::validation::{ValidationLayer, ValidationReport};
-use serde_json::Value;
 use regex::Regex;
+use serde_json::Value;
 
 #[derive(Debug, Clone)]
 pub struct ReasonerContextUsed {
@@ -63,7 +63,13 @@ impl ReasoningEngine {
             return Ok(StructuredResult {
                 intent: guess.intent.clone(),
                 intent_guess: guess.clone(),
-                context_used: ReasonerContextUsed { goals: vec![], decisions: vec![], audits: vec![], daily_notes: vec![], phase: None },
+                context_used: ReasonerContextUsed {
+                    goals: vec![],
+                    decisions: vec![],
+                    audits: vec![],
+                    daily_notes: vec![],
+                    phase: None,
+                },
                 raw_model_output: "".to_string(),
                 parsed: None,
                 validation: ValidationReport {
@@ -82,7 +88,10 @@ impl ReasoningEngine {
         let context_used = ReasonerContextUsed {
             phase: GovernanceIngestion::active_phase_summary(ctx),
             goals: if refs.goals.is_empty() {
-                GovernanceIngestion::load_goals(ctx)?.into_iter().take(5).collect()
+                GovernanceIngestion::load_goals(ctx)?
+                    .into_iter()
+                    .take(5)
+                    .collect()
             } else {
                 GovernanceIngestion::filter_goals_by_ids(ctx, &refs.goals)?
             },
@@ -158,7 +167,11 @@ impl ReasoningEngine {
     fn render_context(&self, ctx: &ReasonerContextUsed) -> String {
         let mut out = String::new();
         if let Some(phase) = &ctx.phase {
-            out.push_str(&format!("## Active Phase\n{} [{}]\n", phase.id, phase.status.clone().unwrap_or_default()));
+            out.push_str(&format!(
+                "## Active Phase\n{} [{}]\n",
+                phase.id,
+                phase.status.clone().unwrap_or_default()
+            ));
         }
         if !ctx.goals.is_empty() {
             out.push_str("## Goals (summary)\n");

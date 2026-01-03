@@ -396,19 +396,20 @@
 
 <!-- Detail Modal -->
 {#if showDetailModal && selectedPrompt}
-  <div
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-    role="button"
-    tabindex="0"
-    on:click={closeDetailModal}
-    on:keydown={(e) => e.key === "Escape" && closeDetailModal()}
-  >
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <button
+      class="absolute inset-0 bg-black/50 cursor-default w-full h-full border-0"
+      on:click={closeDetailModal}
+      on:keydown={(e) => e.key === "Escape" && closeDetailModal()}
+      aria-label="Close modal"
+    ></button>
+    <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
-      role="document"
-      tabindex="0"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
+      class="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
     >
       <div
         class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between"
@@ -609,19 +610,20 @@
 
 <!-- References Modal -->
 {#if showReferencesModal && selectedPromptForRefs}
-  <div
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-    role="button"
-    tabindex="0"
-    on:click={closeReferencesModal}
-    on:keydown={(e) => e.key === "Escape" && closeReferencesModal()}
-  >
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <button
+      class="absolute inset-0 bg-black/50 cursor-default w-full h-full border-0"
+      on:click={closeReferencesModal}
+      on:keydown={(e) => e.key === "Escape" && closeReferencesModal()}
+      aria-label="Close modal"
+    ></button>
+    <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[60vh] overflow-y-auto"
-      role="document"
-      tabindex="0"
-      on:click|stopPropagation
-      on:keydown|stopPropagation
+      class="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[60vh] overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      tabindex="-1"
     >
       <div
         class="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between"
@@ -712,6 +714,7 @@
   .line-clamp-3 {
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

@@ -18,6 +18,9 @@
   let content = "";
 
   let activePhase = null;
+  let phaseDefined = true;
+  let phaseMetrics = null;
+  let phaseGoals = [];
   let inPhaseGoals = [];
   let outOfPhaseGoals = [];
   let goalRelations = {};
@@ -95,8 +98,15 @@
       const ctx = await invoke("get_daily_context", { date });
 
       activePhase = ctx.active_phase;
+      phaseDefined = ctx.phase_defined;
+      phaseMetrics = ctx.phase_metrics;
+      phaseGoals = ctx.phase_goals || [];
       inPhaseGoals = ctx.in_phase_goals || [];
       outOfPhaseGoals = ctx.out_of_phase_goals || [];
+      if (!phaseDefined) {
+        inPhaseGoals = [];
+        outOfPhaseGoals = [];
+      }
       // Build relation map
       goalRelations = {};
       if (ctx.goal_relations) {
@@ -113,7 +123,10 @@
       const note = ctx.note;
       mode = note?.mode || "";
       protocol = note?.protocol || "";
-      selectedGoals = note?.goals || [];
+      const allowedGoals = new Set(inPhaseGoals.map((g) => g.goal_id.toLowerCase()));
+      selectedGoals = (note?.goals || []).filter((g) =>
+        allowedGoals.has(g.toLowerCase()),
+      );
       selectedDecisions = note?.decisions || [];
       manualBlockers = note?.blockers || [];
       divergencesText = (note?.divergences || []).join("\n");
@@ -220,7 +233,7 @@
   }
 
   function scheduleAutosave() {
-    if (devMode) return;
+    if (devMode || !phaseDefined) return;
     clearTimeout(autosaveTimer);
     autosaveStatus = "Saving…";
     autosaveTimer = setTimeout(() => saveDaily(false), 800);
@@ -314,6 +327,10 @@
 
   async function saveDaily(showToast = true) {
     if (devMode) return;
+    if (!phaseDefined) {
+      showError("Cannot save daily note without an active phase");
+      return;
+    }
 
     // Validation
     if (mode === "heavy" && selectedGoals.length < 2) {
@@ -360,6 +377,7 @@
   }
 
   function toggleGoal(goalId) {
+    if (!phaseDefined) return;
     if (selectedGoals.includes(goalId)) {
       selectedGoals = selectedGoals.filter((id) => id !== goalId);
     } else {
@@ -370,6 +388,7 @@
   }
 
   function toggleDecision(decisionId) {
+    if (!phaseDefined) return;
     if (selectedDecisions.includes(decisionId)) {
       selectedDecisions = selectedDecisions.filter((id) => id !== decisionId);
     } else {
@@ -434,6 +453,16 @@
     if (!value) return "n/a";
     return new Date(value).toLocaleDateString();
   }
+
+  function levelLabel(goal) {
+    const raw = goal?.level || "";
+    if (!raw) return "";
+    const normalized = raw.toLowerCase().replace(/_/g, "-");
+    if (normalized === "subgoal") return "Sub-goal";
+    if (normalized === "task") return "Task";
+    if (normalized === "goal") return "Goal";
+    return raw;
+  }
 </script>
 
 <div>
@@ -453,7 +482,7 @@
       <button
         class="btn btn-primary"
         on:click={() => saveDaily(true)}
-        disabled={devMode || saving}
+        disabled={devMode || saving || !phaseDefined}
       >
         {saving ? "Saving…" : "Save now"}
       </button>
@@ -476,6 +505,22 @@
     </div>
   {/if}
 
+  {#if !phaseDefined}
+    <div class="card mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">⚠️</span>
+        <div>
+          <p class="font-semibold text-red-800 dark:text-red-200">
+            Phase undefined — Daily work must be scoped to an active phase.
+          </p>
+          <p class="text-sm text-red-700 dark:text-red-300">
+            Set or pin an active phase in the Phases view, then reload. Daily notes no longer infer phase from goals.
+          </p>
+        </div>
+      </div>
+    </div>
+  {/if}
+
   {#if loading}
     <div class="card">
       <p class="text-gray-500 dark:text-gray-400">
@@ -483,6 +528,43 @@
       </p>
     </div>
   {:else}
+    {#if activePhase}
+      <div class="card mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Phase is the canonical scope root
+          </p>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            {activePhase.phase_id} — {activePhase.title}
+          </h3>
+          {#if activePhase.status}
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              Status: {activePhase.status}
+            </p>
+          {/if}
+        </div>
+        {#if phaseMetrics}
+          <div class="flex gap-4 flex-wrap">
+            <div class="metric-pill">
+              <span class="metric-value">{phaseMetrics.completion_pct?.toFixed?.(1) || 0}%</span>
+              <span class="metric-label">Phase progress</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-value">{phaseMetrics.active}</span>
+              <span class="metric-label">Active goals</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-value">{phaseMetrics.blocked}</span>
+              <span class="metric-label">Blocked</span>
+            </div>
+            <div class="metric-pill">
+              <span class="metric-value">{phaseMetrics.done}</span>
+              <span class="metric-label">Done</span>
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 space-y-4">
         <div class="card">
@@ -592,18 +674,23 @@
                             <div>
                               <div class="flex items-center gap-2">
                                 <span
-                                  class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300"
-                                  >{goal.goal_id}</span
-                                >
-                                <span
-                                  class="badge {getStatusBadge(goal.status)}"
-                                  >{goal.status}</span
-                                >
-                              </div>
-                              <div
-                                class="text-gray-900 dark:text-white font-semibold"
-                              >
-                                {goal.title}
+                              class="font-mono text-sm font-semibold text-primary-700 dark:text-primary-300"
+                              >{goal.goal_id}</span
+                            >
+                            <span
+                              class="badge {getStatusBadge(goal.status)}"
+                              >{goal.status}</span
+                            >
+                            {#if levelLabel(goal) && levelLabel(goal) !== "Goal"}
+                              <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {levelLabel(goal)}
+                              </span>
+                            {/if}
+                          </div>
+                          <div
+                            class="text-gray-900 dark:text-white font-semibold"
+                          >
+                            {goal.title}
                               </div>
                             </div>
                             {#if selectedGoals.includes(goal.goal_id)}
@@ -647,21 +734,76 @@
                                 </div>
                                 <div>
                                   <div
+                                  class="text-sm text-gray-900 dark:text-white"
+                                >
+                                  {child.title}
+                                </div>
+                                <div class="text-xs text-gray-500 font-mono flex items-center gap-2">
+                                  <span>{child.goal_id}</span>
+                                  <span>· {child.status}</span>
+                                  {#if levelLabel(child) && levelLabel(child) !== "Goal"}
+                                    <span class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                                      {levelLabel(child)}
+                                    </span>
+                                  {/if}
+                                </div>
+                              </div>
+                            </button>
+                          </div>
+                          {#each getChildren(inPhaseGoals, child.goal_id) as grandchild}
+                            <div
+                              class="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/70 pl-14 pr-3 py-2"
+                            >
+                              <button
+                                class="w-full flex items-center gap-3 text-left"
+                                on:click={() => toggleGoal(grandchild.goal_id)}
+                              >
+                                <div
+                                  class="w-4 h-4 rounded border flex items-center justify-center transition-colors {selectedGoals.includes(
+                                    grandchild.goal_id,
+                                  )
+                                    ? 'bg-primary-600 border-primary-600'
+                                    : 'border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-700'}"
+                                >
+                                  {#if selectedGoals.includes(grandchild.goal_id)}
+                                    <svg
+                                      class="w-3 h-3 text-white"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                      ><path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="3"
+                                        d="M5 13l4 4L19 7"
+                                      /></svg
+                                    >
+                                  {/if}
+                                </div>
+                                <div>
+                                  <div
                                     class="text-sm text-gray-900 dark:text-white"
                                   >
-                                    {child.title}
+                                    {grandchild.title}
                                   </div>
-                                  <div class="text-xs text-gray-500 font-mono">
-                                    {child.goal_id} · {child.status}
+                                  <div class="text-xs text-gray-500 font-mono flex items-center gap-2">
+                                    <span>{grandchild.goal_id}</span>
+                                    <span>· {grandchild.status}</span>
+                                    {#if levelLabel(grandchild) && levelLabel(grandchild) !== "Goal"}
+                                      <span class="px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                                        {levelLabel(grandchild)}
+                                      </span>
+                                    {/if}
                                   </div>
                                 </div>
                               </button>
                             </div>
                           {/each}
-                        </div>
-                      {/each}
-                    </div>
+                        {/each}
+                      </div>
+                    {/each}
                   </div>
+                </div>
                 {/if}
               {/if}
             {/each}
@@ -675,38 +817,11 @@
                 class="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-200 mb-2"
               >
                 <span class="text-lg">⚠</span>
-                <span>Out-of-phase goals (allowed, but monitored)</span>
+                <span>Out-of-phase goals are hidden for this daily</span>
               </div>
-              <div class="grid md:grid-cols-2 gap-2">
-                {#each outOfPhaseGoals as goal}
-                  <button
-                    class="p-3 rounded-lg border text-left {selectedGoals.includes(
-                      goal.goal_id,
-                    )
-                      ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-yellow-400'}"
-                    on:click={() => toggleGoal(goal.goal_id)}
-                  >
-                    <div class="flex items-center gap-2">
-                      <span
-                        class="font-mono text-sm font-semibold text-yellow-800 dark:text-yellow-200"
-                        >{goal.goal_id}</span
-                      >
-                      <span class="badge {getStatusBadge(goal.status)}"
-                        >{goal.status}</span
-                      >
-                    </div>
-                    <div class="text-gray-900 dark:text-white font-semibold">
-                      {goal.title}
-                    </div>
-                    {#if goal.phase}
-                      <div class="text-xs text-gray-500 dark:text-gray-400">
-                        Phase {goal.phase}
-                      </div>
-                    {/if}
-                  </button>
-                {/each}
-              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-300">
+                {outOfPhaseGoals.length} goal(s) belong to other phases. Switch the active phase to work on them.
+              </p>
             </div>
           {/if}
         </div>
@@ -948,14 +1063,14 @@
             <button
               class="btn btn-secondary"
               on:click={createIfMissing}
-              disabled={devMode || saving}
+              disabled={devMode || saving || !phaseDefined}
             >
               Create if missing
             </button>
             <button
               class="btn btn-primary"
               on:click={() => saveDaily(true)}
-              disabled={devMode || saving}
+              disabled={devMode || saving || !phaseDefined}
             >
               {saving ? "Saving…" : "Save"}
             </button>
@@ -1052,3 +1167,28 @@
 </div>
 
 <Toast bind:show={toastShow} message={toastMessage} type={toastType} />
+
+<style>
+  .metric-pill {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.25);
+    min-width: 120px;
+  }
+
+  .metric-value {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1f2937;
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: #4b5563;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+</style>

@@ -83,7 +83,10 @@ impl OllamaRuntimeController {
             message: if default_model_ready {
                 "ok".to_string()
             } else {
-                format!("Model {} missing; pull manually on {}", self.default_model, self.base_url)
+                format!(
+                    "Model {} missing; pull manually on {}",
+                    self.default_model, self.base_url
+                )
             },
         })
     }
@@ -95,12 +98,10 @@ impl OllamaRuntimeController {
             .join("/api/tags")
             .map_err(|e| MetaError::ConfigError(format!("Invalid Ollama tags URL: {}", e)))?;
 
-        let resp = self
-            .client
-            .get(url)
-            .send()
-            .await
-            .map_err(|e| MetaError::NetworkError(format!("Ollama tags request failed: {}", e)))?;
+        let resp =
+            self.client.get(url).send().await.map_err(|e| {
+                MetaError::NetworkError(format!("Ollama tags request failed: {}", e))
+            })?;
 
         if resp.status() == StatusCode::NOT_FOUND {
             return Err(MetaError::NetworkError(

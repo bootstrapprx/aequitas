@@ -74,7 +74,7 @@
 <div class="dashboard">
   {#if loading}
     <div class="loading">
-      <div class="spinner" />
+      <div class="spinner"></div>
       <p>Loading dashboard...</p>
     </div>
   {:else if error}
@@ -87,13 +87,29 @@
     <!-- Hero Section -->
     <div class="hero">
       <div class="hero-content">
-        <h1 class="title">Aequitas Progress</h1>
-        <p class="mission">Finish Aequitas · Leave a Trace · Continue Evolution</p>
+        <h1 class="title">Phase Progress</h1>
+        <p class="mission">
+          {dashboard.phase_defined
+            ? `Tracking active phase${dashboard.current_phase.phase_title ? ` — ${dashboard.current_phase.phase_title}` : ""}`
+            : "Set an active phase to scope dashboards"}
+        </p>
       </div>
       <button on:click={loadDashboard} class="btn-refresh">
         <span>↻</span> Refresh
       </button>
     </div>
+
+    {#if dashboard && !dashboard.phase_defined}
+      <div class="alert">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <p class="alert-title">Active phase not set</p>
+          <p class="alert-body">
+            Dashboards are phase-scoped. Select or pin an active phase to see accurate metrics.
+          </p>
+        </div>
+      </div>
+    {/if}
 
     <!-- KPI Cards -->
     <div class="kpi-grid">
@@ -102,12 +118,12 @@
         <div class="kpi-icon">🎯</div>
         <div class="kpi-content">
           <div class="kpi-value">{formatPercentage(dashboard.completion.percentage)}</div>
-          <div class="kpi-label">Overall Completion</div>
-          <div class="kpi-detail">{dashboard.completion.done_goals} of {dashboard.completion.total_goals} goals</div>
+          <div class="kpi-label">Phase Progress</div>
+          <div class="kpi-detail">{dashboard.completion.done_goals} of {dashboard.completion.total_goals} goals in this phase</div>
         </div>
         <div class="kpi-progress">
           <div class="progress-bar">
-            <div class="progress-fill" style="width: {dashboard.completion.percentage}%" />
+            <div class="progress-fill" style="width: {dashboard.completion.percentage}%"></div>
           </div>
         </div>
       </button>
@@ -117,7 +133,7 @@
         <div class="kpi-icon active">⚡</div>
         <div class="kpi-content">
           <div class="kpi-value">{dashboard.completion.active_goals}</div>
-          <div class="kpi-label">Active</div>
+          <div class="kpi-label">Active Goals (This Phase)</div>
         </div>
       </button>
 
@@ -126,7 +142,7 @@
         <div class="kpi-icon blocked">🚧</div>
         <div class="kpi-content">
           <div class="kpi-value">{dashboard.completion.blocked_goals}</div>
-          <div class="kpi-label">Blocked</div>
+          <div class="kpi-label">Blocked (This Phase)</div>
         </div>
       </button>
 
@@ -135,21 +151,25 @@
         <div class="kpi-icon">📈</div>
         <div class="kpi-content">
           <div class="kpi-value">{dashboard.recent_activity.velocity.toFixed(2)}</div>
-          <div class="kpi-label">Goals/Day</div>
+          <div class="kpi-label">Phase Velocity (goals/day)</div>
         </div>
       </button>
     </div>
 
     <!-- Current Phase -->
-    {#if dashboard.current_phase.phase_number}
+    {#if dashboard.phase_defined && dashboard.current_phase.phase_number}
       <div class="phase-card">
         <div class="phase-header">
           <div class="phase-info">
             <span class="phase-badge">Phase {dashboard.current_phase.phase_number}</span>
             <h2 class="phase-title">{dashboard.current_phase.phase_title}</h2>
-            <span class="status-badge {dashboard.current_phase.phase_status}">
-              {dashboard.current_phase.phase_status}
-            </span>
+            {#if dashboard.current_phase.phase_status}
+              <span class="status-badge {dashboard.current_phase.phase_status}">
+                {dashboard.current_phase.phase_status}
+              </span>
+            {:else}
+              <span class="status-badge">unknown</span>
+            {/if}
           </div>
           <button class="btn-action" on:click={navigateToPhases}>View Details →</button>
         </div>
@@ -164,18 +184,18 @@
           </div>
           <div class="stat">
             <div class="stat-value">{formatPercentage(dashboard.current_phase.phase_completion)}</div>
-            <div class="stat-label">Progress</div>
+            <div class="stat-label">Phase Progress</div>
           </div>
         </div>
         <div class="progress-bar phase-progress">
-          <div class="progress-fill phase" style="width: {dashboard.current_phase.phase_completion}%" />
+          <div class="progress-fill phase" style="width: {dashboard.current_phase.phase_completion}%"></div>
         </div>
       </div>
     {:else}
       <div class="phase-card empty">
         <div class="empty-state">
           <span class="empty-icon">📋</span>
-          <p>No active phase detected</p>
+          <p>Phase context missing</p>
           <button class="btn-action" on:click={navigateToPhases}>Set Active Phase</button>
         </div>
       </div>
@@ -233,7 +253,7 @@
                 </div>
                 <div class="item-title">{critical.title}</div>
                 <div class="item-meta">
-                  <span class="status-dot {critical.status}" />
+                  <span class="status-dot {critical.status}"></span>
                   {critical.status}
                   {#if critical.phase}· Phase {critical.phase}{/if}
                 </div>
@@ -357,6 +377,33 @@
     font-size: 1.1rem;
     opacity: 0.95;
     margin: 0;
+  }
+
+  .alert {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    background: rgba(248, 113, 113, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    margin-bottom: 1.5rem;
+  }
+
+  .alert-icon {
+    font-size: 1.5rem;
+  }
+
+  .alert-title {
+    font-weight: 700;
+    color: #991b1b;
+    margin: 0;
+  }
+
+  .alert-body {
+    margin: 0;
+    color: #b91c1c;
+    font-size: 0.95rem;
   }
 
   .btn-refresh {

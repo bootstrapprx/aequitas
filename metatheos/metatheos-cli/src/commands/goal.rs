@@ -1,19 +1,23 @@
-use anyhow::{Result, bail, anyhow};
+use crate::args::{parse_goal_status, GoalAction};
+use anyhow::{anyhow, bail, Result};
 use metatheos_core::{GovernanceContext, MetaError};
-use crate::args::{GoalAction, parse_goal_status};
 
 pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
     let ctx = GovernanceContext::load(root)?;
 
     match action {
         GoalAction::Show { goal_id } => {
-            let goal = ctx.get_goal(goal_id)
+            let goal = ctx
+                .get_goal(goal_id)
                 .ok_or_else(|| MetaError::GoalNotFound(goal_id.clone()))?;
 
             println!("Goal: {}", goal.goal_id);
             println!("Title: {}", goal.title);
             println!("Status: {}", goal.status);
-            println!("Phase: {}", goal.phase.clone().unwrap_or_else(|| "None".to_string()));
+            println!(
+                "Phase: {}",
+                goal.phase.clone().unwrap_or_else(|| "None".to_string())
+            );
             println!("Owner: {}", goal.owner.as_deref().unwrap_or("Unassigned"));
             println!("Dependencies: {:?}", goal.dependencies);
             println!("Canon: {:?}", goal.canon);
@@ -22,7 +26,8 @@ pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
         }
 
         GoalAction::Set { goal_id, status } => {
-            let goal = ctx.get_goal(goal_id)
+            let goal = ctx
+                .get_goal(goal_id)
                 .ok_or_else(|| MetaError::GoalNotFound(goal_id.clone()))?;
 
             let new_status = parse_goal_status(status).map_err(|e| anyhow!(e))?;
@@ -40,7 +45,8 @@ pub fn run_goal(root: &str, action: &GoalAction) -> Result<()> {
         }
 
         GoalAction::Deps { goal_id } => {
-            let goal = ctx.get_goal(goal_id)
+            let goal = ctx
+                .get_goal(goal_id)
                 .ok_or_else(|| MetaError::GoalNotFound(goal_id.clone()))?;
 
             if goal.dependencies.is_empty() {

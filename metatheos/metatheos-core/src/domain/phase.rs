@@ -16,9 +16,6 @@ pub struct Phase {
 
 impl Phase {
     pub fn number(&self) -> Option<u32> {
-        self.phase_id
-            .trim_start_matches('P')
-            .parse::<u32>()
-            .ok()
+        self.phase_id.trim_start_matches('P').parse::<u32>().ok()
     }
 }

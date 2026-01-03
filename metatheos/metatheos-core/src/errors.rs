@@ -62,4 +62,10 @@ pub enum MetaError {
     SystemError(String),
 }
 
+impl From<anyhow::Error> for MetaError {
+    fn from(err: anyhow::Error) -> Self {
+        MetaError::SystemError(err.to_string())
+    }
+}
+
 pub type Result<T> = std::result::Result<T, MetaError>;

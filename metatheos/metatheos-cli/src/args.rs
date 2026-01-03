@@ -86,10 +86,7 @@ pub enum GoalAction {
     Show { goal_id: String },
 
     /// Update goal status
-    Set {
-        goal_id: String,
-        status: String,
-    },
+    Set { goal_id: String, status: String },
 
     /// Show dependency tree
     Deps { goal_id: String },

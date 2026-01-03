@@ -8,10 +8,7 @@ pub fn run_scan(root: &str) -> Result<()> {
     println!("Governance root: {}", root);
 
     if let Some(phase) = summary.current_phase {
-        println!(
-            "Current phase: {} — {}",
-            phase.phase_id, phase.title
-        );
+        println!("Current phase: {} — {}", phase.phase_id, phase.title);
     } else {
         println!("Current phase: not found");
     }

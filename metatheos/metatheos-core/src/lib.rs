@@ -1,28 +1,32 @@
-pub mod domain;
-pub mod parser;
-pub mod validator;
-pub mod query;
 pub mod canon;
-pub mod governance;
+pub mod dashboard;
+pub mod domain;
 pub mod errors;
+pub mod governance;
 pub mod llm;
-pub mod writer;
+pub mod parser;
+pub mod query;
 pub mod reasoner;
 pub mod store;
-pub mod dashboard;
+pub mod validator;
 pub mod watcher;
+pub mod writer;
 
-pub use domain::*;
-pub use governance::{
-    CanonDoc, DailyContext, DependencyGap, GovernanceContext, GovernanceState,
-    GovernanceSummary, GovernanceWarning, GovernanceWarningKind, GoalRelations, PhaseGoalBreakdown,
-    ProtocolDoc,
-};
-pub use validator::GovernanceValidator;
-pub use query::GoalQuery;
-pub use errors::{MetaError, Result};
-pub use llm::{AIService, AIResponse, StatusSuggestion, ClaudeClient, ContextBuilder, PromptLogger};
-pub use writer::{GoalWriter, PhaseWriter, DailyWriter};
-pub use reasoner::{ReasoningEngine, StructuredResult};
 pub use dashboard::{AequitasDashboard, DashboardCalculator};
-pub use watcher::{FileWatcher, FileChangeEvent, EntityType, ChangeKind};
+pub use domain::*;
+pub use errors::{MetaError, Result};
+pub use governance::{
+    CanonDoc, DailyContext, DependencyGap, GoalRelations, GovernanceContext, GovernanceState,
+    GovernanceSummary, GovernanceWarning, GovernanceWarningKind, PhaseGoalBreakdown, ProtocolDoc,
+    ReadOnlyGoal, ReadOnlyGovernanceContext, ReadOnlyPhase,
+};
+pub use llm::{
+    AIResponse, AIService, ClaudeClient, ContextBuilder, PromptLogger, StatusSuggestion,
+};
+pub use query::GoalQuery;
+pub use reasoner::{ReasoningEngine, StructuredResult};
+pub use validator::GovernanceValidator;
+pub use watcher::{
+    ChangeKind, EntityType, FileChangeEvent, FileWatcher, GovernanceUpdateEvent, WatcherService,
+};
+pub use writer::{DailyWriter, GoalWriter, PhaseWriter};

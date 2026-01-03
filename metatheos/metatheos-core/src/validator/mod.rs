@@ -1,5 +1,5 @@
-pub mod invariants;
 pub mod goal_validator;
+pub mod invariants;
 
-pub use invariants::GovernanceValidator;
 pub use goal_validator::GoalValidator;
+pub use invariants::GovernanceValidator;

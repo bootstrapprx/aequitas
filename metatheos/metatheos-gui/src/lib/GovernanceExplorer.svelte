@@ -872,13 +872,17 @@
 
 <!-- Write Preview Modal -->
 {#if showPreviewModal && editingFile}
-  <div
-    class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
-    on:click={closePreview}
-  >
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <button
+      class="absolute inset-0 bg-black/60 cursor-default w-full h-full border-0"
+      on:click={closePreview}
+      on:keydown={(e) => e.key === "Escape" && closePreview()}
+      aria-label="Close preview"
+    ></button>
+    <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full max-h-[85vh] flex flex-col"
-      on:click|stopPropagation
+      class="relative z-10 bg-white dark:bg-gray-800 rounded-lg shadow-2xl max-w-5xl w-full max-h-[85vh] flex flex-col"
     >
       <!-- Modal Header -->
       <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">

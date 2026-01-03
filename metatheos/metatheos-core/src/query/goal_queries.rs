@@ -1,5 +1,6 @@
 use crate::domain::*;
 use crate::governance::GovernanceContext;
+use chrono::Local;
 
 pub struct GoalQuery<'a> {
     ctx: &'a GovernanceContext,
@@ -36,13 +37,31 @@ impl<'a> GoalQuery<'a> {
     pub fn execute(&self) -> Vec<&Goal> {
         let mut results: Vec<&Goal> = self.ctx.all_goals();
 
+        if self.phase_filter.is_none() {
+            let scope = self
+                .ctx
+                .phase_scope(Local::now().naive_local().date(), None);
+            if let Some(active_phase) = scope.metrics.phase_id {
+                results.retain(|g| {
+                    self.ctx
+                        .resolve_goal_phase(g)
+                        .as_ref()
+                        .map(|p| p.eq_ignore_ascii_case(&active_phase))
+                        .unwrap_or(false)
+                });
+            } else {
+                results.clear();
+            }
+        }
+
         if let Some(ref status) = self.status_filter {
             results.retain(|g| &g.status == status);
         }
 
         if let Some(ref phase) = self.phase_filter {
             results.retain(|g| {
-                g.phase
+                self.ctx
+                    .resolve_goal_phase(g)
                     .as_ref()
                     .map(|p| p.eq_ignore_ascii_case(&phase))
                     .unwrap_or(false)

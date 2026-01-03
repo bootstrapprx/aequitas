@@ -1,5 +1,5 @@
-use crate::governance::GovernanceContext;
 use crate::domain::Goal;
+use crate::governance::GovernanceContext;
 
 pub struct ContextBuilder {
     #[allow(dead_code)]
@@ -21,7 +21,8 @@ impl ContextBuilder {
         }
 
         // Active goals
-        let active_goals: Vec<&Goal> = ctx.all_goals()
+        let active_goals: Vec<&Goal> = ctx
+            .all_goals()
             .into_iter()
             .filter(|g| g.is_active())
             .take(10)
@@ -30,17 +31,17 @@ impl ContextBuilder {
         if !active_goals.is_empty() {
             context.push_str("## Active Goals\n");
             for goal in active_goals {
-                context.push_str(&format!("- {} ({}): {}\n",
-                    goal.goal_id,
-                    goal.status,
-                    goal.title
+                context.push_str(&format!(
+                    "- {} ({}): {}\n",
+                    goal.goal_id, goal.status, goal.title
                 ));
             }
             context.push_str("\n");
         }
 
         // Blocked goals
-        let blocked_goals: Vec<&Goal> = ctx.all_goals()
+        let blocked_goals: Vec<&Goal> = ctx
+            .all_goals()
             .into_iter()
             .filter(|g| g.is_blocked())
             .take(5)
@@ -49,17 +50,17 @@ impl ContextBuilder {
         if !blocked_goals.is_empty() {
             context.push_str("## Blocked Goals\n");
             for goal in blocked_goals {
-                context.push_str(&format!("- {} ({}): {}\n",
-                    goal.goal_id,
-                    goal.status,
-                    goal.title
+                context.push_str(&format!(
+                    "- {} ({}): {}\n",
+                    goal.goal_id, goal.status, goal.title
                 ));
             }
             context.push_str("\n");
         }
 
         // Recently completed
-        let done_goals: Vec<&Goal> = ctx.all_goals()
+        let done_goals: Vec<&Goal> = ctx
+            .all_goals()
             .into_iter()
             .filter(|g| g.is_done())
             .take(5)
@@ -112,10 +113,9 @@ impl ContextBuilder {
             context.push_str("\n## Dependencies\n");
             for dep in &goal.dependencies {
                 if let Some(dep_goal) = ctx.get_goal(dep) {
-                    context.push_str(&format!("- {} ({}): {}\n",
-                        dep_goal.goal_id,
-                        dep_goal.status,
-                        dep_goal.title
+                    context.push_str(&format!(
+                        "- {} ({}): {}\n",
+                        dep_goal.goal_id, dep_goal.status, dep_goal.title
                     ));
                 } else {
                     context.push_str(&format!("- {} (not found)\n", dep));
@@ -124,7 +124,8 @@ impl ContextBuilder {
         }
 
         // Check for reverse dependencies (what depends on this goal)
-        let dependents: Vec<&Goal> = ctx.all_goals()
+        let dependents: Vec<&Goal> = ctx
+            .all_goals()
             .into_iter()
             .filter(|g| g.has_dependency(goal_id))
             .collect();
@@ -132,10 +133,9 @@ impl ContextBuilder {
         if !dependents.is_empty() {
             context.push_str("\n## Blocked By This Goal\n");
             for dependent in dependents {
-                context.push_str(&format!("- {} ({}): {}\n",
-                    dependent.goal_id,
-                    dependent.status,
-                    dependent.title
+                context.push_str(&format!(
+                    "- {} ({}): {}\n",
+                    dependent.goal_id, dependent.status, dependent.title
                 ));
             }
         }

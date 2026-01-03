@@ -1,7 +1,8 @@
+// Parser module - DB-only architecture for entities
+// Only FrontmatterParser and LinkExtractor remain for daily note editing
+
 pub mod frontmatter;
-pub mod markdown;
 pub mod links;
 
 pub use frontmatter::FrontmatterParser;
-pub use markdown::MarkdownParser;
 pub use links::LinkExtractor;

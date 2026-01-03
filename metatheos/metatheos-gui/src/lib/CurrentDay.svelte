@@ -200,14 +200,15 @@
                         {#each Object.entries(frontmatter) as [key, value]}
                             <div class="contents">
                                 <label
-                                    class="text-xs text-gray-500 flex items-center"
-                                    >{key}</label
+                                    class="text-xs text-gray-500 flex items-center justify-between gap-2 w-full"
                                 >
-                                <input
-                                    type="text"
-                                    bind:value={frontmatter[key]}
-                                    class="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                                />
+                                    {key}
+                                    <input
+                                        type="text"
+                                        bind:value={frontmatter[key]}
+                                        class="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-blue-500 focus:outline-none flex-1 ml-2"
+                                    />
+                                </label>
                             </div>
                         {/each}
                     </div>

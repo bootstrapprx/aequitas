@@ -172,11 +172,15 @@ impl PromptWriter {
         }
 
         // Serialize frontmatter
-        let fm_str = serde_yaml::to_string(&frontmatter)
-            .map_err(|e| MetaError::ValidationError(format!("Failed to serialize frontmatter: {}", e)))?;
+        let fm_str = serde_yaml::to_string(&frontmatter).map_err(|e| {
+            MetaError::ValidationError(format!("Failed to serialize frontmatter: {}", e))
+        })?;
 
         // Build full markdown
-        let markdown = format!("---\n{}---\n\n# {}\n\n{}", fm_str, prompt.title, prompt.content);
+        let markdown = format!(
+            "---\n{}---\n\n# {}\n\n{}",
+            fm_str, prompt.title, prompt.content
+        );
 
         Ok(markdown)
     }
@@ -184,19 +188,44 @@ impl PromptWriter {
     fn validate_metadata(&self, prompt: &Prompt) -> Result<()> {
         // Require core governance fields for curated prompts
         let mut missing = Vec::new();
-        if prompt.prompt_id.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+        if prompt
+            .prompt_id
+            .as_ref()
+            .map(|id| id.trim().is_empty())
+            .unwrap_or(true)
+        {
             missing.push("id");
         }
-        if prompt.agent.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+        if prompt
+            .agent
+            .as_ref()
+            .map(|id| id.trim().is_empty())
+            .unwrap_or(true)
+        {
             missing.push("agent");
         }
-        if prompt.purpose.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+        if prompt
+            .purpose
+            .as_ref()
+            .map(|id| id.trim().is_empty())
+            .unwrap_or(true)
+        {
             missing.push("purpose");
         }
-        if prompt.origin.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+        if prompt
+            .origin
+            .as_ref()
+            .map(|id| id.trim().is_empty())
+            .unwrap_or(true)
+        {
             missing.push("origin");
         }
-        if prompt.status.as_ref().map(|id| id.trim().is_empty()).unwrap_or(true) {
+        if prompt
+            .status
+            .as_ref()
+            .map(|id| id.trim().is_empty())
+            .unwrap_or(true)
+        {
             missing.push("status");
         }
 
@@ -250,7 +279,8 @@ impl MarkdownWriter for PromptWriter {
 
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
         let file_name = path.file_name().unwrap();
-        let backup_path = backup_dir.join(format!("{}.{}.bak", file_name.to_string_lossy(), timestamp));
+        let backup_path =
+            backup_dir.join(format!("{}.{}.bak", file_name.to_string_lossy(), timestamp));
 
         fs::copy(path, &backup_path)?;
         Ok(Some(backup_path))
@@ -270,15 +300,13 @@ impl MarkdownWriter for PromptWriter {
         }
 
         // Basic YAML validation and required fields
-        let end = content[4..]
-            .find("---")
-            .ok_or_else(|| MetaError::ValidationError("Prompt frontmatter must end with ---".to_string()))?
-            + 4;
+        let end = content[4..].find("---").ok_or_else(|| {
+            MetaError::ValidationError("Prompt frontmatter must end with ---".to_string())
+        })? + 4;
         let yaml_part = &content[4..end];
 
-        let value: serde_yaml::Value = serde_yaml::from_str(yaml_part).map_err(|e| {
-            MetaError::ValidationError(format!("Invalid YAML frontmatter: {}", e))
-        })?;
+        let value: serde_yaml::Value = serde_yaml::from_str(yaml_part)
+            .map_err(|e| MetaError::ValidationError(format!("Invalid YAML frontmatter: {}", e)))?;
 
         let mapping = value.as_mapping().ok_or_else(|| {
             MetaError::ValidationError("Prompt frontmatter must be a mapping".to_string())

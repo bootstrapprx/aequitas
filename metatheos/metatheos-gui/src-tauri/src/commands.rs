@@ -1,14 +1,10 @@
-use chrono::{NaiveDate, DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate};
+use metatheos_core::writer::ensure_governance_layout;
 use metatheos_core::{
     AequitasDashboard, AuditRecord, CanonDoc, DailyContext, DashboardCalculator, DependencyGap,
-    GovernanceContext, GovernanceWarning, GovernanceWarningKind, Goal, GoalQuery, GoalRelations,
-    GoalStatus, PhaseGoalBreakdown, ProtocolDoc,
+    Goal, GoalQuery, GoalRelations, GoalStatus, GovernanceContext, GovernanceWarning,
+    GovernanceWarningKind, PhaseGoalBreakdown, ProtocolDoc, ReadOnlyGovernanceContext,
 };
-use metatheos_core::dashboard::{
-    Blocker, CompletionMetrics, CriticalGoal, DailyNoteInfo, HealthMetrics, PhaseStatus,
-    RecentActivity,
-};
-use metatheos_core::writer::ensure_governance_layout;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -53,6 +49,7 @@ pub struct GoalDto {
     pub title: String,
     pub status: String,
     pub phase: Option<String>,
+    pub level: Option<String>,
     pub owner: Option<String>,
     pub parent_id: Option<String>,
     pub dependencies: Vec<String>,
@@ -69,6 +66,7 @@ pub struct EnrichedGoalDto {
     pub title: String,
     pub status: String,
     pub phase: Option<String>,
+    pub level: Option<String>,
     pub owner: Option<String>,
     pub parent_id: Option<String>,
     pub dependencies: Vec<String>,
@@ -98,6 +96,7 @@ impl From<&Goal> for GoalDto {
             title: goal.title.clone(),
             status: goal.status.to_string(),
             phase: goal.phase.clone(),
+            level: goal.level.clone(),
             owner: goal.owner.clone(),
             parent_id: goal.parent_id.clone(),
             dependencies: goal.dependencies.clone(),
@@ -127,6 +126,16 @@ impl From<&metatheos_core::Phase> for PhaseDto {
             updated: None,
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PhaseMetricsDto {
+    pub phase_id: Option<String>,
+    pub total_goals: usize,
+    pub active: usize,
+    pub blocked: usize,
+    pub done: usize,
+    pub completion_pct: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -282,8 +291,6 @@ pub struct WarningDto {
     pub related: Vec<String>,
 }
 
-
-
 impl From<&GovernanceWarning> for WarningDto {
     fn from(warning: &GovernanceWarning) -> Self {
         Self {
@@ -351,11 +358,7 @@ impl From<&PhaseGoalBreakdown> for PhaseGoalsDto {
     fn from(value: &PhaseGoalBreakdown) -> Self {
         Self {
             phase: PhaseDto::from(&value.phase),
-            active_goals: value
-                .active_goals
-                .iter()
-                .map(GoalDto::from)
-                .collect(),
+            active_goals: value.active_goals.iter().map(GoalDto::from).collect(),
         }
     }
 }
@@ -403,6 +406,9 @@ pub struct DailyContextDto {
     pub date: String,
     pub note: Option<DailyNoteDto>,
     pub active_phase: Option<PhaseDto>,
+    pub phase_defined: bool,
+    pub phase_metrics: PhaseMetricsDto,
+    pub phase_goals: Vec<GoalDto>,
     pub in_phase_goals: Vec<GoalDto>,
     pub out_of_phase_goals: Vec<GoalDto>,
     pub goal_relations: Vec<GoalRelationsDto>,
@@ -420,11 +426,11 @@ pub fn get_all_goals(state: State<AppState>) -> Result<Vec<GoalDto>, String> {
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
-    let goals = ctx
-        .state
-        .goals
-        .iter()
-        .map(GoalDto::from)
+    let goals = GoalQuery::new(&ctx)
+        .execute()
+        .into_iter()
+        .map(|g| ctx.goal_with_effective_phase(g))
+        .map(|g| GoalDto::from(&g))
         .collect();
 
     Ok(goals)
@@ -434,10 +440,14 @@ pub fn get_all_goals(state: State<AppState>) -> Result<Vec<GoalDto>, String> {
 pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>, String> {
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+    let phase_scope = ctx.phase_scope(Local::now().naive_local().date(), None);
+    let phase_id = phase_scope.metrics.phase_id.clone();
+    let scoped_goals = phase_scope.goals;
 
     // Build reverse dependency map
-    let mut reverse_deps: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
-    for goal in &ctx.state.goals {
+    let mut reverse_deps: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
+    for goal in &scoped_goals {
         for dep in &goal.dependencies {
             reverse_deps
                 .entry(dep.clone())
@@ -447,16 +457,27 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
     }
 
     // Build goal ID lookup
-    let goal_map: std::collections::HashMap<String, &Goal> = ctx
-        .state
-        .goals
+    let goal_map: std::collections::HashMap<String, &Goal> = scoped_goals
         .iter()
         .map(|g| (g.goal_id.clone(), g))
         .collect();
 
     // Collect daily note references
-    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for daily in &ctx.state.daily_notes {
+        if let Some(pid) = &phase_id {
+            if !daily
+                .phase
+                .as_ref()
+                .map(|p| p.eq_ignore_ascii_case(pid))
+                .unwrap_or(false)
+            {
+                continue;
+            }
+        } else {
+            continue;
+        }
         for goal_id in &daily.goals {
             daily_refs
                 .entry(goal_id.clone())
@@ -466,8 +487,9 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
     }
 
     // Build parent map for sub-goals
-    let mut children_map: std::collections::HashMap<String, Vec<&Goal>> = std::collections::HashMap::new();
-    for goal in &ctx.state.goals {
+    let mut children_map: std::collections::HashMap<String, Vec<&Goal>> =
+        std::collections::HashMap::new();
+    for goal in &scoped_goals {
         if let Some(parent) = &goal.parent_id {
             children_map
                 .entry(parent.clone())
@@ -476,10 +498,9 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
         }
     }
 
-    let enriched_goals: Vec<EnrichedGoalDto> = ctx
-        .state
-        .goals
+    let enriched_goals: Vec<EnrichedGoalDto> = scoped_goals
         .iter()
+        .map(|g| ctx.goal_with_effective_phase(g))
         .map(|goal| {
             // Find missing dependencies
             let missing_deps: Vec<String> = goal
@@ -518,19 +539,23 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
             let completion_blocked = !blocked_by.is_empty();
 
             // Calculate completion
-            let children = children_map.get(&goal.goal_id).map(|v| v.as_slice()).unwrap_or(&[]);
+            let children = children_map
+                .get(&goal.goal_id)
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
             let completion_pct = if !children.is_empty() {
                 let total_children = children.len();
-                let sum_pct: u32 = children.iter().map(|c| {
-                     match c.status {
+                let sum_pct: u32 = children
+                    .iter()
+                    .map(|c| match c.status {
                         GoalStatus::Done | GoalStatus::Archived => 100,
                         GoalStatus::Partial => 50,
                         _ => 0,
-                    }
-                }).sum();
+                    })
+                    .sum();
                 (sum_pct / total_children as u32) as u8
             } else {
-                 match goal.status {
+                match goal.status {
                     GoalStatus::Done | GoalStatus::Archived => 100,
                     GoalStatus::Partial => 50,
                     _ => 0,
@@ -542,6 +567,7 @@ pub fn get_enriched_goals(state: State<AppState>) -> Result<Vec<EnrichedGoalDto>
                 title: goal.title.clone(),
                 status: goal.status.to_string(),
                 phase: goal.phase.clone(),
+                level: goal.level.clone(),
                 owner: goal.owner.clone(),
                 parent_id: goal.parent_id.clone(),
                 dependencies: goal.dependencies.clone(),
@@ -568,12 +594,7 @@ pub fn get_all_audits(state: State<AppState>) -> Result<Vec<AuditDto>, String> {
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
-    let audits = ctx
-        .state
-        .audits
-        .iter()
-        .map(AuditDto::from)
-        .collect();
+    let audits = ctx.state.audits.iter().map(AuditDto::from).collect();
 
     Ok(audits)
 }
@@ -583,12 +604,7 @@ pub fn get_all_prompts(state: State<AppState>) -> Result<Vec<PromptDto>, String>
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
-    let prompts = ctx
-        .state
-        .prompts
-        .iter()
-        .map(PromptDto::from)
-        .collect();
+    let prompts = ctx.state.prompts.iter().map(PromptDto::from).collect();
 
     Ok(prompts)
 }
@@ -604,7 +620,8 @@ pub fn get_goals_by_status(status: String, state: State<AppState>) -> Result<Vec
     let goals = query
         .execute()
         .iter()
-        .map(|g| GoalDto::from(*g))
+        .map(|g| ctx.goal_with_effective_phase(g))
+        .map(|g| GoalDto::from(&g))
         .collect();
 
     Ok(goals)
@@ -615,11 +632,24 @@ pub fn get_goals_by_phase(phase: String, state: State<AppState>) -> Result<Vec<G
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
-    let query = GoalQuery::new(&ctx).with_phase(phase);
-    let goals = query
-        .execute()
+    let goals: Vec<GoalDto> = ctx
+        .state
+        .goals
         .iter()
-        .map(|g| GoalDto::from(*g))
+        .filter_map(|g| {
+            let resolved = ctx.goal_with_effective_phase(g);
+            let matches = resolved
+                .phase
+                .as_ref()
+                .map(|p| p.eq_ignore_ascii_case(&phase))
+                .unwrap_or(false);
+            if matches {
+                Some(resolved)
+            } else {
+                None
+            }
+        })
+        .map(|g| GoalDto::from(&g))
         .collect();
 
     Ok(goals)
@@ -642,16 +672,18 @@ pub fn list_audits(state: State<AppState>) -> Result<Vec<AuditDto>, String> {
 #[tauri::command]
 pub async fn get_dashboard_data(state: State<'_, AppState>) -> Result<DashboardData, String> {
     let root = state.governance_root.lock().unwrap().clone();
-    
+
     let store_opt = {
         let db_mutex = state.db.lock().unwrap();
         db_mutex.clone()
     };
 
     let ctx = if let Some(store) = store_opt {
-         GovernanceContext::from_store(&store, root).await.map_err(|e| e.to_string())?
+        GovernanceContext::from_store(&store, root)
+            .await
+            .map_err(|e| e.to_string())?
     } else {
-         GovernanceContext::load(&root).map_err(|e| e.to_string())?
+        GovernanceContext::load(&root).map_err(|e| e.to_string())?
     };
 
     let summary = ctx.summary();
@@ -663,7 +695,7 @@ pub async fn get_dashboard_data(state: State<'_, AppState>) -> Result<DashboardD
         .iter()
         .filter(|g| g.status == GoalStatus::Done)
         .count();
-    
+
     let planned_count = ctx
         .state
         .goals
@@ -698,16 +730,8 @@ pub async fn get_dashboard_data(state: State<'_, AppState>) -> Result<DashboardD
             .iter()
             .map(DecisionDto::from)
             .collect(),
-        canon_docs: summary
-            .canon_docs
-            .iter()
-            .map(CanonDocDto::from)
-            .collect(),
-        protocols: summary
-            .protocols
-            .iter()
-            .map(ProtocolDocDto::from)
-            .collect(),
+        canon_docs: summary.canon_docs.iter().map(CanonDocDto::from).collect(),
+        protocols: summary.protocols.iter().map(ProtocolDocDto::from).collect(),
         latest_daily: summary.latest_daily.as_ref().map(|d| DailyFocusDto {
             date: d.date.to_string(),
             mode: d.mode.clone(),
@@ -720,21 +744,9 @@ pub async fn get_dashboard_data(state: State<'_, AppState>) -> Result<DashboardD
             .iter()
             .map(PhaseGoalsDto::from)
             .collect(),
-        orphaned_goals: summary
-            .orphaned_goals
-            .iter()
-            .map(GoalDto::from)
-            .collect(),
-        stale_goals: summary
-            .stale_goals
-            .iter()
-            .map(GoalDto::from)
-            .collect(),
-        top_blocked: summary
-            .top_blocked
-            .iter()
-            .map(GoalDto::from)
-            .collect(),
+        orphaned_goals: summary.orphaned_goals.iter().map(GoalDto::from).collect(),
+        stale_goals: summary.stale_goals.iter().map(GoalDto::from).collect(),
+        top_blocked: summary.top_blocked.iter().map(GoalDto::from).collect(),
         warnings: summary.warnings.iter().map(WarningDto::from).collect(),
     })
 }
@@ -748,16 +760,27 @@ pub fn get_daily_context(date: String, state: State<AppState>) -> Result<DailyCo
         NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
 
     let context: DailyContext = ctx.daily_context(parsed_date);
+    let scope = ctx.phase_scope(
+        parsed_date,
+        context.active_phase.as_ref().map(|p| p.phase_id.as_str()),
+    );
+    let phase_metrics = PhaseMetricsDto {
+        phase_id: scope.metrics.phase_id.clone(),
+        total_goals: scope.metrics.total_goals,
+        active: scope.metrics.active,
+        blocked: scope.metrics.blocked,
+        done: scope.metrics.done,
+        completion_pct: scope.metrics.completion_pct,
+    };
 
     Ok(DailyContextDto {
         date,
         note: context.note.as_ref().map(DailyNoteDto::from),
         active_phase: context.active_phase.as_ref().map(PhaseDto::from),
-        in_phase_goals: context
-            .in_phase_goals
-            .iter()
-            .map(GoalDto::from)
-            .collect(),
+        phase_defined: context.phase_defined,
+        phase_metrics,
+        phase_goals: scope.goals.iter().map(GoalDto::from).collect(),
+        in_phase_goals: context.in_phase_goals.iter().map(GoalDto::from).collect(),
         out_of_phase_goals: context
             .out_of_phase_goals
             .iter()
@@ -778,16 +801,8 @@ pub fn get_daily_context(date: String, state: State<AppState>) -> Result<DailyCo
             .iter()
             .map(DecisionDto::from)
             .collect(),
-        linked_audits: context
-            .linked_audits
-            .iter()
-            .map(AuditDto::from)
-            .collect(),
-        blocked_goals: context
-            .blocked_goals
-            .iter()
-            .map(GoalDto::from)
-            .collect(),
+        linked_audits: context.linked_audits.iter().map(AuditDto::from).collect(),
+        blocked_goals: context.blocked_goals.iter().map(GoalDto::from).collect(),
         dependency_gaps: context
             .dependency_gaps
             .iter()
@@ -821,7 +836,9 @@ pub fn create_daily_note(date: String, state: State<AppState>) -> Result<String,
     let parsed_date =
         NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
 
-    let path = ctx.ensure_daily_note(parsed_date).map_err(|e| e.to_string())?;
+    let path = ctx
+        .ensure_daily_note(parsed_date)
+        .map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().to_string())
 }
 
@@ -881,7 +898,9 @@ impl From<&metatheos_core::DailyNote> for DailyNoteDto {
             divergences: d.divergences.clone(),
             content: d.content.clone(),
             raw_content: None,
-            properties: d.extra.iter()
+            properties: d
+                .extra
+                .iter()
                 .map(|(k, v)| (k.clone(), v.to_string().trim_matches('"').to_string()))
                 .collect(),
         }
@@ -889,13 +908,17 @@ impl From<&metatheos_core::DailyNote> for DailyNoteDto {
 }
 
 #[tauri::command]
-pub async fn get_daily_note(date: String, state: State<'_, AppState>) -> Result<Option<DailyNoteDto>, String> {
+pub async fn get_daily_note(
+    date: String,
+    state: State<'_, AppState>,
+) -> Result<Option<DailyNoteDto>, String> {
     // MARKDOWN-FIRST: Read directly from filesystem (no DB layer)
     // TODO (Phase 4): When SurrealDB is re-enabled as read cache, check cache first before FS
 
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
-    let parsed_date = NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
+    let parsed_date =
+        NaiveDate::parse_from_str(&date, "%Y-%m-%d").map_err(|e| format!("Invalid date: {}", e))?;
     let daily = ctx.get_daily(parsed_date);
     Ok(daily.map(|d| DailyNoteDto::from(&d)))
 }
@@ -958,11 +981,14 @@ pub fn get_enriched_audits(state: State<AppState>) -> Result<Vec<EnrichedAuditDt
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
     // Build goal references map (scan goals for audit mentions)
-    let mut goal_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut goal_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for goal in &ctx.state.goals {
         // Simple heuristic: check content for audit file references
         for audit in &ctx.state.audits {
-            let audit_name = audit.file_path.file_stem()
+            let audit_name = audit
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
             if goal.content.contains(audit_name) || goal.content.contains(&audit.title) {
@@ -975,10 +1001,13 @@ pub fn get_enriched_audits(state: State<AppState>) -> Result<Vec<EnrichedAuditDt
     }
 
     // Build daily note references
-    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for daily in &ctx.state.daily_notes {
         for audit in &ctx.state.audits {
-            let audit_name = audit.file_path.file_stem()
+            let audit_name = audit
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
             if daily.content.contains(audit_name) || daily.content.contains(&audit.title) {
@@ -991,19 +1020,32 @@ pub fn get_enriched_audits(state: State<AppState>) -> Result<Vec<EnrichedAuditDt
     }
 
     // Build prompt relations (audits mentioning prompts)
-    let mut prompt_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut prompt_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for audit in &ctx.state.audits {
         for prompt in &ctx.state.prompts {
-            let prompt_name = prompt.file_path.file_stem()
+            let prompt_name = prompt
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
-            if audit.content.contains(prompt_name) ||
-               audit.content.contains(&prompt.title) ||
-               prompt.prompt_id.as_ref().map(|id| audit.content.contains(id)).unwrap_or(false) {
+            if audit.content.contains(prompt_name)
+                || audit.content.contains(&prompt.title)
+                || prompt
+                    .prompt_id
+                    .as_ref()
+                    .map(|id| audit.content.contains(id))
+                    .unwrap_or(false)
+            {
                 prompt_refs
                     .entry(audit.file_path.to_string_lossy().to_string())
                     .or_insert_with(Vec::new)
-                    .push(prompt.prompt_id.clone().unwrap_or_else(|| prompt.title.clone()));
+                    .push(
+                        prompt
+                            .prompt_id
+                            .clone()
+                            .unwrap_or_else(|| prompt.title.clone()),
+                    );
             }
         }
     }
@@ -1057,15 +1099,23 @@ pub fn get_enriched_prompts(state: State<AppState>) -> Result<Vec<EnrichedPrompt
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
     // Build goal references map
-    let mut goal_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut goal_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for goal in &ctx.state.goals {
         for prompt in &ctx.state.prompts {
-            let prompt_name = prompt.file_path.file_stem()
+            let prompt_name = prompt
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
-            if goal.content.contains(prompt_name) ||
-               goal.content.contains(&prompt.title) ||
-               prompt.prompt_id.as_ref().map(|id| goal.content.contains(id)).unwrap_or(false) {
+            if goal.content.contains(prompt_name)
+                || goal.content.contains(&prompt.title)
+                || prompt
+                    .prompt_id
+                    .as_ref()
+                    .map(|id| goal.content.contains(id))
+                    .unwrap_or(false)
+            {
                 goal_refs
                     .entry(prompt.file_path.to_string_lossy().to_string())
                     .or_insert_with(Vec::new)
@@ -1075,15 +1125,23 @@ pub fn get_enriched_prompts(state: State<AppState>) -> Result<Vec<EnrichedPrompt
     }
 
     // Build daily note references
-    let mut daily_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut daily_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for daily in &ctx.state.daily_notes {
         for prompt in &ctx.state.prompts {
-            let prompt_name = prompt.file_path.file_stem()
+            let prompt_name = prompt
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
-            if daily.content.contains(prompt_name) ||
-               daily.content.contains(&prompt.title) ||
-               prompt.prompt_id.as_ref().map(|id| daily.content.contains(id)).unwrap_or(false) {
+            if daily.content.contains(prompt_name)
+                || daily.content.contains(&prompt.title)
+                || prompt
+                    .prompt_id
+                    .as_ref()
+                    .map(|id| daily.content.contains(id))
+                    .unwrap_or(false)
+            {
                 daily_refs
                     .entry(prompt.file_path.to_string_lossy().to_string())
                     .or_insert_with(Vec::new)
@@ -1093,15 +1151,23 @@ pub fn get_enriched_prompts(state: State<AppState>) -> Result<Vec<EnrichedPrompt
     }
 
     // Build audit relations (prompts mentioned in audits)
-    let mut audit_refs: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    let mut audit_refs: std::collections::HashMap<String, Vec<String>> =
+        std::collections::HashMap::new();
     for prompt in &ctx.state.prompts {
         for audit in &ctx.state.audits {
-            let prompt_name = prompt.file_path.file_stem()
+            let prompt_name = prompt
+                .file_path
+                .file_stem()
                 .and_then(|s| s.to_str())
                 .unwrap_or("");
-            if audit.content.contains(prompt_name) ||
-               audit.content.contains(&prompt.title) ||
-               prompt.prompt_id.as_ref().map(|id| audit.content.contains(id)).unwrap_or(false) {
+            if audit.content.contains(prompt_name)
+                || audit.content.contains(&prompt.title)
+                || prompt
+                    .prompt_id
+                    .as_ref()
+                    .map(|id| audit.content.contains(id))
+                    .unwrap_or(false)
+            {
                 audit_refs
                     .entry(prompt.file_path.to_string_lossy().to_string())
                     .or_insert_with(Vec::new)
@@ -1207,16 +1273,19 @@ pub fn get_governance_tree(state: State<AppState>) -> Result<GovernanceFileNode,
     let root = state.governance_root.lock().unwrap();
     println!("INFO: get_governance_tree called on root: {:?}", *root);
     let result = build_governance_tree(&*root, None);
-    
+
     if let Ok(ref node) = result {
         match serde_json::to_string(node) {
-            Ok(json) => println!("INFO: Serialization successful. Payload length: {}", json.len()),
+            Ok(json) => println!(
+                "INFO: Serialization successful. Payload length: {}",
+                json.len()
+            ),
             Err(e) => println!("ERROR: Serialization failed: {}", e),
         }
     } else if let Err(ref e) = result {
         println!("ERROR: build_governance_tree failed: {}", e);
     }
-    
+
     println!("INFO: get_governance_tree finished");
     result
 }
@@ -1242,13 +1311,10 @@ fn build_governance_tree(
     let metadata = std::fs::metadata(&current_path).map_err(|e| e.to_string())?;
     let is_directory = metadata.is_dir();
 
-    let modified = metadata
-        .modified()
-        .ok()
-        .map(|m| {
-            let dt: DateTime<Local> = m.into();
-            dt.to_rfc3339()
-        });
+    let modified = metadata.modified().ok().map(|m| {
+        let dt: DateTime<Local> = m.into();
+        dt.to_rfc3339()
+    });
 
     let size = if is_directory {
         None
@@ -1493,7 +1559,9 @@ pub fn safe_write_file(
         || path_str.contains("00_MASTER")
         || path_str.contains("90_ARCHIVE")
     {
-        return Err("Cannot modify read-only governance files (Canon, Constitution, Archive)".to_string());
+        return Err(
+            "Cannot modify read-only governance files (Canon, Constitution, Archive)".to_string(),
+        );
     }
 
     // Create parent directories if needed
@@ -1506,12 +1574,15 @@ pub fn safe_write_file(
     // Create timestamped backup only if file exists
     if target_path.exists() {
         let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
-        let backup_name = format!("{}.backup.{}", target_path.file_name().unwrap().to_string_lossy(), timestamp);
+        let backup_name = format!(
+            "{}.backup.{}",
+            target_path.file_name().unwrap().to_string_lossy(),
+            timestamp
+        );
         let backup = target_path.with_file_name(backup_name);
 
-        fs::copy(target_path, &backup)
-            .map_err(|e| format!("Failed to create backup: {}", e))?;
-        
+        fs::copy(target_path, &backup).map_err(|e| format!("Failed to create backup: {}", e))?;
+
         backup_info = backup.to_string_lossy().to_string();
     }
 
@@ -1544,7 +1615,9 @@ pub fn safe_write_file(
 /// Phase 1 Day 5-6 - "Finish Aequitas" mission tracker
 /// Uses SurrealDB for fast, cached queries
 #[tauri::command]
-pub async fn get_aequitas_dashboard(state: State<'_, AppState>) -> Result<AequitasDashboard, String> {
+pub async fn get_aequitas_dashboard(
+    state: State<'_, AppState>,
+) -> Result<AequitasDashboard, String> {
     let root = state.governance_root.lock().unwrap().clone();
     let governance_root_str = root.to_string_lossy().to_string();
 
@@ -1573,258 +1646,38 @@ async fn dashboard_from_db(
     store: &metatheos_core::store::SurrealStore,
     governance_root: &str,
 ) -> Result<AequitasDashboard, String> {
-    use chrono::{Utc, Duration};
-    use std::collections::{HashMap, HashSet};
-
-    // Load all data from DB
-    let all_goals = store
-        .get_all_goals()
+    let ctx = GovernanceContext::from_store(store, std::path::PathBuf::from(governance_root))
         .await
-        .map_err(|e| format!("Failed to load goals: {}", e))?;
+        .map_err(|e| format!("Failed to load governance context: {}", e))?;
+    let calculator = DashboardCalculator::new(&ctx);
+    Ok(calculator.calculate())
+}
 
-    let all_phases = store
-        .get_all_phases()
-        .await
-        .map_err(|e| format!("Failed to load phases: {}", e))?;
+#[tauri::command]
+pub async fn get_ai_context(
+    state: State<'_, AppState>,
+    date: Option<String>,
+) -> Result<ReadOnlyGovernanceContext, String> {
+    let root = state
+        .governance_root
+        .lock()
+        .map_err(|e| e.to_string())?
+        .clone();
+    let maybe_store = state.db.lock().map_err(|e| e.to_string())?.clone();
 
-    let today = Utc::now().naive_utc().date();
-    let seven_days_ago = today - Duration::days(7);
-
-    let all_daily_notes = store
-        .get_daily_notes_in_range(seven_days_ago, today)
-        .await
-        .unwrap_or_default();
-
-    // Calculate completion metrics
-    let total_goals = all_goals.len();
-    let done_goals = all_goals.iter().filter(|g| g.status == GoalStatus::Done).count();
-    let active_goals = all_goals.iter().filter(|g| g.status == GoalStatus::Active).count();
-    let blocked_goals = all_goals.iter().filter(|g| g.status == GoalStatus::Blocked).count();
-    let planned_goals = all_goals.iter().filter(|g| g.status == GoalStatus::Planned).count();
-
-    let percentage = if total_goals > 0 {
-        (done_goals as f64 / total_goals as f64) * 100.0
+    let ctx = if let Some(store) = maybe_store {
+        GovernanceContext::from_store(&store, root)
+            .await
+            .map_err(|e| e.to_string())?
     } else {
-        0.0
+        GovernanceContext::load(&root).map_err(|e| e.to_string())?
     };
 
-    let completion = CompletionMetrics {
-        percentage,
-        total_goals,
-        done_goals,
-        active_goals,
-        blocked_goals,
-        planned_goals,
-    };
-
-    // Detect current phase
-    let parse_phase_num = |phase_id: &str| -> Option<u8> {
-        phase_id.trim_start_matches('P').parse().ok()
-    };
-
-    let current_phase = all_phases
-        .iter()
-        .filter(|p| p.status.as_str() == "active")
-        .max_by_key(|p| parse_phase_num(&p.phase_id))
-        .or_else(|| {
-            all_phases
-                .iter()
-                .filter(|p| {
-                    let phase_num = parse_phase_num(&p.phase_id);
-                    all_goals.iter().any(|g| {
-                        g.phase.as_ref().and_then(|ph| ph.parse::<u8>().ok()) == phase_num
-                    })
-                })
-                .max_by_key(|p| parse_phase_num(&p.phase_id))
-        });
-
-    let current_phase_status = if let Some(phase) = current_phase {
-        let phase_num = parse_phase_num(&phase.phase_id);
-        let phase_goals: Vec<_> = all_goals
-            .iter()
-            .filter(|g| {
-                g.phase.as_ref().and_then(|ph| ph.parse::<u8>().ok()) == phase_num
-            })
-            .collect();
-
-        let goals_in_phase = phase_goals.len();
-        let done_in_phase = phase_goals.iter().filter(|g| g.status == GoalStatus::Done).count();
-        let phase_completion = if goals_in_phase > 0 {
-            (done_in_phase as f64 / goals_in_phase as f64) * 100.0
-        } else {
-            0.0
-        };
-
-        PhaseStatus {
-            phase_number: phase_num,
-            phase_title: Some(phase.title.clone()),
-            phase_status: Some(phase.status.clone()),
-            goals_in_phase,
-            done_in_phase,
-            phase_completion,
-        }
+    let target_date = if let Some(d) = date {
+        NaiveDate::parse_from_str(&d, "%Y-%m-%d").map_err(|e| e.to_string())?
     } else {
-        PhaseStatus {
-            phase_number: None,
-            phase_title: None,
-            phase_status: None,
-            goals_in_phase: 0,
-            done_in_phase: 0,
-            phase_completion: 0.0,
-        }
+        Local::now().naive_local().date()
     };
 
-    // Build reverse dependency map for blockers and critical path
-    let mut reverse_deps: HashMap<String, Vec<String>> = HashMap::new();
-    for goal in &all_goals {
-        for dep_id in &goal.dependencies {
-            reverse_deps
-                .entry(dep_id.clone())
-                .or_insert_with(Vec::new)
-                .push(goal.goal_id.clone());
-        }
-    }
-
-    // Find blockers
-    let blocked_goals_list: Vec<_> = all_goals
-        .iter()
-        .filter(|g| g.status == GoalStatus::Blocked)
-        .collect();
-
-    let mut blockers: Vec<Blocker> = blocked_goals_list
-        .iter()
-        .map(|goal| {
-            let blocking_count = reverse_deps.get(&goal.goal_id).map(|v| v.len()).unwrap_or(0);
-
-            let reason = if goal.content.contains("Blocked by:") {
-                goal.content
-                    .lines()
-                    .find(|line| line.contains("Blocked by:"))
-                    .and_then(|line| line.split("Blocked by:").nth(1))
-                    .map(|reason| reason.trim().to_string())
-            } else {
-                None
-            };
-
-            Blocker {
-                goal_id: goal.goal_id.clone(),
-                title: goal.title.clone(),
-                reason,
-                blocked_since: goal.updated.map(|d| d.to_string()),
-                blocking_count,
-            }
-        })
-        .collect();
-
-    blockers.sort_by(|a, b| b.blocking_count.cmp(&a.blocking_count));
-
-    // Build critical path
-    let mut critical_goals: Vec<CriticalGoal> = all_goals
-        .iter()
-        .filter_map(|goal| {
-            let reverse_count = reverse_deps.get(&goal.goal_id).map(|v| v.len()).unwrap_or(0);
-            if reverse_count > 0 {
-                Some(CriticalGoal {
-                    goal_id: goal.goal_id.clone(),
-                    title: goal.title.clone(),
-                    status: goal.status.to_string(),
-                    reverse_dependencies: reverse_count,
-                    phase: goal.phase.clone(),
-                })
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    critical_goals.sort_by(|a, b| b.reverse_dependencies.cmp(&a.reverse_dependencies));
-    let critical_path = critical_goals.into_iter().take(10).collect();
-
-    // Analyze recent activity
-    let days_tracked = all_daily_notes.len();
-
-    let goals_completed = all_goals
-        .iter()
-        .filter(|g| {
-            g.status == GoalStatus::Done
-                && g.updated
-                    .map(|d| d >= seven_days_ago && d <= today)
-                    .unwrap_or(false)
-        })
-        .count();
-
-    let goals_started = all_goals
-        .iter()
-        .filter(|g| {
-            g.status == GoalStatus::Active
-                && g.updated
-                    .map(|d| d >= seven_days_ago && d <= today)
-                    .unwrap_or(false)
-        })
-        .count();
-
-    let velocity = if days_tracked > 0 {
-        goals_completed as f64 / 7.0
-    } else {
-        0.0
-    };
-
-    let daily_notes = all_daily_notes
-        .iter()
-        .map(|note| DailyNoteInfo {
-            date: note.date.to_string(),
-            goals_worked: note.goals_worked.clone(),
-            decisions_made: note.decisions_made.clone(),
-        })
-        .collect();
-
-    let recent_activity = RecentActivity {
-        days_tracked,
-        goals_completed,
-        goals_started,
-        velocity,
-        daily_notes,
-    };
-
-    // Calculate health
-    let blocked_percentage = if total_goals > 0 {
-        (blocked_goals as f64 / total_goals as f64) * 100.0
-    } else {
-        0.0
-    };
-
-    let orphaned_goals = all_goals
-        .iter()
-        .filter(|g| g.phase.is_none() && g.canon.is_empty())
-        .count();
-
-    let all_goal_ids: HashSet<String> = all_goals.iter().map(|g| g.goal_id.clone()).collect();
-
-    let missing_dependencies = all_goals
-        .iter()
-        .flat_map(|g| &g.dependencies)
-        .filter(|dep_id| !all_goal_ids.contains(*dep_id))
-        .count();
-
-    // For audit errors, we'd need to run the validator, but that requires GovernanceContext
-    // For now, we'll use 0 as we're focusing on DB performance
-    let audit_errors = 0;
-
-    let health = HealthMetrics {
-        blocked_percentage,
-        orphaned_goals,
-        missing_dependencies,
-        audit_errors,
-    };
-
-    Ok(AequitasDashboard {
-        completion,
-        current_phase: current_phase_status,
-        blockers,
-        critical_path,
-        recent_activity,
-        health,
-        generated_at: Utc::now().to_rfc3339(),
-        governance_root: governance_root.to_string(),
-    })
+    Ok(ctx.get_read_only_context(target_date))
 }

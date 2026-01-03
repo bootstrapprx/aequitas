@@ -6,11 +6,10 @@ mod commands_ai;
 mod commands_crud;
 mod commands_git;
 mod state;
-mod watcher_handler;
 
 use state::AppState;
 use std::path::PathBuf;
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 fn main() {
     // Default governance root - absolute path to Aequitas governance folder
@@ -19,103 +18,121 @@ fn main() {
         .unwrap_or_else(|_| {
             // Default to governance folder in Aequitas project
             #[cfg(target_os = "linux")]
-            let home = std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/home/actpm".to_string()));
+            let home = std::path::PathBuf::from(
+                std::env::var("HOME").unwrap_or_else(|_| "/home/actpm".to_string()),
+            );
             #[cfg(not(target_os = "linux"))]
-             let home = std::path::PathBuf::from("/"); // Fallback for safety
+            let home = std::path::PathBuf::from("/"); // Fallback for safety
 
             home.join("Documents/workfolder/aequitas/governance")
         });
-    
+
     // Assume repo root is the parent of governance root
-    let repo_root = governance_root.parent().unwrap_or(&governance_root).to_path_buf();
+    let repo_root = governance_root
+        .parent()
+        .unwrap_or(&governance_root)
+        .to_path_buf();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(AppState::new(governance_root.clone(), repo_root))
         .setup(move |app| {
-             // PHASE 1 CRITICAL: SurrealDB enabled as read-only cache for dashboard performance
-             // See PERSISTENCE_STRATEGY.md and SURREALDB_MIGRATION.md for design
-             //
-             // Architecture:
-             // - Markdown files remain the single source of truth
-             // - SurrealDB provides fast, indexed queries for dashboard
-             // - GUI writes to markdown → migration updates DB
-             // - File watcher keeps DB synchronized
+            // PHASE 1 CRITICAL: SurrealDB enabled as read-only cache for dashboard performance
+            // See PERSISTENCE_STRATEGY.md and SURREALDB_MIGRATION.md for design
+            //
+            // Architecture:
+            // - Markdown files remain the single source of truth
+            // - SurrealDB provides fast, indexed queries for dashboard
+            // - GUI writes to markdown → migration updates DB
+            // - File watcher keeps DB synchronized
 
-             let handle = app.handle().clone();
-             let gov_root = governance_root.clone();
+            let handle = app.handle().clone();
+            let gov_root = governance_root.clone();
 
-             tauri::async_runtime::spawn(async move {
-                 let state = handle.state::<AppState>();
-                 let db_path = gov_root.join(".metatheos.db"); // Embedded DB folder
-                 println!("Initializing SurrealDB at {:?}", db_path);
-                 match metatheos_core::store::SurrealStore::init(db_path).await {
-                     Ok(store) => {
-                         let store = std::sync::Arc::new(store);
+            tauri::async_runtime::spawn(async move {
+                let state = handle.state::<AppState>();
+                let db_path = gov_root.join(".metatheos.db"); // Embedded DB folder
+                println!("Initializing SurrealDB at {:?}", db_path);
+                match metatheos_core::store::SurrealStore::init(db_path).await {
+                    Ok(store) => {
+                        let store = std::sync::Arc::new(store);
 
-                         // Run Migration
-                         println!("Running SurrealDB migration...");
-                         if let Err(e) = metatheos_core::store::migration::migrate_all(&store, &gov_root).await {
-                             eprintln!("Migration failed: {}", e);
-                         } else {
-                             println!("Migration complete - DB cache ready");
-                         }
+                        // Run Migration
+                        println!("Running SurrealDB migration...");
+                        if let Err(e) =
+                            metatheos_core::store::migration::migrate_all(&store, &gov_root).await
+                        {
+                            eprintln!("Migration failed: {}", e);
+                        } else {
+                            println!("Migration complete - DB cache ready");
+                        }
 
-                         // Set state
-                         *state.db.lock().unwrap() = Some(store.clone());
-                         println!("SurrealDB initialized and state updated.");
+                        // Set state
+                        *state.db.lock().unwrap() = Some(store.clone());
+                        println!("SurrealDB initialized and state updated.");
 
-                         // PHASE 2.1: Initialize file watcher for real-time sync
-                         println!("Initializing file watcher...");
-                         match metatheos_core::FileWatcher::new(&gov_root) {
-                             Ok(watcher) => {
-                                 *state.watcher.lock().unwrap() = Some(watcher);
-                                 println!("File watcher initialized");
+                        // PHASE 2.1: Initialize file watcher for real-time sync
+                        println!("Initializing file watcher...");
+                        // PHASE 2.1: Initialize file watcher for real-time sync
+                        println!("Initializing file watcher service...");
 
-                                 // Spawn background task to handle file change events
-                                 let handle_clone = handle.clone();
-                                 let store_clone = store.clone();
-                                 let gov_root_clone = gov_root.clone();
+                        // Initialize WatcherService
+                        match metatheos_core::WatcherService::new(&gov_root, store.clone()) {
+                            Ok((service, watcher, mut rx)) => {
+                                println!("WatcherService initialized");
 
-                                 tauri::async_runtime::spawn(async move {
-                                     loop {
-                                         // Poll for file change events
-                                         let event_opt = {
-                                             // Scope to ensure mutex guard is dropped before await
-                                             if let Some(mut watcher) = handle_clone.state::<AppState>().watcher.lock().unwrap().take() {
-                                                 let event = watcher.next_event();
-                                                 // Put watcher back immediately
-                                                 *handle_clone.state::<AppState>().watcher.lock().unwrap() = Some(watcher);
-                                                 event
-                                             } else {
-                                                 None
-                                             }
-                                         };
+                                // Spawn the service (handles DB updates)
+                                tauri::async_runtime::spawn(async move {
+                                    service.run(watcher).await;
+                                });
 
-                                         // Handle event if any (mutex is now released)
-                                         if let Some(event) = event_opt {
-                                             watcher_handler::handle_file_change(
-                                                 event,
-                                                 store_clone.clone(),
-                                                 gov_root_clone.clone(),
-                                                 handle_clone.clone(),
-                                             ).await;
-                                         }
+                                // Spawn the event listener (handles UI notifications)
+                                let handle_clone = handle.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    loop {
+                                        match rx.recv().await {
+                                            Ok(event) => {
+                                                println!(
+                                                    "Watcher Event: {} {} ({})",
+                                                    event.entity_type, event.id, event.operation
+                                                );
 
-                                         // Sleep to avoid busy-waiting
-                                         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-                                     }
-                                 });
-                             }
-                             Err(e) => eprintln!("Failed to init file watcher: {}", e),
-                         }
-                     },
-                     Err(e) => eprintln!("Failed to init SurrealDB: {}", e),
-                 }
-             });
+                                                // Map to frontend event names (lowercase)
+                                                let type_str = event.entity_type.to_lowercase();
 
-             println!("Metatheos GUI started (SurrealDB caching mode + file watcher)");
-             Ok(())
+                                                // Emit specific changed event (e.g., "goal_changed")
+                                                let _ = handle_clone.emit(
+                                                    &format!("{}_changed", type_str),
+                                                    &event.id,
+                                                );
+
+                                                // Emit general governance_changed
+                                                let _ = handle_clone
+                                                    .emit("governance_changed", &event.id);
+                                            }
+                                            Err(
+                                                tokio::sync::broadcast::error::RecvError::Lagged(n),
+                                            ) => {
+                                                println!("Watcher event lag: skipped {} events", n);
+                                            }
+                                            Err(
+                                                tokio::sync::broadcast::error::RecvError::Closed,
+                                            ) => {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                });
+                            }
+                            Err(e) => eprintln!("Failed to init watcher service: {}", e),
+                        }
+                    }
+                    Err(e) => eprintln!("Failed to init SurrealDB: {}", e),
+                }
+            });
+
+            println!("Metatheos GUI started (SurrealDB caching mode + file watcher)");
+            Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             // Read commands
@@ -139,10 +156,9 @@ fn main() {
             commands::create_daily_note,
             commands::list_audits,
             commands::set_daily_mode,
-            commands::list_audits,
-            commands::set_daily_mode,
             commands::get_daily_note, // It is now async, still valid handler
             commands::update_daily_note,
+            commands::get_ai_context,
             // AI commands
             commands_ai::ai_check_config,
             commands_ai::ai_ask,

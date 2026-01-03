@@ -1,8 +1,6 @@
-use metatheos_core::{
-    AIService, ClaudeClient, ContextBuilder, GovernanceContext, PromptLogger,
-};
-use metatheos_core::reasoner::{ReasoningEngine, ReasonerContextUsed, Intent};
 use metatheos_core::llm::runtime::OllamaRuntimeController;
+use metatheos_core::reasoner::{Intent, ReasonerContextUsed, ReasoningEngine};
+use metatheos_core::{AIService, ClaudeClient, ContextBuilder, GovernanceContext, PromptLogger};
 
 use metatheos_core::llm::LLMClient;
 use serde::{Deserialize, Serialize};
@@ -171,7 +169,9 @@ pub async fn ai_suggest_status(
     let has_api_key = std::env::var("ANTHROPIC_API_KEY").is_ok();
 
     if !has_api_key {
-        return Err("No API key configured. Please set ANTHROPIC_API_KEY environment variable.".to_string());
+        return Err(
+            "No API key configured. Please set ANTHROPIC_API_KEY environment variable.".to_string(),
+        );
     }
 
     // Load governance context - clone path before async
@@ -225,10 +225,7 @@ pub fn ai_get_examples(state: State<'_, AppState>) -> Result<Vec<String>, String
     ];
 
     if active_count > 0 {
-        examples.insert(
-            1,
-            format!("Summarize my {} active goals", active_count),
-        );
+        examples.insert(1, format!("Summarize my {} active goals", active_count));
     }
 
     Ok(examples)
@@ -244,7 +241,10 @@ pub fn get_context_clipboard_payload(
     let root = state.governance_root.lock().unwrap();
     let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
 
-    let phase = ctx.active_phase().map(|p| p.phase_id.clone()).unwrap_or_else(|| "unknown".to_string());
+    let phase = ctx
+        .active_phase()
+        .map(|p| p.phase_id.clone())
+        .unwrap_or_else(|| "unknown".to_string());
     let goals = selected_goals.unwrap_or_default();
     let mut lines = Vec::new();
     lines.push("Metatheos Governance Context (manual paste)".to_string());
@@ -259,7 +259,9 @@ pub fn get_context_clipboard_payload(
             lines.push(format!("Last file: {}", path));
         }
     }
-    lines.push("Warning: No vault context here. Do not request auto-writes; drafts only.".to_string());
+    lines.push(
+        "Warning: No vault context here. Do not request auto-writes; drafts only.".to_string(),
+    );
 
     Ok(lines.join("\n"))
 }
@@ -278,40 +280,40 @@ pub async fn ollama_reason(
 
     let ctx = GovernanceContext::load(&root).map_err(|e| e.to_string())?;
     let runtime = OllamaRuntimeController::new(None, None).map_err(|e| e.to_string())?;
-    let health = runtime
-        .ollama_health()
-        .await
-        .map_err(|e| e.to_string())?;
+    let health = runtime.ollama_health().await.map_err(|e| e.to_string())?;
 
     if !health.reachable {
         return Err(health.message);
     }
     if !health.default_model_ready {
-        return Err(format!("Model {} not available: {}", runtime.model_name(), health.message));
+        return Err(format!(
+            "Model {} not available: {}",
+            runtime.model_name(),
+            health.message
+        ));
     }
 
     let engine = ReasoningEngine::new(runtime.clone());
-    let override_intent = intent_override
-        .as_deref()
-        .and_then(|s| match s {
-            "draft_goal" => Some(Intent::DraftGoal),
-            "update_goal" => Some(Intent::UpdateGoal),
-            "draft_decision" => Some(Intent::DraftDecision),
-            "draft_audit" => Some(Intent::DraftAudit),
-            "summarize_state" => Some(Intent::SummarizeState),
-            "analyze_blockers" => Some(Intent::AnalyzeBlockers),
-            "explain_phase" => Some(Intent::ExplainPhase),
-            _ => None,
-        });
+    let override_intent = intent_override.as_deref().and_then(|s| match s {
+        "draft_goal" => Some(Intent::DraftGoal),
+        "update_goal" => Some(Intent::UpdateGoal),
+        "draft_decision" => Some(Intent::DraftDecision),
+        "draft_audit" => Some(Intent::DraftAudit),
+        "summarize_state" => Some(Intent::SummarizeState),
+        "analyze_blockers" => Some(Intent::AnalyzeBlockers),
+        "explain_phase" => Some(Intent::ExplainPhase),
+        _ => None,
+    });
 
     let result = engine
         .run(&query, &ctx, override_intent)
         .await
         .map_err(|e| e.to_string())?;
 
-    let draft_markdown = result.draft.as_ref().map(|d| {
-        format!("---\n{}---\n\n{}", d.frontmatter, d.body)
-    });
+    let draft_markdown = result
+        .draft
+        .as_ref()
+        .map(|d| format!("---\n{}---\n\n{}", d.frontmatter, d.body));
 
     Ok(ReasonerResponse {
         intent: format!("{:?}", result.intent),
@@ -319,7 +321,10 @@ pub async fn ollama_reason(
         rationale: result.intent_guess.rationale,
         required_inputs: result.required_inputs.clone(),
         context_used: to_summary(&result.context_used),
-        draft_path: result.draft.as_ref().map(|d| d.target_path.to_string_lossy().to_string()),
+        draft_path: result
+            .draft
+            .as_ref()
+            .map(|d| d.target_path.to_string_lossy().to_string()),
         draft_frontmatter: result.draft.as_ref().map(|d| d.frontmatter.clone()),
         draft_body: result.draft.as_ref().map(|d| d.body.clone()),
         draft_markdown,
@@ -354,35 +359,23 @@ fn build_context_descriptor(ctx: &GovernanceContext) -> AIContextDescriptor {
 fn collect_included_goals(ctx: &GovernanceContext) -> Vec<String> {
     let mut ids: Vec<String> = Vec::new();
     let mut push_unique = |value: String| {
-        if !ids.iter().any(|existing| existing.eq_ignore_ascii_case(&value)) {
+        if !ids
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(&value))
+        {
             ids.push(value);
         }
     };
 
-    for goal in ctx
-        .all_goals()
-        .iter()
-        .filter(|g| g.is_active())
-        .take(10)
-    {
+    for goal in ctx.all_goals().iter().filter(|g| g.is_active()).take(10) {
         push_unique(goal.goal_id.clone());
     }
 
-    for goal in ctx
-        .all_goals()
-        .iter()
-        .filter(|g| g.is_blocked())
-        .take(5)
-    {
+    for goal in ctx.all_goals().iter().filter(|g| g.is_blocked()).take(5) {
         push_unique(goal.goal_id.clone());
     }
 
-    for goal in ctx
-        .all_goals()
-        .iter()
-        .filter(|g| g.is_done())
-        .take(5)
-    {
+    for goal in ctx.all_goals().iter().filter(|g| g.is_done()).take(5) {
         push_unique(goal.goal_id.clone());
     }
 

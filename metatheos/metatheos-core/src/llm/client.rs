@@ -32,8 +32,9 @@ impl ClaudeClient {
     }
 
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("ANTHROPIC_API_KEY")
-            .map_err(|_| crate::errors::MetaError::ConfigError("ANTHROPIC_API_KEY not set".to_string()))?;
+        let api_key = std::env::var("ANTHROPIC_API_KEY").map_err(|_| {
+            crate::errors::MetaError::ConfigError("ANTHROPIC_API_KEY not set".to_string())
+        })?;
         Ok(Self::new(api_key, None))
     }
 }
@@ -69,8 +70,14 @@ impl LLMClient for ClaudeClient {
             .map_err(|e| crate::errors::MetaError::NetworkError(e.to_string()))?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(crate::errors::MetaError::NetworkError(format!("Claude API error: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(crate::errors::MetaError::NetworkError(format!(
+                "Claude API error: {}",
+                error_text
+            )));
         }
 
         let response_json: serde_json::Value = response
@@ -81,7 +88,9 @@ impl LLMClient for ClaudeClient {
         // Extract text from response
         let text = response_json["content"][0]["text"]
             .as_str()
-            .ok_or_else(|| crate::errors::MetaError::NetworkError("Invalid response format".to_string()))?;
+            .ok_or_else(|| {
+                crate::errors::MetaError::NetworkError("Invalid response format".to_string())
+            })?;
 
         Ok(text.to_string())
     }
@@ -109,9 +118,13 @@ impl OllamaClient {
 
     pub fn with_base(model: Option<String>, base_url: Option<String>) -> Self {
         Self {
-            base_url: base_url
-                .unwrap_or_else(|| std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://127.0.0.1:11435".to_string())),
-            model: model.unwrap_or_else(|| std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen2.5:7b-instruct".to_string())),
+            base_url: base_url.unwrap_or_else(|| {
+                std::env::var("OLLAMA_BASE_URL")
+                    .unwrap_or_else(|_| "http://127.0.0.1:11435".to_string())
+            }),
+            model: model.unwrap_or_else(|| {
+                std::env::var("OLLAMA_MODEL").unwrap_or_else(|_| "qwen2.5:7b-instruct".to_string())
+            }),
         }
     }
 
@@ -134,16 +147,19 @@ impl LLMClient for OllamaClient {
         });
 
         let url = format!("{}/api/generate", self.base_url);
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| crate::errors::MetaError::NetworkError(format!("Ollama request failed: {}", e)))?;
+        let response = client.post(&url).json(&body).send().await.map_err(|e| {
+            crate::errors::MetaError::NetworkError(format!("Ollama request failed: {}", e))
+        })?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(crate::errors::MetaError::NetworkError(format!("Ollama API error: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(crate::errors::MetaError::NetworkError(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
         let response_json: serde_json::Value = response
@@ -151,9 +167,9 @@ impl LLMClient for OllamaClient {
             .await
             .map_err(|e| crate::errors::MetaError::NetworkError(e.to_string()))?;
 
-        let text = response_json["response"]
-            .as_str()
-            .ok_or_else(|| crate::errors::MetaError::NetworkError("Invalid response format".to_string()))?;
+        let text = response_json["response"].as_str().ok_or_else(|| {
+            crate::errors::MetaError::NetworkError("Invalid response format".to_string())
+        })?;
 
         Ok(text.to_string())
     }
@@ -168,16 +184,19 @@ impl LLMClient for OllamaClient {
         });
 
         let url = format!("{}/api/chat", self.base_url);
-        let response = client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| crate::errors::MetaError::NetworkError(format!("Ollama chat failed: {}", e)))?;
+        let response = client.post(&url).json(&body).send().await.map_err(|e| {
+            crate::errors::MetaError::NetworkError(format!("Ollama chat failed: {}", e))
+        })?;
 
         if !response.status().is_success() {
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(crate::errors::MetaError::NetworkError(format!("Ollama API error: {}", error_text)));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(crate::errors::MetaError::NetworkError(format!(
+                "Ollama API error: {}",
+                error_text
+            )));
         }
 
         let response_json: serde_json::Value = response
@@ -187,7 +206,9 @@ impl LLMClient for OllamaClient {
 
         let text = response_json["message"]["content"]
             .as_str()
-            .ok_or_else(|| crate::errors::MetaError::NetworkError("Invalid chat response format".to_string()))?;
+            .ok_or_else(|| {
+                crate::errors::MetaError::NetworkError("Invalid chat response format".to_string())
+            })?;
 
         Ok(text.to_string())
     }
