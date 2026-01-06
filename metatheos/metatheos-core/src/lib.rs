@@ -7,6 +7,8 @@ pub mod llm;
 pub mod parser;
 pub mod query;
 pub mod reasoner;
+pub mod repository;
+pub mod service;
 pub mod store;
 pub mod validator;
 pub mod watcher;
@@ -25,6 +27,8 @@ pub use llm::{
 };
 pub use query::GoalQuery;
 pub use reasoner::{ReasoningEngine, StructuredResult};
+pub use repository::{GoalRepository, PhaseRepository};
+pub use service::{GoalService, PhaseService};
 pub use validator::GovernanceValidator;
 pub use watcher::{
     ChangeKind, EntityType, FileChangeEvent, FileWatcher, GovernanceUpdateEvent, WatcherService,

@@ -15,7 +15,7 @@ export interface ChatDockState {
 
 const defaultState: ChatDockState = {
   open: false,
-  mode: 'hidden',
+  mode: 'bottom',
   provider: 'chatgpt',
   customUrls: {},
   size: 40,
@@ -38,10 +38,14 @@ function createPersistedStore() {
     set,
     update,
     setOpen(open: boolean) {
-      update((s) => ({ ...s, open, mode: open ? (s.mode === 'hidden' ? 'bottom' : s.mode) : 'hidden' }))
+      update((s) => ({ ...s, open }))
     },
     setMode(mode: DockMode) {
-      update((s) => ({ ...s, mode, open: mode !== 'hidden' }))
+      if (mode === 'hidden') {
+        update((s) => ({ ...s, open: false }))
+      } else {
+        update((s) => ({ ...s, mode, open: true }))
+      }
     },
     setProvider(provider: ChatProviderId) {
       update((s) => ({ ...s, provider }))

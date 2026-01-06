@@ -1,11 +1,17 @@
 use crate::errors::{MetaError, Result};
-use crate::{AuditRecord, DailyNote, Decision, Goal, GoalStatus, Phase, Prompt};
+use crate::{
+    Annotation, AuditRecord, DailyNote, Decision, Event, Goal, GoalStatus, Phase, Prompt, WorkItem,
+};
 use chrono::NaiveDate;
 use std::path::PathBuf;
 use surrealdb::engine::local::{Db, SurrealKv};
 use surrealdb::Surreal;
 
+pub mod consequences;
+pub mod dto;
 pub mod migration;
+pub mod queries;
+pub mod schema;
 
 pub struct SurrealStore {
     pub db: Surreal<Db>,
@@ -23,29 +29,9 @@ impl SurrealStore {
             .await
             .map_err(|e| MetaError::SystemError(format!("Failed to select DB: {}", e)))?;
 
-        // --- Schema Definition ---
-
-        // Daily Notes
-        // We use string for date ID? daily_notes:2023-10-27
-        // We use string for date ID? daily_notes:2023-10-27
-        let _ = db.query("DEFINE TABLE daily_notes SCHEMAFULL").await;
-        let _ = db
-            .query("DEFINE FIELD date ON TABLE daily_notes TYPE string ASSERT $value != NONE")
-            .await;
-        let _ = db
-            .query("DEFINE FIELD content ON TABLE daily_notes TYPE string")
-            .await;
-        // Dynamic fields will just be stored as top-level fields in the JSON document,
-        // which SCHEMAFULL allows if we define them, or SCHEMALESS?
-        // Let's use SCHEMALESS for now to support dynamic frontmatter without explicit definitions for every user field.
-        // Actually, for "dynamic management", SCHEMALESS is better for the user's custom fields.
-
-        // Let's redefine as SCHEMALESS for maximum flexibility as requested.
-        let _ = db.query("DEFINE TABLE daily_notes SCHEMALESS").await;
-
-        // Goals
-        let _ = db.query("DEFINE TABLE goals SCHEMALESS").await;
-        // We can enforce some structure later if needed, but SCHEMALESS fits "Markdown frontmatter" paradigm best.
+        // --- DB-First Schema Initialization ---
+        // Initialize the complete canonical schema
+        schema::initialize_schema(&db).await?;
 
         Ok(Self { db })
     }
@@ -55,7 +41,7 @@ impl SurrealStore {
     }
 
     pub async fn get_daily_note(&self, date: NaiveDate) -> Result<Option<DailyNote>> {
-        let sql = "SELECT * FROM type::thing($table, $id)";
+        let sql = "SELECT content, date, phase, mode, protocol, goals_worked, decisions_made, divergences, goals, blockers, decisions, linked_goals, file_path, extra FROM type::thing($table, $id)";
         let mut response = self
             .db
             .query(sql)
@@ -264,6 +250,478 @@ impl SurrealStore {
 
     pub async fn get_all_goals(&self) -> Result<Vec<Goal>> {
         #[derive(serde::Deserialize)]
+        struct GoalDbCanon {
+            id: String,
+            phase_id: String,
+            title: String,
+            description: Option<String>,
+            status: String,
+            updated: Option<String>,
+            tags: Option<Vec<String>>,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct GoalDbLegacy {
+            goal_id: String,
+            title: String,
+            status: Option<serde_json::Value>,
+            phase: Option<String>,
+            owner: Option<String>,
+            parent_id: Option<String>,
+            level: Option<String>,
+            dependencies: Option<serde_json::Value>,
+            canon: Option<serde_json::Value>,
+            tags: Option<serde_json::Value>,
+            updated: Option<String>,
+            file_path: Option<String>,
+            content: Option<String>,
+        }
+
+        // Canonical query first
+        if let Ok(mut response) = self.db.query("SELECT * FROM goal").await {
+            if let Ok(db_items) = response.take::<Vec<GoalDbCanon>>(0) {
+                let items: Vec<Goal> = db_items
+                    .into_iter()
+                    .map(|g| Goal {
+                        goal_id: g.id,
+                        title: g.title,
+                        status: GoalStatus::from_str(&g.status)
+                            .unwrap_or_else(|| GoalStatus::Unknown(g.status.clone())),
+                        phase: Some(g.phase_id),
+                        owner: None,
+                        parent_id: None,
+                        level: Some("goal".to_string()),
+                        dependencies: Vec::new(),
+                        canon: Vec::new(),
+                        updated: g
+                            .updated
+                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        tags: g.tags.unwrap_or_default(),
+                        file_path: PathBuf::new(),
+                        content: g.description.unwrap_or_default(),
+                    })
+                    .collect();
+                if !items.is_empty() {
+                    return Ok(items);
+                }
+            }
+        }
+
+        // Legacy fallback
+        let mut response = self
+            .db
+            .query("SELECT * FROM goals")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let db_items: Vec<GoalDbLegacy> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+
+        let items: Vec<Goal> = db_items
+            .into_iter()
+            .map(|g| Goal {
+                goal_id: g.goal_id,
+                title: g.title,
+                status: g
+                    .status
+                    .as_ref()
+                    .and_then(|v| v.as_str())
+                    .and_then(GoalStatus::from_str)
+                    .unwrap_or_else(|| GoalStatus::Unknown("unknown".to_string())),
+                phase: g.phase,
+                owner: g.owner,
+                parent_id: g.parent_id,
+                level: g.level.or_else(|| Some("goal".to_string())),
+                dependencies: g
+                    .dependencies
+                    .and_then(|val| {
+                        val.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default(),
+                canon: g
+                    .canon
+                    .and_then(|val| {
+                        val.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default(),
+                updated: g
+                    .updated
+                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                tags: g
+                    .tags
+                    .and_then(|val| {
+                        val.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default(),
+                file_path: g.file_path.map(PathBuf::from).unwrap_or_else(PathBuf::new),
+                content: g.content.unwrap_or_default(),
+            })
+            .collect();
+        Ok(items)
+    }
+
+    pub async fn get_all_phases(&self) -> Result<Vec<Phase>> {
+        #[derive(serde::Deserialize)]
+        struct PhaseDbCanon {
+            id: String,
+            title: String,
+            status: String,
+            description: Option<String>,
+            start_date: Option<String>,
+            target_date: Option<String>,
+        }
+
+        #[derive(serde::Deserialize)]
+        struct PhaseDbLegacy {
+            phase_id: String,
+            title: String,
+            status: String,
+            start_date: Option<String>,
+            target_date: Option<String>,
+            dependencies: Vec<String>,
+            file_path: String,
+            content: String,
+        }
+
+        if let Ok(mut resp) = self.db.query("SELECT * FROM phase").await {
+            if let Ok(db_items) = resp.take::<Vec<PhaseDbCanon>>(0) {
+                let items: Vec<Phase> = db_items
+                    .into_iter()
+                    .map(|p| Phase {
+                        phase_id: p.id,
+                        title: p.title,
+                        status: p.status,
+                        start_date: p
+                            .start_date
+                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        target_date: p
+                            .target_date
+                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        dependencies: Vec::new(),
+                        file_path: PathBuf::new(),
+                        content: p.description.unwrap_or_default(),
+                    })
+                    .collect();
+                if !items.is_empty() {
+                    return Ok(items);
+                }
+            }
+        }
+
+        let mut response = self
+            .db
+            .query("SELECT * FROM phases")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+
+        let db_items: Vec<PhaseDbLegacy> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+
+        let items: Vec<Phase> = db_items
+            .into_iter()
+            .map(|p| Phase {
+                phase_id: p.phase_id,
+                title: p.title,
+                status: p.status,
+                start_date: p
+                    .start_date
+                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                target_date: p
+                    .target_date
+                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                dependencies: p.dependencies,
+                file_path: PathBuf::from(p.file_path),
+                content: p.content,
+            })
+            .collect();
+
+        Ok(items)
+    }
+
+    pub async fn get_all_decisions(&self) -> Result<Vec<Decision>> {
+        #[derive(serde::Deserialize)]
+        struct DecisionDb {
+            decision_id: String,
+            title: String,
+            status: Option<serde_json::Value>,
+            date: Option<String>,
+            updated: Option<String>,
+            canon: Option<serde_json::Value>,
+            phase: Option<String>,
+            rationale: Option<String>,
+            file_path: Option<String>,
+            content: Option<String>,
+        }
+
+        let mut response = self
+            .db
+            .query("SELECT * FROM decisions")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+
+        let db_items: Vec<DecisionDb> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+
+        let items = db_items
+            .into_iter()
+            .map(|d| Decision {
+                decision_id: d.decision_id,
+                title: d.title,
+                status: d.status.and_then(|v| {
+                    if let Some(s) = v.as_str() {
+                        crate::domain::decision::DecisionStatus::from_str(s)
+                    } else {
+                        None
+                    }
+                }),
+                date: d
+                    .date
+                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                updated: d
+                    .updated
+                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                canon: d
+                    .canon
+                    .and_then(|val| {
+                        val.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default(),
+                phase: d.phase,
+                rationale: d.rationale,
+                file_path: d.file_path.map(PathBuf::from).unwrap_or_else(PathBuf::new),
+                content: d.content.unwrap_or_default(),
+            })
+            .collect();
+
+        Ok(items)
+    }
+
+    pub async fn get_all_audits(&self) -> Result<Vec<AuditRecord>> {
+        let mut response = self
+            .db
+            .query("SELECT * FROM audits")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<AuditRecord> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn get_all_prompts(&self) -> Result<Vec<Prompt>> {
+        let mut response = self
+            .db
+            .query("SELECT * FROM prompts")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Prompt> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn get_all_daily_notes(&self) -> Result<Vec<DailyNote>> {
+        let mut response = self
+            .db
+            .query("SELECT content, date, phase, mode, protocol, goals_worked, decisions_made, divergences, goals, blockers, decisions, linked_goals, file_path, extra FROM daily_notes")
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<DailyNote> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn upsert_daily_note(&self, note: &DailyNote) -> Result<()> {
+        let id = note.date.to_string(); // YYYY-MM-DD
+
+        let _: std::result::Result<Option<DailyNote>, surrealdb::Error> = self
+            .db
+            .create(("daily_notes", &id))
+            .content(note.clone())
+            .await; // Ignore error if exists
+
+        let _: Option<DailyNote> = self
+            .db
+            .update(("daily_notes", &id))
+            .content(note.clone())
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Update Daily Note Error: {}", e)))?;
+
+        Ok(())
+    }
+
+    // === WorkItems === (canonical SCHEMAFULL table)
+
+    pub async fn add_work_item(&self, item: &WorkItem) -> Result<()> {
+        let _: std::result::Result<Option<WorkItem>, surrealdb::Error> = self
+            .db
+            .create(("work_item", &item.id))
+            .content(item.clone())
+            .await;
+        Ok(())
+    }
+
+    pub async fn get_work_items_by_goal(&self, goal_id: &str) -> Result<Vec<WorkItem>> {
+        let mut response = self
+            .db
+            .query("SELECT * FROM work_item WHERE goal_id = $goal_id")
+            .bind(("goal_id", goal_id.to_string()))
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<WorkItem> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn update_work_item(&self, item: &WorkItem) -> Result<()> {
+        let _: Option<WorkItem> = self
+            .db
+            .update(("work_item", &item.id))
+            .content(item.clone())
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Update WorkItem Error: {}", e)))?;
+        Ok(())
+    }
+
+    // === Annotations ===
+
+    pub async fn add_annotation(&self, item: &Annotation) -> Result<()> {
+        let _: std::result::Result<Option<Annotation>, surrealdb::Error> = self
+            .db
+            .create(("annotation", &item.id))
+            .content(item.clone())
+            .await;
+        Ok(())
+    }
+
+    pub async fn get_annotations(
+        &self,
+        entity_type: &str,
+        entity_id: &str,
+    ) -> Result<Vec<Annotation>> {
+        let mut response = self
+            .db
+            .query(
+                "SELECT * FROM annotation WHERE (entity_type = $etype OR target_type = $etype) AND (entity_id = $eid OR target_id = $eid) ORDER BY created_at DESC",
+            )
+            .bind(("etype", entity_type.to_string()))
+            .bind(("eid", entity_id.to_string()))
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let items: Vec<Annotation> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+        Ok(items)
+    }
+
+    pub async fn delete_annotation(&self, id: &str) -> Result<()> {
+        let _: Option<serde_json::Value> = self
+            .db
+            .delete(("annotation", id))
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Delete Error: {}", e)))?;
+        Ok(())
+    }
+
+    pub async fn log_event(&self, event: &Event) -> Result<()> {
+        let _: Option<serde_json::Value> = self
+            .db
+            .create(("event", &event.id))
+            .content(event.clone())
+            .await
+            .map_err(|e| MetaError::SystemError(format!("DB Event Error: {}", e)))?;
+        Ok(())
+    }
+
+    // === Meta Methods ===
+
+    pub async fn get_meta(&self, key: &str) -> Result<Option<String>> {
+        // Use .select() method instead of raw SQL to avoid table name escaping issues
+        #[derive(serde::Deserialize)]
+        struct MetaValue {
+            value: String,
+        }
+
+        let result: Option<MetaValue> = self.db.select(("meta_kv", key)).await.map_err(|e| {
+            MetaError::DatabaseQuery(format!("Failed to query meta_kv[{}]: {}", key, e))
+        })?;
+
+        Ok(result.map(|m| m.value))
+    }
+
+    pub async fn set_meta(&self, key: &str, value: &str) -> Result<()> {
+        let _: Option<serde_json::Value> = self
+            .db
+            .create(("meta_kv", key))
+            .content(serde_json::json!({ "value": value }))
+            .await
+            .unwrap_or_else(|_| None); // If create fails, try update
+
+        let _: Option<serde_json::Value> = self
+            .db
+            .update(("meta_kv", key))
+            .content(serde_json::json!({ "value": value }))
+            .await
+            .map_err(|e| {
+                MetaError::DatabaseQuery(format!("Failed to update meta_kv[{}]: {}", key, e))
+            })?;
+
+        Ok(())
+    }
+
+    // === Dashboard Query Methods ===
+
+    /// Count goals by status using SurrealDB query
+    pub async fn count_goals_by_status(&self) -> Result<std::collections::HashMap<String, usize>> {
+        use serde::Deserialize;
+
+        #[derive(Deserialize)]
+        struct StatusCount {
+            status: String,
+            count: i64,
+        }
+
+        let query = "SELECT status, count() as count FROM goals GROUP BY status";
+        let mut response = self
+            .db
+            .query(query)
+            .await
+            .map_err(|e| MetaError::SystemError(format!("Status count query failed: {}", e)))?;
+
+        let counts: Vec<StatusCount> = response
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("Failed to parse status counts: {}", e)))?;
+
+        let mut result = std::collections::HashMap::new();
+        for count in counts {
+            result.insert(count.status, count.count as usize);
+        }
+        Ok(result)
+    }
+
+    /// Get goals filtered by status
+    pub async fn get_goals_by_status(&self, status: &str) -> Result<Vec<crate::Goal>> {
+        #[derive(serde::Deserialize)]
         struct GoalDb {
             goal_id: String,
             title: String,
@@ -280,16 +738,17 @@ impl SurrealStore {
             content: Option<String>,
         }
 
-        let mut response = self
-            .db
-            .query("SELECT * FROM goals")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
+        let query = format!("SELECT * FROM goals WHERE status = '{}'", status);
+        let mut response =
+            self.db.query(&query).await.map_err(|e| {
+                MetaError::SystemError(format!("Goals by status query failed: {}", e))
+            })?;
+
         let db_items: Vec<GoalDb> = response
             .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
+            .map_err(|e| MetaError::SystemError(format!("Failed to parse goals: {}", e)))?;
 
-        let items: Vec<Goal> = db_items
+        let goals: Vec<crate::Goal> = db_items
             .into_iter()
             .map(|g| Goal {
                 goal_id: g.goal_id,
@@ -346,144 +805,6 @@ impl SurrealStore {
                 content: g.content.unwrap_or_default(),
             })
             .collect();
-        Ok(items)
-    }
-
-    pub async fn get_all_phases(&self) -> Result<Vec<Phase>> {
-        // DB stores dates as strings and file_path as string - use intermediate struct
-        #[derive(serde::Deserialize)]
-        struct PhaseDb {
-            phase_id: String,
-            title: String,
-            status: String,
-            start_date: Option<String>,
-            target_date: Option<String>,
-            dependencies: Vec<String>,
-            file_path: String,
-            content: String,
-        }
-
-        let mut response = self
-            .db
-            .query("SELECT * FROM phases")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
-
-        let db_items: Vec<PhaseDb> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
-
-        // Convert to Phase
-        let items: Vec<Phase> = db_items
-            .into_iter()
-            .map(|p| Phase {
-                phase_id: p.phase_id,
-                title: p.title,
-                status: p.status,
-                start_date: p
-                    .start_date
-                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-                target_date: p
-                    .target_date
-                    .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-                dependencies: p.dependencies,
-                file_path: PathBuf::from(p.file_path),
-                content: p.content,
-            })
-            .collect();
-
-        Ok(items)
-    }
-
-    pub async fn get_all_decisions(&self) -> Result<Vec<Decision>> {
-        let mut response = self
-            .db
-            .query("SELECT * FROM decisions")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
-        let items: Vec<Decision> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
-        Ok(items)
-    }
-
-    pub async fn get_all_audits(&self) -> Result<Vec<AuditRecord>> {
-        let mut response = self
-            .db
-            .query("SELECT * FROM audits")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
-        let items: Vec<AuditRecord> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
-        Ok(items)
-    }
-
-    pub async fn get_all_prompts(&self) -> Result<Vec<Prompt>> {
-        let mut response = self
-            .db
-            .query("SELECT * FROM prompts")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
-        let items: Vec<Prompt> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
-        Ok(items)
-    }
-
-    pub async fn get_all_daily_notes(&self) -> Result<Vec<DailyNote>> {
-        let mut response = self
-            .db
-            .query("SELECT * FROM daily_notes")
-            .await
-            .map_err(|e| MetaError::SystemError(format!("DB Query Error: {}", e)))?;
-        let items: Vec<DailyNote> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("DB Deserialization Error: {}", e)))?;
-        Ok(items)
-    }
-
-    // === Dashboard Query Methods ===
-
-    /// Count goals by status using SurrealDB query
-    pub async fn count_goals_by_status(&self) -> Result<std::collections::HashMap<String, usize>> {
-        use serde::Deserialize;
-
-        #[derive(Deserialize)]
-        struct StatusCount {
-            status: String,
-            count: i64,
-        }
-
-        let query = "SELECT status, count() as count FROM goals GROUP BY status";
-        let mut response = self
-            .db
-            .query(query)
-            .await
-            .map_err(|e| MetaError::SystemError(format!("Status count query failed: {}", e)))?;
-
-        let counts: Vec<StatusCount> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("Failed to parse status counts: {}", e)))?;
-
-        let mut result = std::collections::HashMap::new();
-        for count in counts {
-            result.insert(count.status, count.count as usize);
-        }
-        Ok(result)
-    }
-
-    /// Get goals filtered by status
-    pub async fn get_goals_by_status(&self, status: &str) -> Result<Vec<crate::Goal>> {
-        let query = format!("SELECT * FROM goals WHERE status = '{}'", status);
-        let mut response =
-            self.db.query(&query).await.map_err(|e| {
-                MetaError::SystemError(format!("Goals by status query failed: {}", e))
-            })?;
-
-        let goals: Vec<crate::Goal> = response
-            .take(0)
-            .map_err(|e| MetaError::SystemError(format!("Failed to parse goals: {}", e)))?;
 
         Ok(goals)
     }

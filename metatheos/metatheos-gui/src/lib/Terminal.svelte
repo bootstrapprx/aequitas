@@ -1,5 +1,6 @@
 <script>
     import { onMount, onDestroy } from "svelte";
+    import { invoke } from "@tauri-apps/api/core";
     import { Terminal } from "xterm";
     import { FitAddon } from "xterm-addon-fit";
     import { WebLinksAddon } from "xterm-addon-web-links";
@@ -15,6 +16,42 @@
     let terminal;
     let fitAddon;
     let resizeObserver;
+    let buffer = "";
+
+    function prompt() {
+        if (terminal) {
+            terminal.write("\r\n$ ");
+        }
+    }
+
+    async function executeCurrent() {
+        const cmd = buffer.trim();
+        buffer = "";
+        if (!cmd) {
+            prompt();
+            return;
+        }
+        if (cmd === "clear") {
+            terminal.reset();
+            initialContent.forEach((line) => terminal.writeln(line));
+            terminal.write("\r\n$ ");
+            return;
+        }
+        try {
+            const result = await invoke("execute_shell_command", { input: cmd });
+            terminal.writeln("");
+            if (result.output) {
+                terminal.writeln(result.output);
+            }
+            if (result.error) {
+                terminal.writeln(`\x1b[31m${result.error}\x1b[0m`);
+            }
+        } catch (err) {
+            terminal.writeln("");
+            terminal.writeln(`\x1b[31m${err}\x1b[0m`);
+        }
+        prompt();
+    }
 
     onMount(() => {
         // Initialize xterm.js
@@ -60,17 +97,24 @@
         initialContent.forEach((line) => terminal.writeln(line));
         terminal.write("\r\n$ ");
 
-        // Input Handling (Mock)
+        // Input Handling (real command dispatcher)
         terminal.onData((e) => {
             const char = e;
             if (char === "\r") {
-                // Enter
-                terminal.writeln("");
-                terminal.write("$ ");
+                executeCurrent();
+            } else if (char === "\u0003") {
+                // Ctrl+C
+                buffer = "";
+                terminal.writeln("^C");
+                prompt();
             } else if (char === "\u007F") {
                 // Backspace
-                terminal.write("\b \b");
+                if (buffer.length > 0) {
+                    buffer = buffer.slice(0, -1);
+                    terminal.write("\b \b");
+                }
             } else {
+                buffer += char;
                 terminal.write(char);
             }
         });
@@ -92,6 +136,7 @@
         if (terminal) {
             terminal.writeln(`\x1b[2m[LOG]\x1b[0m ${message}`);
             terminal.write("$ ");
+            buffer = "";
         }
     }
 </script>

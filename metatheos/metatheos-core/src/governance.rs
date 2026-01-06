@@ -269,13 +269,18 @@ pub struct GovernanceContext {
 }
 
 impl GovernanceContext {
-    /// Sync wrapper for load - opens DB inline and returns context
-    /// NOTE: Prefer from_store() with shared AppState for production usage
+    /// DEPRECATED: Sync wrapper causes tokio runtime panic when called from async context.
+    /// Use `load_async()` or `from_store()` instead.
+    ///
+    /// This method is kept ONLY for CLI usage where we're not in an async context.
+    /// For Tauri commands (async), use `load_async()`.
+    #[deprecated(since = "2.1.0", note = "Use `load_async()` to avoid runtime panic")]
     pub fn load<P: AsRef<Path>>(root: P) -> Result<Self> {
         let root_path = root.as_ref().to_path_buf();
         let db_path = root_path.join(".metatheos.db");
 
-        // Create a new runtime or use existing handle
+        // Create a new runtime ONLY if we're not already in one
+        // This is safe only for CLI usage
         let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -287,15 +292,64 @@ impl GovernanceContext {
         })
     }
 
+    /// Async load method - safe to call from Tauri commands and other async contexts
+    /// This is the RECOMMENDED method for all new code.
+    pub async fn load_async<P: AsRef<Path>>(root: P) -> Result<Self> {
+        let root_path = root.as_ref().to_path_buf();
+        let db_path = root_path.join(".metatheos.db");
+
+        let store = crate::store::SurrealStore::init(db_path).await?;
+        Self::from_store(&store, root_path).await
+    }
+
     /// Load context from SurrealStore (hybrid DB + FS for Canon/Protocols)
     pub async fn from_store(store: &crate::store::SurrealStore, root: PathBuf) -> Result<Self> {
-        // Fetch DB data
-        let goals = store.get_all_goals().await?;
-        let phases = store.get_all_phases().await?;
-        let decisions = store.get_all_decisions().await?;
-        let audits = store.get_all_audits().await?;
-        let prompts = store.get_all_prompts().await?;
-        let daily_notes = store.get_all_daily_notes().await?;
+        // Fetch DB data with graceful degradation - deserialization errors should not crash UI
+        let goals = match store.get_all_goals().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("GovernanceContext: failed to load goals from DB: {}", e);
+                Vec::new()
+            }
+        };
+        let phases = match store.get_all_phases().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("GovernanceContext: failed to load phases from DB: {}", e);
+                Vec::new()
+            }
+        };
+        let decisions = match store.get_all_decisions().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("GovernanceContext: failed to load decisions from DB: {}", e);
+                Vec::new()
+            }
+        };
+        let audits = match store.get_all_audits().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("GovernanceContext: failed to load audits from DB: {}", e);
+                Vec::new()
+            }
+        };
+        let prompts = match store.get_all_prompts().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!("GovernanceContext: failed to load prompts from DB: {}", e);
+                Vec::new()
+            }
+        };
+        let daily_notes = match store.get_all_daily_notes().await {
+            Ok(data) => data,
+            Err(e) => {
+                eprintln!(
+                    "GovernanceContext: failed to load daily notes from DB: {}",
+                    e
+                );
+                Vec::new()
+            }
+        };
 
         // Fetch FS data (Canon + Protocols) via Scanner
         let scanner = GovernanceScanner::new(&root);

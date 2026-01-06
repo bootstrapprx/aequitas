@@ -3,13 +3,18 @@
     import { onMount } from "svelte";
     import Toast from "./Toast.svelte";
     import OllamaChat from "./OllamaChat.svelte";
+    import BeginDay from "./BeginDay.svelte";
+    import Timeline from "./Timeline.svelte";
+    import DayOutcomeBadge from "./DayOutcomeBadge.svelte";
 
     let loading = true;
     let error = null;
     let date = new Date().toISOString().split("T")[0]; // Today
     let content = "";
     let frontmatter = {};
-    let rawContent = ""; // For context passing
+    let rawContent = "";
+
+    let hasActiveDay = false;
 
     // Toast
     let toastShow = false;
@@ -27,16 +32,12 @@
     async function loadDaily() {
         try {
             loading = true;
-            // Try to get existing note
-            // detailed response needed: content + parsed frontmatter
             const note = await invoke("get_daily_note", { date });
 
             if (note) {
-                // DB-backed note has properties map
                 if (note.properties) {
                     frontmatter = { ...note.properties };
                 } else if (note.raw_content) {
-                    // Fallback to manual parse if raw_content exists (legacy FS)
                     const match = note.raw_content.match(
                         /^---\n([\s\S]*?)\n---/,
                     );
@@ -53,37 +54,37 @@
                         });
                     }
                 } else {
-                    frontmatter = {};
+                    // Check if note object ITSELF has top-level fields (DB DTO)
+                    // If note has 'mode', use it.
+                    if (note.mode) frontmatter.mode = note.mode;
+                    if (note.phase) frontmatter.phase = note.phase;
                 }
 
-                content = note.content || "";
-
-                // For Ollama context, we reconstruct the full note since we might not have raw_content
-                let contextStr = "---\n";
-                for (const [key, val] of Object.entries(frontmatter)) {
-                    if (val) contextStr += `${key}: ${val}\n`;
+                if (frontmatter.mode || note.mode) {
+                    hasActiveDay = true;
+                    content = note.content || "";
+                } else {
+                    hasActiveDay = false;
                 }
-                contextStr += "---\n\n" + content;
-                rawContent = contextStr;
             } else {
+                hasActiveDay = false;
                 content = "";
                 frontmatter = {};
                 rawContent = "";
             }
             error = null;
         } catch (err) {
-            if (err.toString().includes("not found")) {
-                // Create empty state, or auto-create?
-                // Let's offer to create
-                content = "";
-                frontmatter = {};
-                error = "No daily note for today.";
-            } else {
+            hasActiveDay = false;
+            if (!err.toString().includes("not found")) {
                 error = err.toString();
             }
         } finally {
             loading = false;
         }
+    }
+
+    function onDayStarted() {
+        loadDaily();
     }
 
     async function createDaily() {
@@ -140,94 +141,127 @@
     }
 </script>
 
-<div class="flex h-full gap-4">
-    <!-- Left: Daily Editor -->
-    <div
-        class="flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-    >
-        <!-- Header -->
+<div class="flex h-full gap-4 relative">
+    {#if !hasActiveDay && !loading}
         <div
-            class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50"
+            class="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900"
         >
-            <h2 class="font-bold text-gray-900 dark:text-white">
-                Current Day: {date}
-            </h2>
-            <div class="flex gap-2">
-                <button class="text-xs btn btn-secondary" on:click={loadDaily}
-                    >Reload</button
+            <div
+                class="max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+            >
+                <div
+                    class="p-8 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"
                 >
-                <button
-                    class="text-xs btn btn-primary"
-                    on:click={save}
-                    disabled={saving || error}
-                >
-                    {saving ? "Saving..." : "Save"}
-                </button>
+                    <h1
+                        class="text-3xl font-bold text-gray-800 dark:text-gray-100"
+                    >
+                        Begin Day
+                    </h1>
+                    <p class="text-gray-500">
+                        Initialize your execution context
+                    </p>
+                </div>
+                <BeginDay {date} on:dayStarted={onDayStarted} />
             </div>
         </div>
-
-        {#if loading}
-            <div class="p-8 text-center text-gray-500">Loading...</div>
-        {:else if error}
+    {:else}
+        <!-- Left: Daily Editor -->
+        <div
+            class="flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+        >
+            <!-- Header -->
             <div
-                class="flex-1 flex flex-col items-center justify-center p-8 text-center"
+                class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50"
             >
-                <p class="text-gray-600 mb-4">{error}</p>
-                {#if error.includes("No daily note")}
-                    <button class="btn btn-primary" on:click={createDaily}
-                        >Initialize Today</button
+                <div class="flex items-center gap-3">
+                    <h2 class="font-bold text-gray-900 dark:text-white">
+                        Current Day: {date}
+                    </h2>
+                    <DayOutcomeBadge dayId={date} />
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        class="text-xs btn btn-secondary"
+                        on:click={loadDaily}>Reload</button
                     >
-                {/if}
+                    <button
+                        class="text-xs btn btn-primary"
+                        on:click={save}
+                        disabled={saving || error}
+                    >
+                        {saving ? "Saving..." : "Save"}
+                    </button>
+                </div>
             </div>
-        {:else}
-            <div class="flex-1 overflow-y-auto p-4">
-                <!-- Dynamic Management (Frontmatter) -->
+
+            {#if loading}
+                <div class="p-8 text-center text-gray-500">Loading...</div>
+            {:else if error}
                 <div
-                    class="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"
+                    class="flex-1 flex flex-col items-center justify-center p-8 text-center"
                 >
-                    <div class="flex justify-between items-center mb-2">
-                        <h3
-                            class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    <p class="text-gray-600 mb-4">{error}</p>
+                    {#if error.includes("No daily note")}
+                        <button class="btn btn-primary" on:click={createDaily}
+                            >Initialize Today</button
                         >
-                            Properties (Dynamic Management)
-                        </h3>
-                        <button
-                            class="text-xs text-blue-500 hover:text-blue-600"
-                            on:click={addField}>+ Field</button
-                        >
+                    {/if}
+                </div>
+            {:else}
+                <div class="flex-1 overflow-y-auto p-4">
+                    <!-- Dynamic Management (Frontmatter) -->
+                    <div
+                        class="mb-4 p-3 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700"
+                    >
+                        <div class="flex justify-between items-center mb-2">
+                            <h3
+                                class="text-sm font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Properties (Dynamic Management)
+                            </h3>
+                            <button
+                                class="text-xs text-blue-500 hover:text-blue-600"
+                                on:click={addField}>+ Field</button
+                            >
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            {#each Object.entries(frontmatter) as [key, value]}
+                                <div class="contents">
+                                    <label
+                                        class="text-xs text-gray-500 flex items-center justify-between gap-2 w-full"
+                                    >
+                                        {key}
+                                        <input
+                                            type="text"
+                                            bind:value={frontmatter[key]}
+                                            class="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-blue-500 focus:outline-none flex-1 ml-2"
+                                        />
+                                    </label>
+                                </div>
+                            {/each}
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        {#each Object.entries(frontmatter) as [key, value]}
-                            <div class="contents">
-                                <label
-                                    class="text-xs text-gray-500 flex items-center justify-between gap-2 w-full"
-                                >
-                                    {key}
-                                    <input
-                                        type="text"
-                                        bind:value={frontmatter[key]}
-                                        class="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus:ring-1 focus:ring-blue-500 focus:outline-none flex-1 ml-2"
-                                    />
-                                </label>
-                            </div>
-                        {/each}
+
+                    <!-- Content -->
+                    <textarea
+                        class="w-full h-[500px] p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
+                        bind:value={content}
+                        placeholder="Daily notes..."
+                    ></textarea>
+
+                    <!-- Timeline View -->
+                    <div class="mt-4">
+                        <Timeline scopeType="day" scopeId={date} heading="Day Timeline" collapsedInitially={true} />
                     </div>
                 </div>
+            {/if}
+        </div>
 
-                <!-- Content -->
-                <textarea
-                    class="w-full h-[500px] p-4 font-mono text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"
-                    bind:value={content}
-                    placeholder="Daily notes..."
-                ></textarea>
-            </div>
-        {/if}
-    </div>
-
-    <!-- Right: Ollama Interaction -->
-    <div class="w-[400px] flex flex-col">
-        <OllamaChat context={rawContent} />
-    </div>
+        <!-- Right: Ollama Interaction -->
+        <div class="w-[400px] flex flex-col">
+            <OllamaChat context={rawContent} />
+        </div>
+    {/if}
 </div>
 
 <Toast bind:show={toastShow} message={toastMessage} type={toastType} />

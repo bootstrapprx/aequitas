@@ -21,3 +21,5 @@ regex.workspace = true
 walkdir.workspace = true
 surrealdb = { version = "2.0", features = ["kv-surrealkv"] }
 tokio = { version = "1", features = ["full"] }
+uuid = { version = "1.4", features = ["v4", "serde"] }
+reqwest = { version = "0.11", features = ["json"] }

@@ -2,10 +2,12 @@
   import { onMount, onDestroy } from "svelte";
   import { chatDockStore } from "./stores/chatDock";
   import { defaultProviders } from "./chat/providers";
+  import AssistantPanel from "./AssistantPanel.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { get } from "svelte/store";
 
-  export let onSwitchToAssistant = () => {};
+  export let activePhase = null;
+  export let activeDay = null;
 
   let state;
   const unsubscribe = chatDockStore.subscribe((v) => (state = v));
@@ -38,11 +40,8 @@
   }
 
   function setProvider(id) {
-    if (id === "ollama-assistant") {
-      onSwitchToAssistant();
-      chatDockStore.setMode("hidden");
-      return;
-    }
+    // If user selects Ollama, we now stay in the dock (Sidebar/Bottom mode)
+    // instead of switching views.
     chatDockStore.setProvider(id);
   }
 
@@ -101,7 +100,7 @@
   }
 </script>
 
-{#if state && state.mode !== "hidden"}
+{#if state && state.open}
   <div
     class={`chat-dock ${state.mode}`}
     style={state.mode === "bottom"
@@ -152,7 +151,11 @@
       Do not request auto-writes; drafts only.
     </div>
 
-    {#if currentProvider().webOnly}
+    {#if currentProvider().id === "ollama-assistant"}
+      <div class="chat-dock__body p-0 bg-gray-900">
+        <AssistantPanel {activePhase} {activeDay} inDock={true} />
+      </div>
+    {:else if currentProvider().webOnly}
       <div class="chat-dock__body">
         <iframe
           title="chat-dock"

@@ -1,9 +1,8 @@
 use chrono::NaiveDate;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecisionStatus {
     Draft,
     Proposed,
@@ -12,6 +11,27 @@ pub enum DecisionStatus {
     Superseded,
     Abandoned,
     Unknown(String),
+}
+
+// Custom serialization to always produce a string (not an object)
+impl Serialize for DecisionStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+// Custom deserialization from string
+impl<'de> Deserialize<'de> for DecisionStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(DecisionStatus::from_str(&s).unwrap_or_else(|| DecisionStatus::Unknown(s)))
+    }
 }
 
 impl DecisionStatus {

@@ -69,7 +69,13 @@
       "Bash(rm:*)",
       "Bash(./metatheos/metatheos-cli/target/release/metatheos:*)",
       "Bash(./metatheos/target/release/metatheos:*)",
-      "Bash(cargo tarpaulin:*)"
+      "Bash(cargo tarpaulin:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(/home/actpm/Documents/workfolder/aequitas/metatheos/target/debug/metatheos ingest_roadmap:*)",
+      "Bash(/home/actpm/Documents/workfolder/aequitas/metatheos/target/debug/metatheos:*)",
+      "Bash(timeout 45 cargo run:*)",
+      "Bash(cargo tree:*)"
     ],
     "deny": [],
     "ask": []

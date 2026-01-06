@@ -1,13 +1,23 @@
+pub mod ai_run;
+pub mod annotation;
 pub mod audit;
 pub mod daily;
+pub mod day;
 pub mod decision;
+pub mod event;
 pub mod goal;
 pub mod phase;
 pub mod prompt;
+pub mod work_item;
 
+pub use ai_run::{AIIntent, AIProvider, AIRun, AIRunStatus, PromptTemplate};
+pub use annotation::{Annotation, AnnotationAuthor, AnnotationScope};
 pub use audit::{Audit, AuditRecord, ValidationResult, ValidationSeverity};
 pub use daily::DailyNote;
+pub use day::{Day, DayGoal, DayLog, DayType};
 pub use decision::{Decision, DecisionStatus};
+pub use event::{Event, EventAction};
 pub use goal::{Goal, GoalStatus};
 pub use phase::Phase;
 pub use prompt::Prompt;
+pub use work_item::{WorkItem, WorkItemLevel, WorkItemStatus};

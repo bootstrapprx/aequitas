@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount } from "svelte";
+  import AnnotationPanel from "./AnnotationPanel.svelte";
 
   // Props
   export let goal: any = null; // If null, we're creating a new goal
@@ -20,6 +21,13 @@
   let canonList = goal?.canon || [];
   let tags = goal?.tags?.join(", ") || "";
   let content = goal?.content || "";
+
+  // Work Items (Phase 4)
+  let workItems: any[] = [];
+  let subgoals: any[] = [];
+  let orphanedTasks: any[] = [];
+  let newItemTitle = "";
+  let addingToSubgoal: string | null = null; // ID of subgoal being added to
 
   function addCanonRef() {
     canonList = [...canonList, ""];
@@ -76,6 +84,66 @@
       .split(",")
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
+  }
+
+  // Phase 4: Work Items Logic
+  onMount(() => {
+    if (isEditMode) {
+      loadWorkItems();
+    }
+  });
+
+  async function loadWorkItems() {
+    try {
+      const items: any[] = await invoke("get_work_items", { goalId });
+      workItems = items || [];
+      organizeItems();
+    } catch (e) {
+      console.error("Failed to load work items", e);
+    }
+  }
+
+  function organizeItems() {
+    subgoals = workItems.filter((i) => i.kind === "Subgoal");
+    orphanedTasks = workItems.filter((i) => i.kind === "Task" && !i.parent_id);
+    subgoals.forEach((sg) => {
+      sg.tasks = workItems.filter(
+        (i) => i.kind === "Task" && i.parent_id === sg.id,
+      );
+    });
+    subgoals = subgoals;
+    orphanedTasks = orphanedTasks;
+  }
+
+  async function addWorkItem(kind: string, parentId: string | null = null) {
+    if (!newItemTitle.trim()) return;
+    try {
+      const item = await invoke("add_work_item", {
+        goalId,
+        phaseId: phase,
+        parentId,
+        kind,
+        title: newItemTitle,
+      });
+      workItems = [...workItems, item];
+      organizeItems();
+      newItemTitle = "";
+      addingToSubgoal = null;
+    } catch (e) {
+      error = String(e);
+    }
+  }
+
+  async function toggleItem(id: string) {
+    try {
+      const updated: any = await invoke("toggle_work_item", { itemId: id });
+      workItems = workItems.map((i) => (i.id === id ? updated : i));
+      organizeItems();
+      // Optional: Reload logic if we want propagating effects
+      loadWorkItems();
+    } catch (e) {
+      error = String(e);
+    }
   }
 
   // Save goal
@@ -186,6 +254,10 @@
 
 <div
   class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+  on:click={(e) => e.target === e.currentTarget && onClose()}
+  on:keydown={(e) => e.key === "Escape" && onClose()}
+  role="button"
+  tabindex="0"
 >
   <div
     class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
@@ -439,6 +511,165 @@
           />
         </div>
 
+        <!-- Execution Tree (Phase 4) -->
+        {#if isEditMode}
+          <div
+            class="border-t border-gray-700 pt-4 mt-6 bg-gray-800/30 p-4 rounded-lg border border-gray-700/50"
+          >
+            <h3
+              class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"
+            >
+              <span>⚡</span> <span>Action Plan</span>
+            </h3>
+
+            <div class="space-y-4">
+              <!-- Root Tasks / Subgoals List -->
+              {#each subgoals as sg}
+                <div
+                  class="bg-gray-800 rounded p-3 border border-gray-700 shadow-sm"
+                >
+                  <div class="flex items-center gap-3 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={sg.status === "Done"}
+                      on:change={() => toggleItem(sg.id)}
+                      class="w-5 h-5 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span
+                      class="font-bold text-gray-100 flex-1 {sg.status ===
+                      'Done'
+                        ? 'line-through text-gray-500'
+                        : ''}">{sg.title}</span
+                    >
+                    <span
+                      class="text-[10px] uppercase font-bold text-purple-400 bg-purple-900/30 px-2 py-0.5 rounded"
+                      >Subgoal</span
+                    >
+                  </div>
+
+                  <!-- Subgoal Tasks -->
+                  <div
+                    class="ml-2 pl-4 border-l-2 border-gray-700 space-y-2 mt-2"
+                  >
+                    {#if sg.tasks}
+                      {#each sg.tasks as task}
+                        <div class="flex items-center gap-3 py-1 group">
+                          <input
+                            type="checkbox"
+                            checked={task.status === "Done"}
+                            on:change={() => toggleItem(task.id)}
+                            class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                          <span
+                            class="text-sm text-gray-300 flex-1 {task.status ===
+                            'Done'
+                              ? 'line-through text-gray-500'
+                              : ''} group-hover:text-white transition-colors"
+                            >{task.title}</span
+                          >
+                        </div>
+                      {/each}
+                    {/if}
+
+                    <!-- Add Task Input -->
+                    {#if addingToSubgoal === sg.id}
+                      <div class="flex gap-2 items-center mt-2 animate-fade-in">
+                        <input
+                          type="text"
+                          bind:value={newItemTitle}
+                          placeholder="Task title..."
+                          class="flex-1 px-3 py-1 bg-gray-900 border border-purple-500/50 rounded text-sm text-white focus:outline-none focus:border-purple-500 transition-colors"
+                          on:keydown={(e) =>
+                            e.key === "Enter" && addWorkItem("Task", sg.id)}
+                        />
+                        <button
+                          type="button"
+                          on:click={() => addWorkItem("Task", sg.id)}
+                          class="px-3 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-bold transition-colors"
+                          >Add</button
+                        >
+                        <button
+                          type="button"
+                          on:click={() => {
+                            addingToSubgoal = null;
+                            newItemTitle = "";
+                          }}
+                          class="text-gray-400 hover:text-gray-200 text-xs px-2 transition-colors"
+                          >Cancel</button
+                        >
+                      </div>
+                    {:else}
+                      <button
+                        type="button"
+                        on:click={() => {
+                          addingToSubgoal = sg.id;
+                          newItemTitle = "";
+                        }}
+                        class="text-xs text-gray-500 hover:text-purple-400 flex items-center gap-1 mt-2 transition-colors py-1"
+                      >
+                        + Add Task
+                      </button>
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+
+              <!-- Allocating Orphaned Tasks (Tasks without parent) -->
+              {#each orphanedTasks as task}
+                <div
+                  class="bg-gray-800 rounded p-3 border border-gray-700 flex items-center gap-3"
+                >
+                  <input
+                    type="checkbox"
+                    checked={task.status === "Done"}
+                    on:change={() => toggleItem(task.id)}
+                    class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span
+                    class="text-gray-200 flex-1 {task.status === 'Done'
+                      ? 'line-through text-gray-500'
+                      : ''}">{task.title}</span
+                  >
+                  <span
+                    class="text-[10px] uppercase font-bold text-gray-500 bg-gray-900/50 px-2 py-0.5 rounded"
+                    >Task</span
+                  >
+                </div>
+              {/each}
+
+              <!-- Add Subgoal / Root Task -->
+              {#if !addingToSubgoal}
+                <div class="flex gap-2 pt-4 border-t border-gray-700/50 mt-4">
+                  <div class="flex-1 relative">
+                    <input
+                      type="text"
+                      bind:value={newItemTitle}
+                      placeholder="Create new item..."
+                      class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div class="flex gap-1">
+                    <button
+                      type="button"
+                      on:click={() => addWorkItem("Subgoal")}
+                      class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm font-bold transition-colors shadow-lg shadow-purple-900/20"
+                      >Subgoal</button
+                    >
+                    <button
+                      type="button"
+                      on:click={() => addWorkItem("Task")}
+                      class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-medium transition-colors border border-gray-600"
+                      >Task</button
+                    >
+                  </div>
+                </div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+
+        <div class="h-6"></div>
+
         <!-- Content with Preview Toggle -->
         <div>
           <div class="flex items-center justify-between mb-1">
@@ -478,6 +709,18 @@
           {/if}
           <p class="text-gray-400 text-sm mt-1">Supports markdown formatting</p>
         </div>
+
+        <!-- Annotations (Phase 5) -->
+        {#if isEditMode}
+          <div class="border-t border-gray-700 pt-6 mt-6">
+            <AnnotationPanel
+              scopeType="goal"
+              scopeId={goalId}
+              heading="Goal Notes"
+              collapsedInitially={false}
+            />
+          </div>
+        {/if}
       </div>
     </div>
 

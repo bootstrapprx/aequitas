@@ -43,6 +43,8 @@ services:
   ollama:
     image: ollama/ollama
     restart: always
+    environment:
+      - OLLAMA_DISABLE_CUDA=1  # Force CPU-only mode (no NVIDIA drivers)
     volumes:
       - ollama_data_prod:/root/.ollama
     networks:

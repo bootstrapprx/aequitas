@@ -1,10 +1,13 @@
 use chrono::NaiveDate;
 use metatheos_core::{
+    service::GoalService,
+    store::dto::GoalDbDto,
     writer::{AuditWriter, PromptWriter},
-    AuditRecord, DailyWriter, Goal, GoalStatus, GoalWriter, Phase, PhaseWriter, Prompt,
+    AuditRecord, DailyWriter, Goal, GoalStatus, Prompt,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use std::sync::Arc;
 use tauri::State;
 
 use crate::state::AppState;
@@ -69,11 +72,22 @@ pub struct PhaseUpdateRequest {
 
 /// Create a new goal
 #[tauri::command]
-pub fn create_goal(request: GoalCreateRequest, state: State<AppState>) -> Result<String, String> {
-    let root = state.governance_root.lock().unwrap();
-    let ctx = metatheos_core::GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
-    let writer = GoalWriter::new(root.clone());
+pub async fn create_goal(
+    request: GoalCreateRequest,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .as_ref()
+        .cloned()
+        .ok_or("Store not initialized")?;
 
+    // Initialize service
+    let goal_service = GoalService::new(store);
+
+    // Validate ID format
     if !Goal::validate_id(&request.goal_id) {
         return Err(format!("Invalid goal id '{}'", request.goal_id));
     }
@@ -82,91 +96,49 @@ pub fn create_goal(request: GoalCreateRequest, state: State<AppState>) -> Result
     let status = GoalStatus::from_str(&request.status)
         .ok_or_else(|| format!("Invalid status: {}", request.status))?;
 
-    // Validate parent and inherit phase/level where needed
-    let mut derived_phase = request.phase.clone();
-    let mut derived_level = request.level.clone();
-    if let Some(parent_id) = &request.parent_id {
-        let parent = ctx
-            .get_goal(parent_id)
-            .ok_or_else(|| format!("Parent goal '{}' not found", parent_id))?;
-        let parent_phase = parent.phase.clone().ok_or_else(|| {
-            "Parent goal is missing a phase; phase is the canonical scope root".to_string()
-        })?;
-        if derived_phase.is_none() {
-            derived_phase = Some(parent_phase.clone());
-        } else if !derived_phase
-            .as_ref()
-            .map(|p| p.eq_ignore_ascii_case(&parent_phase))
-            .unwrap_or(false)
-        {
-            return Err(
-                "Parent → child phase mismatch: child must inherit parent's phase".to_string(),
-            );
-        }
-        if derived_level.is_none() {
-            derived_level = Some("subgoal".to_string());
-        }
-    } else if derived_level.is_none() {
-        derived_level = Some("goal".to_string());
-    }
-
-    if derived_phase.is_none() {
-        return Err("Goal must belong to a phase (phase is the canonical scope root)".to_string());
-    }
-
-    // Build goal
+    // Build goal (service will handle validation and phase/level derivation)
     let goal = Goal {
-        goal_id: request.goal_id.clone(),
+        goal_id: request.goal_id,
         title: request.title,
         status,
-        phase: derived_phase,
+        phase: request.phase,
         owner: request.owner,
         parent_id: request.parent_id,
-        level: derived_level,
+        level: request.level,
         dependencies: request.dependencies,
         canon: request.canon,
         tags: request.tags,
-        updated: Some(chrono::Utc::now().naive_utc().date()),
-        file_path: std::path::PathBuf::new(), // Will be set by writer
+        updated: None, // Service will set this
+        file_path: std::path::PathBuf::new(),
         content: request.content,
     };
 
-    // Create goal in markdown (source of truth)
-    writer.create_goal(&goal).map_err(|e| e.to_string())?;
-
-    // Add to SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let goal_clone = goal.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = store
-                .get_db()
-                .create::<Option<metatheos_core::Goal>>(("goals", goal_clone.goal_id.as_str()))
-                .content(goal_clone)
-                .await;
-        });
-    }
-
-    Ok(request.goal_id)
+    // Use service to create (handles all validation and business rules)
+    goal_service
+        .create_goal(goal)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Update an existing goal
 #[tauri::command]
-pub fn update_goal(
+pub async fn update_goal(
     goal_id: String,
     request: GoalUpdateRequest,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-
-    // Load current goal
-    let ctx = metatheos_core::GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
-    let mut goal = ctx
-        .all_goals()
-        .iter()
-        .find(|g| g.goal_id == goal_id)
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .as_ref()
         .cloned()
-        .map(|g| g.clone())
+        .ok_or("Store not initialized")?;
+    let mut goal: Goal = store
+        .get_db()
+        .select(("goal", goal_id.as_str()))
+        .await
+        .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("Goal '{}' not found", goal_id))?;
 
     // Apply updates
@@ -208,8 +180,11 @@ pub fn update_goal(
 
     // Validate parent exists and inherit phase/level when missing
     if let Some(parent_id) = &goal.parent_id {
-        let parent = ctx
-            .get_goal(parent_id)
+        let parent: Goal = store
+            .get_db()
+            .select(("goal", parent_id.as_str()))
+            .await
+            .map_err(|e| e.to_string())?
             .ok_or_else(|| format!("Parent goal '{}' not found", parent_id))?;
         let parent_phase = parent.phase.clone().ok_or_else(|| {
             "Parent goal is missing a phase; phase is the canonical scope root".to_string()
@@ -238,65 +213,55 @@ pub fn update_goal(
     }
 
     // Guard against children drifting across phases
-    let children_out_of_phase: Vec<&Goal> = ctx
-        .state
-        .goals
-        .iter()
-        .filter(|g| g.parent_id.as_deref() == Some(goal.goal_id.as_str()))
-        .filter(|child| {
-            if let (Some(child_phase), Some(goal_phase)) = (&child.phase, &goal.phase) {
-                !child_phase.eq_ignore_ascii_case(goal_phase)
-            } else {
-                false
+    let mut children_out_of_phase: Vec<Goal> = Vec::new();
+    if let Ok(mut resp) = store
+        .get_db()
+        .query("SELECT * FROM goal WHERE parent_id = $pid")
+        .bind(("pid", goal.goal_id.clone()))
+        .await
+    {
+        let kids: Result<Vec<Goal>, _> = resp.take(0);
+        if let Ok(list) = kids {
+            for child in list {
+                if let (Some(child_phase), Some(goal_phase)) = (&child.phase, &goal.phase) {
+                    if !child_phase.eq_ignore_ascii_case(goal_phase) {
+                        children_out_of_phase.push(child);
+                    }
+                }
             }
-        })
-        .collect();
+        }
+    }
     if !children_out_of_phase.is_empty() {
         return Err("Parent-child phase mismatch detected: update child tasks/sub-goals to the parent phase before saving".to_string());
     }
 
     goal.updated = Some(chrono::Utc::now().naive_utc().date());
 
-    // Write updated goal to markdown (source of truth)
-    let writer = GoalWriter::new(root.clone());
-    writer.update_goal(&goal).map_err(|e| e.to_string())?;
-
-    // Update SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let goal_clone = goal.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = store
-                .get_db()
-                .update::<Option<metatheos_core::Goal>>(("goals", goal_clone.goal_id.as_str()))
-                .content(goal_clone)
-                .await;
-        });
-    }
-
+    let goal_dto = GoalDbDto::from(goal);
+    store
+        .get_db()
+        .update::<Option<serde_json::Value>>(("goal", goal_id.as_str()))
+        .content(goal_dto)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
 /// Delete a goal (archives it)
 #[tauri::command]
-pub fn delete_goal(goal_id: String, state: State<AppState>) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-    let writer = GoalWriter::new(root.clone());
-
-    writer.delete_goal(&goal_id).map_err(|e| e.to_string())?;
-
-    // Remove from SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let goal_id_clone = goal_id.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = store
-                .get_db()
-                .delete::<Option<metatheos_core::Goal>>(("goals", goal_id_clone.as_str()))
-                .await;
-        });
-    }
-
+pub async fn delete_goal(goal_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .as_ref()
+        .cloned()
+        .ok_or("Store not initialized")?;
+    let _: Option<serde_json::Value> = store
+        .get_db()
+        .delete(("goal", goal_id.as_str()))
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -306,145 +271,134 @@ pub fn delete_goal(goal_id: String, state: State<AppState>) -> Result<(), String
 
 /// Create a new phase
 #[tauri::command]
-pub fn create_phase(request: PhaseCreateRequest, state: State<AppState>) -> Result<String, String> {
-    let root = state.governance_root.lock().unwrap();
-    let writer = PhaseWriter::new(root.clone());
-
-    // Parse dates
-    let start_date = request
-        .start_date
+pub async fn create_phase(
+    request: PhaseCreateRequest,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
         .as_ref()
-        .and_then(|s| NaiveDate::from_str(s).ok());
+        .cloned()
+        .ok_or("Store not initialized")?;
 
-    let target_date = request
-        .target_date
-        .as_ref()
-        .and_then(|s| NaiveDate::from_str(s).ok());
+    let phase_id = request.phase_id.clone();
 
-    // Build phase
-    let phase = Phase {
-        phase_id: request.phase_id.clone(),
-        title: request.title,
-        status: request.status,
-        start_date,
-        target_date,
-        dependencies: request.dependencies,
-        file_path: std::path::PathBuf::new(), // Will be set by writer
-        content: request.content,
+    // Normalize dates to plain strings; empty strings become nulls so Surreal stores a JSON null
+    let start_date_value = match request.start_date.clone() {
+        Some(ref s) if s.is_empty() => serde_json::Value::Null,
+        Some(ref s) => serde_json::json!(s),
+        None => serde_json::Value::Null,
+    };
+    let target_date_value = match request.target_date.clone() {
+        Some(ref s) if s.is_empty() => serde_json::Value::Null,
+        Some(ref s) => serde_json::json!(s),
+        None => serde_json::Value::Null,
     };
 
-    // Create phase in markdown (source of truth)
-    writer.create_phase(&phase).map_err(|e| e.to_string())?;
+    // Build phase payload (use json to omit created_at - let schema defaults apply)
+    let phase_payload = serde_json::json!({
+        "id": phase_id,
+        "phase_id": phase_id,
+        "title": request.title,
+        "status": request.status,
+        "start_date": start_date_value,
+        "target_date": target_date_value,
+        "dependencies": request.dependencies,
+        "content": request.content,
+        "file_path": "",
+    });
 
-    // Add to SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let phase_clone = phase.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = store
-                .get_db()
-                .create::<Option<metatheos_core::Phase>>(("phases", phase_clone.phase_id.as_str()))
-                .content(phase_clone)
-                .await;
-        });
-    }
+    // Use CREATE (not UPDATE) to create new records - this applies schema defaults
+    let _: Option<serde_json::Value> = store
+        .get_db()
+        .create(("phase", phase_id.as_str()))
+        .content(phase_payload)
+        .await
+        .map_err(|e| e.to_string())?;
 
-    Ok(request.phase_id)
+    Ok(phase_id)
 }
 
 /// Update an existing phase
 #[tauri::command]
-pub fn update_phase(
+pub async fn update_phase(
     phase_id: String,
     request: PhaseUpdateRequest,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-
-    // Load current phase
-    let ctx = metatheos_core::GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
-    let mut phase = ctx
-        .all_phases()
-        .iter()
-        .find(|p| p.phase_id == phase_id)
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .as_ref()
         .cloned()
-        .map(|p| p.clone())
-        .ok_or_else(|| format!("Phase '{}' not found", phase_id))?;
+        .ok_or("Store not initialized")?;
 
-    // Apply updates
+    // Use a generic map to build updates, avoiding deserialization of potentially malformed existing records
+    let mut updates = serde_json::Map::new();
+
+    // Always ensure phase_id is present (auto-repair)
+    updates.insert("phase_id".to_string(), serde_json::json!(phase_id));
+
     if let Some(title) = request.title {
-        phase.title = title;
+        updates.insert("title".to_string(), serde_json::json!(title));
     }
     if let Some(status) = request.status {
-        phase.status = status;
+        updates.insert("status".to_string(), serde_json::json!(status));
     }
     if let Some(start_str) = request.start_date {
-        phase.start_date = NaiveDate::from_str(&start_str).ok();
+        // Store as string, relying on SurrealDB/serde to handle format if needed,
+        // or just consistent string storage. Phase struct uses NaiveDate.
+        if start_str.is_empty() {
+            updates.insert("start_date".to_string(), serde_json::Value::Null);
+        } else {
+            updates.insert("start_date".to_string(), serde_json::json!(start_str));
+        }
     }
     if let Some(target_str) = request.target_date {
-        phase.target_date = NaiveDate::from_str(&target_str).ok();
+        if target_str.is_empty() {
+            updates.insert("target_date".to_string(), serde_json::Value::Null);
+        } else {
+            updates.insert("target_date".to_string(), serde_json::json!(target_str));
+        }
     }
     if let Some(deps) = request.dependencies {
-        phase.dependencies = deps;
+        updates.insert("dependencies".to_string(), serde_json::json!(deps));
     }
     if let Some(content) = request.content {
-        phase.content = content;
+        updates.insert("content".to_string(), serde_json::json!(content));
     }
 
-    // Write updated phase to markdown (source of truth)
-    let writer = PhaseWriter::new(root.clone());
-    writer.update_phase(&phase).map_err(|e| e.to_string())?;
-
-    // Update SurrealDB cache if available
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let phase_clone = phase.clone();
-        tauri::async_runtime::spawn(async move {
-            let _ = store
-                .get_db()
-                .update::<Option<metatheos_core::Phase>>(("phases", phase_clone.phase_id.as_str()))
-                .content(phase_clone)
-                .await;
-        });
-    }
+    // Use MERGE to update/patch the record
+    // We use IgnoredAny to completely bypass any deserialization of the return value,
+    // as we don't need it and it has caused "Invalid revision" and "invalid type" errors previously.
+    let _: Option<serde::de::IgnoredAny> = store
+        .get_db()
+        .update(("phase", phase_id.as_str()))
+        .merge(serde_json::Value::Object(updates))
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 /// Set a phase as active
 #[tauri::command]
-pub fn set_active_phase(phase_id: String, state: State<AppState>) -> Result<(), String> {
-    let root = state.governance_root.lock().unwrap();
-    let writer = PhaseWriter::new(root.clone());
+pub async fn set_active_phase(phase_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let store = state
+        .db
+        .lock()
+        .map_err(|e| e.to_string())?
+        .as_ref()
+        .cloned()
+        .ok_or("Store not initialized")?;
 
-    // Update markdown files (source of truth)
-    writer
-        .set_active_phase(&phase_id)
-        .map_err(|e| e.to_string())?;
-
-    // Sync all phases to SurrealDB cache if available
-    // (set_active_phase modifies multiple phase files)
-    if let Some(store) = state.db.lock().unwrap().as_ref() {
-        let store = store.clone();
-        let root_clone = root.clone();
-        tauri::async_runtime::spawn(async move {
-            // Reload phases from filesystem to get updated statuses
-            if let Ok(ctx) = metatheos_core::GovernanceContext::load(&root_clone) {
-                for phase in ctx.all_phases() {
-                    let _ = store
-                        .get_db()
-                        .update::<Option<metatheos_core::Phase>>((
-                            "phases",
-                            phase.phase_id.as_str(),
-                        ))
-                        .content(phase.clone())
-                        .await;
-                }
-            }
-        });
-    }
-
-    Ok(())
+    store
+        .set_meta("active_phase", &phase_id)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 // ============================================================================

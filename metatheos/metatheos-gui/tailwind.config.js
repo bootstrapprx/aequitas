@@ -19,6 +19,23 @@ export default {
           800: '#075985',
           900: '#0c4a6e',
         },
+        navy: {
+          DEFAULT: '#374785',
+          light: '#4d5d9a',
+          dark: '#2a3666',
+        },
+        coral: {
+          DEFAULT: '#F76C6C',
+          hover: '#E55B5B',
+        },
+        cream: {
+          DEFAULT: '#F8E9A1',
+          hover: '#E8D991',
+        },
+        sky: {
+          DEFAULT: '#A8D0E6',
+          hover: '#98C0D6',
+        },
       },
     },
   },

@@ -27,8 +27,7 @@
   const statuses = [
     { value: "planned", label: "Planned" },
     { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-    { value: "completed", label: "Completed" },
+    { value: "closed", label: "Closed" },
     { value: "archived", label: "Archived" },
   ];
 
@@ -180,6 +179,10 @@
 
 <div
   class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+  on:click={(e) => e.target === e.currentTarget && onClose()}
+  on:keydown={(e) => e.key === "Escape" && onClose()}
+  role="button"
+  tabindex="0"
 >
   <div
     class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"

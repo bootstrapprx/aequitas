@@ -1,6 +1,6 @@
 use crate::errors::Result;
 use crate::store::SurrealStore;
-use crate::watcher::{FileChangeEvent, FileWatcher};
+use crate::watcher::FileWatcher;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::broadcast;

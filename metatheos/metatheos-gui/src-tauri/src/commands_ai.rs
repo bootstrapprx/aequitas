@@ -122,7 +122,9 @@ pub async fn ai_ask(query: String, state: State<'_, AppState>) -> Result<AIAskRe
         let guard = state.governance_root.lock().unwrap();
         guard.clone()
     };
-    let ctx = GovernanceContext::load(&root).map_err(|e| e.to_string())?;
+    let ctx = GovernanceContext::load_async(&root)
+        .await
+        .map_err(|e| e.to_string())?;
     let descriptor = build_context_descriptor(&ctx);
 
     // Create AI service
@@ -179,7 +181,9 @@ pub async fn ai_suggest_status(
         let guard = state.governance_root.lock().unwrap();
         guard.clone()
     };
-    let ctx = GovernanceContext::load(&root).map_err(|e| e.to_string())?;
+    let ctx = GovernanceContext::load_async(&root)
+        .await
+        .map_err(|e| e.to_string())?;
 
     // Create AI service
     let client = Arc::new(ClaudeClient::from_env().map_err(|e| e.to_string())?);
@@ -204,9 +208,11 @@ pub async fn ai_suggest_status(
 
 /// Get conversation starters / example questions
 #[tauri::command]
-pub fn ai_get_examples(state: State<'_, AppState>) -> Result<Vec<String>, String> {
-    let root = state.governance_root.lock().unwrap();
-    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+pub async fn ai_get_examples(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let root = state.governance_root.lock().unwrap().clone();
+    let ctx = GovernanceContext::load_async(&root)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let current_phase = ctx
         .active_phase()
@@ -233,13 +239,15 @@ pub fn ai_get_examples(state: State<'_, AppState>) -> Result<Vec<String>, String
 
 /// Build a short manual context snippet for copy/paste into web chats (no auto injection)
 #[tauri::command]
-pub fn get_context_clipboard_payload(
+pub async fn get_context_clipboard_payload(
     selected_goals: Option<Vec<String>>,
     current_path: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let root = state.governance_root.lock().unwrap();
-    let ctx = GovernanceContext::load(&*root).map_err(|e| e.to_string())?;
+    let root = state.governance_root.lock().unwrap().clone();
+    let ctx = GovernanceContext::load_async(&root)
+        .await
+        .map_err(|e| e.to_string())?;
 
     let phase = ctx
         .active_phase()
@@ -278,7 +286,9 @@ pub async fn ollama_reason(
         guard.clone()
     };
 
-    let ctx = GovernanceContext::load(&root).map_err(|e| e.to_string())?;
+    let ctx = GovernanceContext::load_async(&root)
+        .await
+        .map_err(|e| e.to_string())?;
     let runtime = OllamaRuntimeController::new(None, None).map_err(|e| e.to_string())?;
     let health = runtime.ollama_health().await.map_err(|e| e.to_string())?;
 
@@ -457,4 +467,91 @@ fn to_item(item: &metatheos_core::reasoner::ingestion::SummaryItem) -> ReasonerI
         path: item.path.to_string_lossy().to_string(),
         summary: item.summary.clone(),
     }
+}
+
+// === Phase 5: Local AI Assistance ===
+
+#[derive(Serialize)]
+struct OllamaGenerateRequest {
+    model: String,
+    prompt: String,
+    stream: bool,
+}
+
+#[derive(Deserialize)]
+struct OllamaGenerateResponse {
+    response: String,
+}
+
+const OLLAMA_URL: &str = "http://127.0.0.1:11435/api/generate";
+const OLLAMA_MODEL: &str = "qwen2.5-coder:3b";
+
+async fn call_ollama(prompt: &str) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let req = OllamaGenerateRequest {
+        model: OLLAMA_MODEL.to_string(),
+        prompt: prompt.to_string(),
+        stream: false,
+    };
+
+    let res = client
+        .post(OLLAMA_URL)
+        .json(&req)
+        .send()
+        .await
+        .map_err(|e| format!("Ollama connection failed: {}", e))?;
+
+    let body: OllamaGenerateResponse = res
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+
+    Ok(body.response)
+}
+
+#[tauri::command]
+pub async fn ai_assist_draft_tasks(
+    goal_context: String,
+    existing_tasks: Vec<String>,
+) -> Result<Vec<String>, String> {
+    let prompt = format!(
+        "You are an expert project planner. Break down the following goal into actionable tasks.\n\
+        Goal: {}\n\
+        Existing Tasks: {:?}\n\
+        Return ONLY a list of tasks, one per line. Do not include numbering or bullets.",
+        goal_context, existing_tasks
+    );
+
+    let response = call_ollama(&prompt).await?;
+    let tasks: Vec<String> = response
+        .lines()
+        .map(|l| {
+            l.trim()
+                .trim_start_matches('-')
+                .trim_start_matches('*')
+                .trim()
+                .to_string()
+        })
+        .filter(|l| !l.is_empty())
+        .collect();
+
+    Ok(tasks)
+}
+
+#[tauri::command]
+pub async fn ai_assist_refine(text: String) -> Result<String, String> {
+    let prompt = format!(
+        "Refine and clarify the following text for a professional context:\n\n{}",
+        text
+    );
+    call_ollama(&prompt).await
+}
+
+#[tauri::command]
+pub async fn ai_assist_summarize(day_log: String) -> Result<String, String> {
+    let prompt = format!(
+        "Summarize the following daily activity log into a concise paragraph:\n\n{}",
+        day_log
+    );
+    call_ollama(&prompt).await
 }

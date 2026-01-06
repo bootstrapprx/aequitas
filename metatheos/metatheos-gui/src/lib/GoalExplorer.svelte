@@ -4,6 +4,9 @@
   import Toast from "./Toast.svelte";
   import GoalEditor from "./GoalEditor.svelte";
   import { setupLiveUpdates, cleanupLiveUpdates } from "./stores/governance";
+  import { createEventDispatcher } from "svelte";
+
+  const dispatch = createEventDispatcher();
 
   let loading = true;
   let error = null;
@@ -63,9 +66,9 @@
     // PHASE 2.3: Setup live updates for real-time sync
     await setupLiveUpdates({
       onGoalChange: async () => {
-        console.log('[GoalExplorer] Goal changed, reloading...');
+        console.log("[GoalExplorer] Goal changed, reloading...");
         await loadGoals();
-      }
+      },
     });
   });
 
@@ -99,12 +102,36 @@
   async function loadGoals() {
     try {
       loading = true;
-      const result = await invoke("get_enriched_goals");
-      goals = result;
+      // Phase-first: prefer active phase; if none, fall back to first available phase.
+      let activePhase = await invoke("get_active_phase", { date: null });
+      if (!activePhase) {
+        const phases = await invoke("get_all_phases");
+        if (phases && phases.length > 0) {
+          activePhase = phases[0];
+        }
+      }
+
+      if (activePhase) {
+        const result = await invoke("get_goals_by_phase", {
+          phase: activePhase.phase_id,
+        });
+        goals = result;
+        toastMessage = `Loaded goals for ${activePhase.title}`;
+        toastType = "success";
+        toastShow = true;
+      } else {
+        goals = [];
+        toastMessage = "No phase available in DB.";
+        toastType = "info";
+        toastShow = true;
+      }
+
       applyFilters();
       error = null;
     } catch (err) {
+      console.error("Failed to load goals:", err);
       error = err?.toString?.() ?? String(err);
+      goals = [];
     } finally {
       loading = false;
     }
@@ -353,7 +380,7 @@
     <div>
       <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Goals</h2>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Grouped by phase and status from 03_GOALS_EPICS
+        Goals are stored and managed in the database. Changes are immediately persistent.
       </p>
     </div>
     <div class="flex gap-3">
@@ -383,17 +410,6 @@
     </div>
   </div>
 
-  {#if !devMode && layoutOk}
-    <div
-      class="card mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-    >
-      <p class="text-sm text-blue-900 dark:text-blue-100">
-        Governance write mode active. New goals and status changes will write to
-        the vault once confirmed.
-      </p>
-    </div>
-  {/if}
-
   {#if devMode}
     <div
       class="card mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800"
@@ -404,8 +420,7 @@
         Tauri not detected
       </h3>
       <p class="text-yellow-700 dark:text-yellow-200 text-sm">
-        Run <code>cargo tauri dev</code> to load and edit goals from the Governance
-        Vault.
+        Run <code>cargo tauri dev</code> to load and edit goals from the database.
       </p>
     </div>
   {:else if !layoutOk}
@@ -726,6 +741,16 @@
 
                             <!-- Right: Actions -->
                             <div class="flex gap-2 shrink-0">
+                              <button
+                                class="px-2 py-1 bg-primary-100 dark:bg-primary-900/40 hover:bg-primary-200 dark:hover:bg-primary-800/60 text-primary-800 dark:text-primary-200 text-xs rounded transition-colors"
+                                on:click={() =>
+                                  dispatch("openGoalDetail", {
+                                    goalId: goal.goal_id,
+                                  })}
+                                aria-label="Open goal detail"
+                              >
+                                View
+                              </button>
                               <button
                                 class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs rounded transition-colors"
                                 on:click={() => openEditGoalEditor(goal)}
