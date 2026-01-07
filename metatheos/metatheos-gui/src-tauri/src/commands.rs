@@ -9,7 +9,6 @@ use metatheos_core::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::Arc;
 use tauri::State;
 use uuid::Uuid;
 
@@ -4017,13 +4016,9 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
         );
 
         // Check if phase exists
-        #[derive(serde::Deserialize)]
-        struct ExistenceCheck {
-            #[allow(dead_code)]
-            id: serde_json::Value,
-        }
+        // Check if phase exists - struct removed, using IgnoredAny below
 
-        let existing: Option<ExistenceCheck> = db
+        let existing: Option<serde::de::IgnoredAny> = db
             .select(("phase", seed.code))
             .await
             .map_err(|e| e.to_string())?;
@@ -4039,7 +4034,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                 "start_date": start_date,
                 "target_date": target_date,
             });
-            let _: Option<ExistenceCheck> = db
+            let _: Option<serde::de::IgnoredAny> = db
                 .update(("phase", seed.code))
                 .merge(phase_updates)
                 .await
@@ -4057,7 +4052,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                 "target_date": target_date,
                 // created_at will be set by schema default
             });
-            let _: Option<ExistenceCheck> = db
+            let _: Option<serde::de::IgnoredAny> = db
                 .create(("phase", seed.code))
                 .content(phase_payload)
                 .await
@@ -4079,7 +4074,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                 format!("order:{:02}", idx + 1),
             ];
             // Check if goal exists
-            let existing_goal: Option<ExistenceCheck> = db
+            let existing_goal: Option<serde::de::IgnoredAny> = db
                 .select(("goal", goal_id.as_str()))
                 .await
                 .map_err(|e| e.to_string())?;
@@ -4092,7 +4087,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                     "description": goal_desc,
                     "tags": tags,
                 });
-                let _: Option<ExistenceCheck> = db
+                let _: Option<serde::de::IgnoredAny> = db
                     .update(("goal", goal_id.as_str()))
                     .merge(goal_updates)
                     .await
@@ -4110,7 +4105,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                     "tags": tags,
                     // created_at will be set by schema default
                 });
-                let _: Option<ExistenceCheck> = db
+                let _: Option<serde::de::IgnoredAny> = db
                     .create(("goal", goal_id.as_str()))
                     .content(goal_payload)
                     .await
@@ -4146,7 +4141,7 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
                 "author_type": "user",
                 "author_ref": null,
             });
-            let _: Option<serde_json::Value> = db
+            let _: Option<serde::de::IgnoredAny> = db
                 .create(("annotation", ann_id.as_str()))
                 .content(ann_payload)
                 .await
@@ -4156,32 +4151,49 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
     }
 
     // Log a single event for the ingestion if it hasn't been logged before
-    let mut check = db
-        .query("SELECT count() as count FROM event WHERE entity_type = 'roadmap' AND action = 'create' AND payload.philosophy = 'learning-first'")
-        .await
-        .map_err(|e| e.to_string())?;
-    #[derive(Deserialize)]
-    struct Cnt {
-        count: i64,
-    }
-    let existing: Vec<Cnt> = check.take(0).map_err(|e| e.to_string())?;
-    let already_logged = existing.first().map(|c| c.count > 0).unwrap_or(false);
+    // Log a single event for the ingestion if it hasn't been logged before
+    // We wrap this in a block to ensure that logging failures (e.g. strict type errors, deserialization)
+    // do NOT fail the entire ingest process.
+    let log_result: Result<bool, String> = async {
+        let mut check = db
+            .query("SELECT count() as count FROM event WHERE entity_type = 'roadmap' AND action = 'create' AND payload.philosophy = 'learning-first'")
+            .await
+            .map_err(|e| e.to_string())?;
 
-    if !already_logged {
-        let event = Event::new(
-            "roadmap",
-            "aequitas_roadmap.md",
-            EventAction::Create,
-            "system",
-            json!({
-                "type": "roadmap_ingested_and_enriched",
-                "source": "aequitas_roadmap.md",
-                "enrichment": true,
-                "philosophy": "learning-first"
-            }),
-        );
-        store.log_event(&event).await.map_err(|e| e.to_string())?;
-        report.event_logged = true;
+        // We use IgnoredAny here too just in case, though we really want the count.
+        // If count fails, we assume not logged.
+        #[derive(Deserialize)]
+        struct Cnt {
+            count: i64,
+        }
+        let existing: Vec<Cnt> = check.take(0).map_err(|e| e.to_string())?;
+        let already_logged = existing.first().map(|c| c.count > 0).unwrap_or(false);
+
+        if !already_logged {
+            let event = Event::new(
+                "roadmap",
+                "aequitas_roadmap.md",
+                EventAction::Create,
+                "system",
+                json!({
+                    "type": "roadmap_ingested_and_enriched",
+                    "source": "aequitas_roadmap.md",
+                    "enrichment": true,
+                    "philosophy": "learning-first"
+                }),
+            );
+            store.log_event(&event).await.map_err(|e| e.to_string())?;
+            return Ok(true);
+        }
+        Ok(false)
+    }.await;
+
+    if let Ok(logged) = log_result {
+        if logged {
+            report.event_logged = true;
+        }
+    } else if let Err(e) = log_result {
+        println!("Warning: Failed to log ingest event: {}", e);
     }
 
     Ok(report)

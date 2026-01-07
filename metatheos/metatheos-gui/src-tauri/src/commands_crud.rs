@@ -7,7 +7,6 @@ use metatheos_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use std::sync::Arc;
 use tauri::State;
 
 use crate::state::AppState;

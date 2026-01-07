@@ -376,11 +376,21 @@ impl SurrealStore {
         #[derive(serde::Deserialize)]
         struct PhaseDbCanon {
             id: String,
+            phase_id: String,
             title: String,
             status: String,
-            description: Option<String>,
+            #[serde(default)]
+            description: String,
+            #[serde(default)]
+            content: String,
             start_date: Option<String>,
             target_date: Option<String>,
+            #[serde(default)]
+            dependencies: Vec<String>,
+            #[serde(default)]
+            file_path: String,
+            #[serde(default)]
+            order_index: i32,
         }
 
         #[derive(serde::Deserialize)]
@@ -400,7 +410,7 @@ impl SurrealStore {
                 let items: Vec<Phase> = db_items
                     .into_iter()
                     .map(|p| Phase {
-                        phase_id: p.id,
+                        phase_id: p.phase_id,
                         title: p.title,
                         status: p.status,
                         start_date: p
@@ -409,9 +419,17 @@ impl SurrealStore {
                         target_date: p
                             .target_date
                             .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-                        dependencies: Vec::new(),
-                        file_path: PathBuf::new(),
-                        content: p.description.unwrap_or_default(),
+                        dependencies: p.dependencies,
+                        file_path: if p.file_path.is_empty() {
+                            PathBuf::new()
+                        } else {
+                            PathBuf::from(p.file_path)
+                        },
+                        content: if p.content.is_empty() {
+                            p.description
+                        } else {
+                            p.content
+                        },
                     })
                     .collect();
                 if !items.is_empty() {
@@ -644,12 +662,34 @@ impl SurrealStore {
     }
 
     pub async fn log_event(&self, event: &Event) -> Result<()> {
-        let _: Option<serde_json::Value> = self
+        let event_id = event.id.clone();
+        // Strip the "EVENT-" prefix if present for the ID part, or use as is if passed specifically
+        // But Event::new() generates "EVENT-<uuid>". explicit ID is "event:EVENT-<uuid>"
+        // DB.create expects ("event", "EVENT-...")
+        
+        let _: Vec<serde::de::IgnoredAny> = self
             .db
-            .create(("event", &event.id))
-            .content(event.clone())
+            .query(r#"
+                CREATE type::thing('event', $id) SET 
+                    entity_type = $entity_type,
+                    entity_id = $entity_id,
+                    action = $action,
+                    actor = $actor,
+                    payload = $payload,
+                    created_at = type::datetime($created_at)
+            "#)
+            .bind(("id", event_id))
+            .bind(("entity_type", event.entity_type.clone()))
+            .bind(("entity_id", event.entity_id.clone()))
+            .bind(("action", event.action.clone()))
+            .bind(("actor", event.actor.clone()))
+            .bind(("payload", event.payload.clone()))
+            .bind(("created_at", event.created_at.to_rfc3339()))
             .await
-            .map_err(|e| MetaError::SystemError(format!("DB Event Error: {}", e)))?;
+            .map_err(|e| MetaError::SystemError(format!("DB Event Error: {}", e)))?
+            .take(0)
+            .map_err(|e| MetaError::SystemError(format!("DB Result Error: {}", e)))?; // Ignore return value to prevent "Invalid revision" errors here too
+
         Ok(())
     }
 
