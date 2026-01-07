@@ -153,7 +153,7 @@
 
     {#if currentProvider().id === "ollama-assistant"}
       <div class="chat-dock__body p-0 bg-gray-900">
-        <AssistantPanel {activePhase} {activeDay} inDock={true} />
+        <AssistantPanel {activePhase} {activeDay} />
       </div>
     {:else if currentProvider().webOnly}
       <div class="chat-dock__body">

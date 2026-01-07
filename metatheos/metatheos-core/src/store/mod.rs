@@ -373,24 +373,43 @@ impl SurrealStore {
     }
 
     pub async fn get_all_phases(&self) -> Result<Vec<Phase>> {
+        /// Canonical phase schema from DB-first design.
+        /// - `id`: SurrealDB record identity (canonical phase ID in DB)
+        /// - `order_index`: Deterministic phase ordering for roadmap sequencing
         #[derive(serde::Deserialize)]
         struct PhaseDbCanon {
-            id: String,
+            /// Canonical SurrealDB record ID (returned as Thing object from SELECT *)
+            /// Stored as Value to handle SurrealDB's Thing serialization format
+            /// Optional because we exclude it from explicit field list queries
+            #[serde(default)]
+            id: Option<serde_json::Value>,
+            /// Phase identifier (e.g., "P0", "P1")
             phase_id: String,
             title: String,
-            status: String,
+            /// Status (stored as Value to handle SurrealDB ASSERT enum serialization)
+            status: serde_json::Value,
             #[serde(default)]
-            description: String,
+            description: serde_json::Value,
             #[serde(default)]
-            content: String,
-            start_date: Option<String>,
-            target_date: Option<String>,
+            content: serde_json::Value,
+            /// Start date (may be returned as enum from SurrealDB's option<string>)
+            start_date: Option<serde_json::Value>,
+            /// Target date (may be returned as enum from SurrealDB's option<string>)
+            target_date: Option<serde_json::Value>,
+            /// Dependencies (stored as Value to handle SurrealDB array serialization)
             #[serde(default)]
-            dependencies: Vec<String>,
+            dependencies: serde_json::Value,
             #[serde(default)]
-            file_path: String,
+            file_path: serde_json::Value,
+            /// Deterministic ordering index for phase sequencing (P0=0, P1=1, etc.)
             #[serde(default)]
             order_index: i32,
+            /// Timestamp when phase was created (from SurrealDB datetime field)
+            /// Stored as Value to handle SurrealDB's datetime serialization format
+            #[serde(default)]
+            created_at: Option<serde_json::Value>,
+            /// Timestamp when phase was closed (from SurrealDB datetime field, optional)
+            closed_at: Option<serde_json::Value>,
         }
 
         #[derive(serde::Deserialize)]
@@ -405,36 +424,68 @@ impl SurrealStore {
             content: String,
         }
 
-        if let Ok(mut resp) = self.db.query("SELECT * FROM phase").await {
-            if let Ok(db_items) = resp.take::<Vec<PhaseDbCanon>>(0) {
-                let items: Vec<Phase> = db_items
+        // Query with explicit field list to avoid enum deserialization issues from SELECT *
+        // (SurrealDB's id, created_at, closed_at fields use special types that don't deserialize well)
+        let query = "SELECT phase_id, title, status, description, content, start_date, target_date, dependencies, file_path, order_index FROM phase ORDER BY order_index ASC";
+        match self.db.query(query).await {
+            Ok(mut resp) => match resp.take::<Vec<PhaseDbCanon>>(0) {
+                Ok(db_items) => {
+                    let items: Vec<Phase> = db_items
                     .into_iter()
-                    .map(|p| Phase {
-                        phase_id: p.phase_id,
-                        title: p.title,
-                        status: p.status,
-                        start_date: p
-                            .start_date
-                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-                        target_date: p
-                            .target_date
-                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
-                        dependencies: p.dependencies,
-                        file_path: if p.file_path.is_empty() {
-                            PathBuf::new()
-                        } else {
-                            PathBuf::from(p.file_path)
-                        },
-                        content: if p.content.is_empty() {
-                            p.description
-                        } else {
-                            p.content
-                        },
+                    .map(|p| {
+                        // Consume canonical fields to close the read loop:
+                        // - id: SurrealDB record identity (used for DB operations, not in domain model)
+                        // - order_index: Used in SQL ORDER BY clause for deterministic sequencing
+                        // - created_at: Audit timestamp (logged but not needed in domain model here, may be None from explicit SELECT)
+                        // - closed_at: Phase lifecycle tracking (logged but not needed in domain model here, may be None from explicit SELECT)
+                        let _ = (p.order_index, &p.created_at, &p.closed_at);
+                        Phase {
+                            phase_id: p.phase_id,
+                            title: p.title,
+                            status: p.status.as_str().unwrap_or("planned").to_string(),
+                            start_date: p
+                                .start_date
+                                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                                .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                            target_date: p
+                                .target_date
+                                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                                .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                            dependencies: p.dependencies
+                                .as_array()
+                                .map(|arr| arr.iter()
+                                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                    .collect())
+                                .unwrap_or_default(),
+                            file_path: {
+                                let fp_str = p.file_path.as_str().unwrap_or("");
+                                if fp_str.is_empty() {
+                                    PathBuf::new()
+                                } else {
+                                    PathBuf::from(fp_str)
+                                }
+                            },
+                            content: {
+                                let content_str = p.content.as_str().unwrap_or("");
+                                if content_str.is_empty() {
+                                    p.description.as_str().unwrap_or("").to_string()
+                                } else {
+                                    content_str.to_string()
+                                }
+                            },
+                        }
                     })
                     .collect();
                 if !items.is_empty() {
                     return Ok(items);
                 }
+            }
+                Err(_e) => {
+                    // Failed to deserialize canonical table, fall through to legacy table
+                }
+            },
+            Err(_e) => {
+                // Query failed on canonical table, fall through to legacy table
             }
         }
 

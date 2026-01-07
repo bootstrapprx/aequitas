@@ -167,14 +167,31 @@ async fn resolve_active_phase_db(
 
 #[tauri::command]
 pub async fn get_all_phases(state: State<'_, AppState>) -> Result<Vec<PhaseDto>, String> {
+    println!("🔍 [get_all_phases] Called from UI");
     let store_opt = {
         let guard = state.db.lock().unwrap();
         guard.as_ref().cloned()
     };
 
-    let store = store_opt.ok_or("Store not initialized")?;
-    let phases = store.get_all_phases().await.map_err(|e| e.to_string())?;
-    Ok(phases.iter().map(PhaseDto::from).collect())
+    let store = store_opt.ok_or_else(|| {
+        println!("❌ [get_all_phases] Store not initialized!");
+        "Store not initialized".to_string()
+    })?;
+
+    println!("📊 [get_all_phases] Querying store.get_all_phases()...");
+    let phases = store.get_all_phases().await.map_err(|e| {
+        println!("❌ [get_all_phases] Query failed: {}", e);
+        e.to_string()
+    })?;
+
+    println!("✅ [get_all_phases] Got {} phases from DB", phases.len());
+    for phase in &phases {
+        println!("  └─ Phase: {} | {} | {}", phase.phase_id, phase.title, phase.status);
+    }
+
+    let dtos: Vec<PhaseDto> = phases.iter().map(PhaseDto::from).collect();
+    println!("✅ [get_all_phases] Returning {} PhaseDto objects to UI", dtos.len());
+    Ok(dtos)
 }
 
 #[tauri::command]
@@ -3540,6 +3557,234 @@ pub struct RoadmapIngestReport {
     pub annotations_added: usize,
     pub annotations_skipped: usize,
     pub event_logged: bool,
+    pub warnings: Vec<String>,
+    pub fixed_items: usize,
+}
+
+/// Load and validate a roadmap file (returns normalized roadmap + warnings)
+#[tauri::command]
+pub async fn load_roadmap_from_file(
+    state: State<'_, AppState>,
+    file_path: Option<String>,
+) -> Result<serde_json::Value, String> {
+    use crate::roadmap_loader;
+
+    let path = if let Some(p) = file_path {
+        std::path::PathBuf::from(p)
+    } else {
+        let gov_root = state.governance_root.lock().map_err(|e| e.to_string())?.clone();
+        gov_root.join("roadmap.golden.json")
+    };
+
+    log::info!("🔍 Loading roadmap from: {}", path.display());
+
+    let result = roadmap_loader::load_roadmap_file(&path)?;
+
+    log::info!(
+        "✓ Roadmap loaded: {} phases, {} warnings, {} auto-fixed",
+        result.roadmap.phases.len(),
+        result.warnings.len(),
+        result.fixed_items
+    );
+
+    Ok(serde_json::json!({
+        "roadmap": result.roadmap,
+        "warnings": result.warnings,
+        "fixed_items": result.fixed_items,
+    }))
+}
+
+/// Ingest a roadmap from JSON file (fail-safe, never crashes)
+#[tauri::command]
+pub async fn ingest_roadmap_from_file(
+    state: State<'_, AppState>,
+    file_path: Option<String>,
+) -> Result<RoadmapIngestReport, String> {
+    use crate::roadmap_loader;
+
+    let path = if let Some(p) = file_path {
+        std::path::PathBuf::from(p)
+    } else {
+        let gov_root = state.governance_root.lock().map_err(|e| e.to_string())?.clone();
+        gov_root.join("roadmap.json")
+    };
+
+    log::info!("📥 Ingesting roadmap from: {}", path.display());
+
+    // Load and normalize
+    let load_result = roadmap_loader::load_roadmap_file(&path)?;
+    let roadmap = load_result.roadmap;
+
+    log::info!(
+        "📊 Normalized roadmap: {} phases, {} warnings, {} fixed",
+        roadmap.phases.len(),
+        load_result.warnings.len(),
+        load_result.fixed_items
+    );
+
+    // Get database
+    let store = {
+        let guard = state.db.lock().map_err(|e| e.to_string())?;
+        guard.as_ref().cloned().ok_or("Store not initialized")?
+    };
+    let db = store.get_db();
+
+    let mut report = RoadmapIngestReport {
+        phases_upserted: 0,
+        goals_upserted: 0,
+        annotations_added: 0,
+        annotations_skipped: 0,
+        event_logged: false,
+        warnings: load_result.warnings,
+        fixed_items: load_result.fixed_items,
+    };
+
+    // Ingest phases (fail-safe - skip bad items)
+    for (idx, phase_spec) in roadmap.phases.iter().enumerate() {
+        let pointer = format!("/phases/{}", idx);
+        log::debug!("  📍 Processing phase {}: {}", idx, phase_spec.phase_id);
+
+        match ingest_phase_spec(&db, phase_spec, &pointer, &mut report).await {
+            Ok(_) => {
+                log::debug!("    ✓ Phase {} ingested", phase_spec.phase_id);
+                report.phases_upserted += 1;
+            }
+            Err(e) => {
+                let warn = format!("Failed to ingest phase at {}: {}", pointer, e);
+                log::warn!("    ⚠️  {}", warn);
+                report.warnings.push(warn);
+            }
+        }
+    }
+
+    // Log event
+    if report.phases_upserted > 0 {
+        let event = Event::new(
+            "roadmap".to_string(),
+            roadmap.roadmap_id.clone(),
+            EventAction::Update,
+            "system".to_string(),
+            json!({
+                "source": "file",
+                "path": path.display().to_string(),
+                "phases": report.phases_upserted,
+                "goals": report.goals_upserted,
+                "warnings": report.warnings.len(),
+            }),
+        );
+        if let Err(e) = store.log_event(&event).await {
+            log::warn!("Failed to log roadmap ingest event: {}", e);
+        } else {
+            report.event_logged = true;
+        }
+    }
+
+    log::info!(
+        "✅ Roadmap ingestion complete: {} phases, {} goals, {} warnings",
+        report.phases_upserted,
+        report.goals_upserted,
+        report.warnings.len()
+    );
+
+    Ok(report)
+}
+
+/// Helper: Ingest a single phase spec (fail-safe)
+async fn ingest_phase_spec(
+    db: &surrealdb::Surreal<surrealdb::engine::local::Db>,
+    phase: &crate::roadmap_loader::PhaseSpec,
+    pointer: &str,
+    report: &mut RoadmapIngestReport,
+) -> Result<(), String> {
+    // Check if phase exists
+    let existing: Option<serde::de::IgnoredAny> = db
+        .select(("phase", phase.phase_id.as_str()))
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let phase_payload = json!({
+        "id": phase.phase_id,
+        "phase_id": phase.phase_id,
+        "title": phase.title,
+        "description": phase.content,
+        "content": phase.content,
+        "status": phase.status,
+        "order_index": phase.order_index,
+        "start_date": phase.start_date,
+        "target_date": phase.target_date,
+        "dependencies": phase.dependencies,
+    });
+
+    if existing.is_some() {
+        // Update existing
+        let _: Option<serde::de::IgnoredAny> = db
+            .update(("phase", phase.phase_id.as_str()))
+            .merge(phase_payload)
+            .await
+            .map_err(|e| format!("Failed to update phase: {}", e))?;
+    } else {
+        // Create new
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("phase", phase.phase_id.as_str()))
+            .content(phase_payload)
+            .await
+            .map_err(|e| format!("Failed to create phase: {}", e))?;
+    }
+
+    // Ingest goals
+    for (goal_idx, goal_spec) in phase.goals.iter().enumerate() {
+        let goal_pointer = format!("{}/goals/{}", pointer, goal_idx);
+        match ingest_goal_spec(db, goal_spec, &phase.phase_id, &goal_pointer).await {
+            Ok(_) => report.goals_upserted += 1,
+            Err(e) => {
+                let warn = format!("Failed to ingest goal at {}: {}", goal_pointer, e);
+                log::warn!("      ⚠️  {}", warn);
+                report.warnings.push(warn);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Helper: Ingest a single goal spec (fail-safe)
+async fn ingest_goal_spec(
+    db: &surrealdb::Surreal<surrealdb::engine::local::Db>,
+    goal: &crate::roadmap_loader::GoalSpec,
+    phase_id: &str,
+    _pointer: &str,
+) -> Result<(), String> {
+    let existing: Option<serde::de::IgnoredAny> = db
+        .select(("goal", goal.goal_id.as_str()))
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let goal_payload = json!({
+        "id": goal.goal_id,
+        "phase_id": phase_id,
+        "title": goal.title,
+        "description": goal.content,
+        "status": goal.status,
+        "priority": "normal",
+        "dependencies": [],
+        "tags": vec![format!("phase:{}", phase_id), "roadmap_ingest".to_string()],
+    });
+
+    if existing.is_some() {
+        let _: Option<serde::de::IgnoredAny> = db
+            .update(("goal", goal.goal_id.as_str()))
+            .merge(goal_payload)
+            .await
+            .map_err(|e| format!("Failed to update goal: {}", e))?;
+    } else {
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("goal", goal.goal_id.as_str()))
+            .content(goal_payload)
+            .await
+            .map_err(|e| format!("Failed to create goal: {}", e))?;
+    }
+
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -3987,6 +4232,87 @@ fn canonical_phase_dates(code: &str) -> (String, String) {
     }
 }
 
+/// Seed default roadmap phases and goals into the database
+/// This is called during startup if the phase table is empty
+pub async fn seed_default_roadmap(store: &metatheos_core::store::SurrealStore) -> Result<usize, String> {
+    let db = store.get_db();
+    let seeds = roadmap_seeds();
+    let mut phases_seeded = 0;
+
+    for seed in &seeds {
+        let description = format!(
+            "Purpose: {}. Why it matters: {}. (created_from: roadmap_ingest, enrichment)",
+            seed.purpose, seed.why
+        );
+
+        let (start_date, target_date) = if seed.start_date.is_some() || seed.target_date.is_some() {
+            (
+                seed.start_date.unwrap_or("2025-11-20").to_string(),
+                seed.target_date.unwrap_or("2099-12-31").to_string(),
+            )
+        } else {
+            canonical_phase_dates(seed.code)
+        };
+
+
+        // Phase doesn't exist - use CREATE (will apply defaults)
+        let phase_payload = json!({
+            "id": seed.code,
+            "phase_id": seed.code,
+            "title": seed.title,
+            "description": description,
+            "content": "",  // Required field, will be populated later
+            "status": seed.status,
+            "order_index": seed.order_index,
+            "start_date": start_date,
+            "target_date": target_date,
+            "dependencies": [],  // Required field, empty by default
+            "file_path": "",  // Required field, will be populated later
+        });
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("phase", seed.code))
+            .content(phase_payload)
+            .await
+            .map_err(|e| format!("Failed to seed phase {}: {}", seed.code, e))?;
+        phases_seeded += 1;
+
+        // Seed goals for this phase
+        for (idx, goal_title) in seed.goals.iter().enumerate() {
+            let goal_id = format!("G-{}-{:02}", seed.code, idx + 1);
+            let goal_desc = format!(
+                "What: {}. Why: {}. Learning focus: {}.",
+                goal_title,
+                seed.purpose,
+                seed.learning.join("; ")
+            );
+            let tags = vec![
+                "roadmap_ingest".to_string(),
+                format!("phase:{}", seed.code),
+                format!("order:{:02}", idx + 1),
+            ];
+
+            let goal_payload = json!({
+                "id": goal_id,
+                "phase_id": seed.code,
+                "title": goal_title,
+                "description": goal_desc,
+                "status": "open",
+                "priority": "normal",
+                "dependencies": [],
+                "tags": tags,
+            });
+            let _: Option<serde::de::IgnoredAny> = db
+                .create(("goal", goal_id.as_str()))
+                .content(goal_payload)
+                .await
+                .map_err(|e| format!("Failed to seed goal {}: {}", goal_id, e))?;
+        }
+    }
+
+    println!("✓ Seeded {} default phases with goals", phases_seeded);
+    Ok(phases_seeded)
+}
+
 #[tauri::command]
 pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestReport, String> {
     let store = {
@@ -4002,6 +4328,8 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
         annotations_added: 0,
         annotations_skipped: 0,
         event_logged: false,
+        warnings: Vec::new(),
+        fixed_items: 0,
     };
 
     for seed in &seeds {
@@ -4009,7 +4337,18 @@ pub async fn ingest_roadmap(state: State<'_, AppState>) -> Result<RoadmapIngestR
             "Purpose: {}. Why it matters: {}. (created_from: roadmap_ingest, enrichment)",
             seed.purpose, seed.why
         );
-        let (start_date, target_date) = canonical_phase_dates(seed.code);
+
+        // Use seed dates if provided, otherwise fall back to canonical dates
+        // This ensures PhaseSeed.start_date and target_date fields are consumed
+        let (start_date, target_date) = if seed.start_date.is_some() || seed.target_date.is_some() {
+            (
+                seed.start_date.unwrap_or("2025-11-20").to_string(),
+                seed.target_date.unwrap_or("2099-12-31").to_string(),
+            )
+        } else {
+            canonical_phase_dates(seed.code)
+        };
+
         println!(
             "Ingesting phase {}: start_date={}, target_date={}",
             seed.code, start_date, target_date

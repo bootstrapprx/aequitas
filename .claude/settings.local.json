@@ -75,7 +75,9 @@
       "Bash(/home/actpm/Documents/workfolder/aequitas/metatheos/target/debug/metatheos ingest_roadmap:*)",
       "Bash(/home/actpm/Documents/workfolder/aequitas/metatheos/target/debug/metatheos:*)",
       "Bash(timeout 45 cargo run:*)",
-      "Bash(cargo tree:*)"
+      "Bash(cargo tree:*)",
+      "Bash(timeout:*)",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []

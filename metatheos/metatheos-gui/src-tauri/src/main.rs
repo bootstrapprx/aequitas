@@ -5,6 +5,7 @@ mod commands;
 mod commands_ai;
 mod commands_crud;
 mod commands_git;
+mod roadmap_loader;
 mod state;
 
 use state::AppState;
@@ -65,6 +66,26 @@ fn main() {
                             eprintln!("Migration failed: {}", e);
                         } else {
                             println!("Migration complete - DB cache ready");
+                        }
+
+                        // Seed default roadmap if phase table is empty
+                        println!("Checking if default roadmap needs seeding...");
+                        match store.get_all_phases().await {
+                            Ok(phases) if phases.is_empty() => {
+                                println!("Phase table is empty - seeding default roadmap");
+                                if let Err(e) = commands::seed_default_roadmap(&store).await {
+                                    eprintln!("Failed to seed default roadmap: {}", e);
+                                }
+                            }
+                            Ok(phases) => {
+                                println!("Found {} existing phases - skipping seed", phases.len());
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to check phases: {} - attempting seed anyway", e);
+                                if let Err(e) = commands::seed_default_roadmap(&store).await {
+                                    eprintln!("Failed to seed default roadmap: {}", e);
+                                }
+                            }
                         }
 
                         // Set state
@@ -185,6 +206,8 @@ fn main() {
             commands::get_event_stats,
             commands::run_consequence_scan,
             commands::ingest_roadmap,
+            commands::load_roadmap_from_file,
+            commands::ingest_roadmap_from_file,
             commands::execute_shell_command,
             // Timeline Commands (Phase 5) - Read-only observational surface
             commands::get_timeline_for_day,

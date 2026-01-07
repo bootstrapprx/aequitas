@@ -20,10 +20,14 @@
 
   async function loadPhases() {
     try {
+      console.log("🔵 [PhaseManager] Calling get_all_phases...");
       loading = true;
       phases = await invoke("get_all_phases");
+      console.log("🔵 [PhaseManager] Received phases:", phases);
+      console.log("🔵 [PhaseManager] Phase count:", phases ? phases.length : 0);
       error = null;
     } catch (e) {
+      console.error("🔴 [PhaseManager] Error loading phases:", e);
       error = e?.toString?.() ?? String(e);
     } finally {
       loading = false;

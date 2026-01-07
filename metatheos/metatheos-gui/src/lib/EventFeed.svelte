@@ -155,7 +155,13 @@
     <div class="event-list">
       {#each events as event (event.id)}
         <div class="event-item" class:expanded={isExpanded(event.id)}>
-          <div class="event-main" on:click={() => toggleExpand(event.id)}>
+          <button
+            type="button"
+            class="event-main"
+            on:click={() => toggleExpand(event.id)}
+            aria-expanded={isExpanded(event.id)}
+            aria-label={`Toggle details for ${getEventTitle(event)}`}
+          >
             <div class="event-icon">{getEventIcon(event)}</div>
             <div class="event-header-content">
               <div class="event-title">{getEventTitle(event)}</div>
@@ -168,7 +174,7 @@
               </div>
             </div>
             <div class="expand-icon">{isExpanded(event.id) ? "▼" : "▶"}</div>
-          </div>
+          </button>
 
           {#if isExpanded(event.id)}
             <div class="event-details">
@@ -288,6 +294,17 @@
     gap: 12px;
     padding: 12px 16px;
     cursor: pointer;
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+  }
+
+  .event-main:focus {
+    outline: 2px solid rgba(59, 130, 246, 0.5);
+    outline-offset: -2px;
   }
 
   .event-icon {

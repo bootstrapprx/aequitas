@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "roadmap_id": "metatheos-golden",
+  "title": "Metatheos Golden Roadmap (Test)",
+  "project_start_date": "2025-11-20",
+  "last_updated": "2026-01-07",
+  "description": "Golden test roadmap with canonical schema. If this loads, the pipeline is correct.",
+  "phases": [
+    {
+      "phase_id": "P0-GOLDEN",
+      "title": "Phase 0: Foundation & Visibility",
+      "order_index": 0,
+      "start_date": "2025-11-20",
+      "target_date": "2026-01-15",
+      "status": "active",
+      "content": "Intent: Establish canonical entities, storage, and UI visibility.\n\nDefinition of Done:\n- Schema stable\n- Ingest works\n- UI renders phases and goals\n- No silent crashes\n\nThis is a test phase to validate the roadmap pipeline.",
+      "dependencies": [],
+      "goals": [
+        {
+          "goal_id": "G-P0-01",
+          "title": "Roadmap ingestion baseline",
+          "order_index": 10,
+          "status": "active",
+          "content": "Ingest reads roadmap JSON and persists phases/goals without crashing.\n\nAcceptance: Roadmap loads in UI, all phases visible, no console errors.",
+          "tasks": [
+            {
+              "task_id": "T-P0-01-001",
+              "title": "Parse roadmap file",
+              "order_index": 10,
+              "status": "done",
+              "content": "Reads JSON, validates schema_version, loads phases."
+            },
+            {
+              "task_id": "T-P0-01-002",
+              "title": "Normalize malformed data",
+              "order_index": 20,
+              "status": "active",
+              "content": "Auto-fix common issues: missing fields, wrong types, enum objects."
+            }
+          ]
+        },
+        {
+          "goal_id": "G-P0-02",
+          "title": "UI rendering stability",
+          "order_index": 20,
+          "status": "active",
+          "content": "UI can render all roadmap entities without crashes.\n\nAcceptance: No undefined errors, no .map() failures, graceful degradation."
+        }
+      ]
+    },
+    {
+      "phase_id": "P1-GOLDEN",
+      "title": "Phase 1: Canon & Constraints",
+      "order_index": 1,
+      "start_date": "2026-01-16",
+      "target_date": "2026-02-28",
+      "status": "planned",
+      "content": "Intent: Make definitions explicit and immutable.\n\nThis phase tests date handling and status transitions.",
+      "dependencies": ["P0-GOLDEN"],
+      "goals": [
+        {
+          "goal_id": "G-P1-01",
+          "title": "Canonical chart of accounts",
+          "order_index": 10,
+          "status": "open",
+          "content": "Define chart of accounts with explicit types and normal balances."
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,6 @@
 
     export let activePhase: any;
     export let activeDay: any;
-    export let inDock = false;
 
     let modelStatus = "Checking...";
     let isConnected = false;
