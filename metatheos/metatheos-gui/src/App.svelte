@@ -18,7 +18,9 @@
   import PhaseManager from "./lib/PhaseManager.svelte";
   import NotificationBadge from "./lib/NotificationBadge.svelte";
   import Activity from "./lib/Activity.svelte";
+  import ThemeToggle from "./lib/ThemeToggle.svelte";
   import { chatDockStore } from "./lib/stores/chatDock";
+  import { themeStore } from "./lib/stores/theme";
 
   let currentView = "dashboard";
   let selectedGoalId = null;
@@ -193,10 +195,10 @@
   }
 </script>
 
-<div class="flex h-screen bg-gray-50 dark:bg-gray-900">
+<div class="flex h-screen app-container">
   <!-- Sidebar -->
   <aside
-    class={`sidebar ${sidebarCollapsed ? "collapsed" : ""} bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700`}
+    class={`sidebar ${sidebarCollapsed ? "collapsed" : ""}`}
   >
     <div class="p-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -292,24 +294,29 @@
       <!-- Soft Gate: App Shell always loads -->
 
       <!-- Topbar -->
-      <div class="app-topbar glass-panel">
-        <div class="flex items-center gap-3">
-          <div class="pill">Metatheos</div>
-          <div class="text-sm text-gray-300">
-            Governance Engine · Vault control
-          </div>
+      <div class="app-topbar">
+        <div class="flex items-center gap-4">
+          {#if activePhase}
+            <div class="phase-context">
+              <span class="phase-icon">{activePhase.phase_id === "P0" ? "🏗️" : activePhase.phase_id === "P1" ? "📜" : activePhase.phase_id === "P2" ? "⚙️" : "📐"}</span>
+              <div class="phase-info">
+                <div class="phase-title">{activePhase.title}</div>
+                <div class="phase-status">{activePhase.status}</div>
+              </div>
+            </div>
+            <div class="phase-separator"></div>
+          {/if}
+          <div class="topbar-label">Governance Engine</div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
           <NotificationBadge />
+          <ThemeToggle />
           {#if !showDayWizard}
             <button class="btn btn-primary text-sm" on:click={startNewDay}
               >New Day</button
             >
           {/if}
           <span class="pill">Local</span>
-          <button class="btn btn-secondary text-sm" on:click={openDock}
-            >Chat Dock</button
-          >
         </div>
       </div>
 
@@ -431,30 +438,49 @@
 </div>
 
 <style>
+  .app-container {
+    background: var(--color-bg-base);
+    color: var(--color-text-primary);
+  }
+
   .sidebar {
     width: 256px;
     transition: width 0.2s ease;
     position: relative;
+    background: var(--color-bg-elevated);
+    border-right: 1px solid var(--color-border);
   }
+
   .sidebar.collapsed {
     width: 72px;
   }
+
   .sidebar-footer {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     padding: 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
     width: 100%;
+    color: var(--color-text-muted);
   }
+
   .collapse-btn {
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    background: transparent;
-    color: #4b5563;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-secondary);
     border-radius: 6px;
     padding: 6px 10px;
+    transition: all 0.2s ease;
   }
+
+  .collapse-btn:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
+  }
+
   .nav-btn {
     width: 100%;
     text-align: left;
@@ -462,40 +488,115 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: background-color 0.15s ease;
+    transition: all 0.2s ease;
+    color: var(--color-text-secondary);
+    border-left: 3px solid transparent;
   }
+
   .nav-btn.icon-only {
     justify-content: center;
     padding: 12px;
   }
+
+  .nav-btn:hover {
+    background: var(--color-surface-hover);
+    color: var(--color-text-primary);
+  }
+
+  .nav-btn.active {
+    background: var(--color-phase-active-bg);
+    color: var(--color-phase-active);
+    border-left-color: var(--color-phase-active);
+  }
+
   .phase-badge {
     display: flex;
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: var(--color-phase-active-bg);
+    border: 1px solid var(--color-phase-active-border);
     border-radius: 8px;
     transition: all 0.2s ease;
   }
+
   .phase-badge:hover {
-    background: rgba(59, 130, 246, 0.15);
-    border-color: rgba(59, 130, 246, 0.4);
+    background: var(--color-surface-hover);
+    border-color: var(--color-phase-active);
+    transform: translateY(-1px);
   }
+
   .phase-badge-icon {
     font-size: 20px;
     flex-shrink: 0;
   }
+
   .nav-divider {
     height: 1px;
-    background: rgba(107, 114, 128, 0.2);
+    background: var(--color-border);
     margin: 8px 16px;
   }
+
   .app-shell {
     position: relative;
     padding: 24px;
   }
+
   .app-topbar {
-    @apply flex items-center justify-between mb-6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    margin-bottom: 24px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .phase-context {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: var(--color-phase-active-bg);
+    border: 1px solid var(--color-phase-active-border);
+    border-radius: 8px;
+  }
+
+  .phase-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .phase-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .phase-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.2;
+  }
+
+  .phase-status {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    text-transform: capitalize;
+  }
+
+  .phase-separator {
+    width: 1px;
+    height: 32px;
+    background: var(--color-border);
+  }
+
+  .topbar-label {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-weight: 500;
   }
 </style>

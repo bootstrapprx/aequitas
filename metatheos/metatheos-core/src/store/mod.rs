@@ -12,6 +12,7 @@ pub mod dto;
 pub mod migration;
 pub mod queries;
 pub mod schema;
+pub mod validation;
 
 pub struct SurrealStore {
     pub db: Surreal<Db>,

@@ -77,7 +77,10 @@
       "Bash(timeout 45 cargo run:*)",
       "Bash(cargo tree:*)",
       "Bash(timeout:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(npm run tauri:*)",
+      "Bash(npm run)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []

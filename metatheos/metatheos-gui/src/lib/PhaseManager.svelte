@@ -69,6 +69,22 @@
     editingPhase = null;
     loadPhases();
   }
+
+  function getPhaseIcon(phaseId) {
+    const icons = {
+      "P0": "🏗️",  // Foundation Stone - building/construction
+      "P1": "📜",  // Canon - rules/doctrine
+      "P2": "⚙️",  // The Engine - machinery/mechanics
+      "P3": "⏰",  // Time & Events - temporal tracking
+      "P4": "✨",  // Materialization - manifestation
+      "P5": "🧩",  // Operational Modules - modular components
+      "P6": "👁️",  // The Observer - observation/monitoring
+      "P7": "✅",  // Verification - validation/testing
+      "P8": "🛡️",  // Hardening - protection/security
+      "P9": "🌅",  // Horizon - future vision
+    };
+    return icons[phaseId] || "📐";  // Default to triangle if unknown
+  }
 </script>
 
 <div class="space-y-6">
@@ -128,7 +144,7 @@
         >
           <div class="flex items-start justify-between mb-3">
             <div class="flex items-center gap-2">
-              <span class="text-2xl">📐</span>
+              <span class="text-2xl">{getPhaseIcon(phase.phase_id)}</span>
               <div>
                 <div class="font-bold text-lg text-gray-900 dark:text-white">
                   {phase.title}
@@ -207,64 +223,56 @@
 <style>
   .phase-card {
     text-align: left;
-    padding: 16px;
-    border: 2px solid rgba(107, 114, 128, 0.2);
+    padding: 18px;
+    border: 2px solid var(--color-border);
     border-radius: 12px;
-    background: white;
-    transition: all 0.2s ease;
+    background: var(--color-surface);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    position: relative;
   }
 
   .phase-card:hover {
-    border-color: rgba(59, 130, 246, 0.5);
-    background: rgba(59, 130, 246, 0.05);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--color-accent);
+    background: var(--color-surface-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   }
 
   .phase-card.active {
-    border-color: rgba(59, 130, 246, 0.8);
-    background: rgba(59, 130, 246, 0.1);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    border-color: var(--color-phase-active-border);
+    background: var(--color-phase-active-bg);
+    box-shadow: 0 0 0 3px var(--color-emphasis-soft);
+  }
+
+  .phase-card.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--color-phase-active), var(--color-accent));
+    border-radius: 12px 12px 0 0;
   }
 
   .active-badge {
-    background: rgba(34, 197, 94, 0.15);
-    color: rgb(21, 128, 61);
-    padding: 4px 8px;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    padding: 5px 10px;
     border-radius: 6px;
     font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--color-success);
   }
 
   .status-badge {
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
     text-transform: capitalize;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .phase-card {
-      background: rgba(31, 41, 55, 0.8);
-      border-color: rgba(75, 85, 99, 0.5);
-    }
-
-    .phase-card:hover {
-      background: rgba(59, 130, 246, 0.1);
-      border-color: rgba(59, 130, 246, 0.6);
-    }
-
-    .phase-card.active {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: rgba(59, 130, 246, 0.8);
-    }
-
-    .active-badge {
-      background: rgba(34, 197, 94, 0.2);
-      color: rgb(134, 239, 172);
-    }
   }
 </style>

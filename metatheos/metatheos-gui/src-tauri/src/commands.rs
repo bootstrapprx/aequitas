@@ -4269,6 +4269,11 @@ pub async fn seed_default_roadmap(store: &metatheos_core::store::SurrealStore) -
             "dependencies": [],  // Required field, empty by default
             "file_path": "",  // Required field, will be populated later
         });
+
+        // Validate before writing to database
+        metatheos_core::store::validation::validate_phase_input(&phase_payload)
+            .map_err(|e| format!("Phase validation failed for {}: {}", seed.code, e))?;
+
         let _: Option<serde::de::IgnoredAny> = db
             .create(("phase", seed.code))
             .content(phase_payload)
@@ -4301,6 +4306,11 @@ pub async fn seed_default_roadmap(store: &metatheos_core::store::SurrealStore) -
                 "dependencies": [],
                 "tags": tags,
             });
+
+            // Validate before writing to database
+            metatheos_core::store::validation::validate_goal_input(&goal_payload)
+                .map_err(|e| format!("Goal validation failed for {}: {}", goal_id, e))?;
+
             let _: Option<serde::de::IgnoredAny> = db
                 .create(("goal", goal_id.as_str()))
                 .content(goal_payload)
@@ -4310,7 +4320,243 @@ pub async fn seed_default_roadmap(store: &metatheos_core::store::SurrealStore) -
     }
 
     println!("✓ Seeded {} default phases with goals", phases_seeded);
+
+    // Now seed detailed work items based on actual Aequitas progress
+    seed_aequitas_work_items(store).await?;
+
     Ok(phases_seeded)
+}
+
+/// Seed detailed work items based on actual Aequitas development progress
+async fn seed_aequitas_work_items(store: &metatheos_core::store::SurrealStore) -> Result<(), String> {
+    println!("🌱 [seed_aequitas_work_items] Starting detailed Aequitas seeding...");
+    let db = store.get_db();
+
+    // P0: Foundation Stone - What's been built in Aequitas
+    println!("  → Seeding P0 goals...");
+    let p0_goals = vec![
+        ("G-P0-BACKEND", "Backend API Foundation", "done", vec![
+            ("Database models and migrations", "done"),
+            ("FastAPI application structure", "done"),
+            ("Authentication and authorization", "done"),
+            ("PostgreSQL integration", "done"),
+            ("Alembic migration system", "done"),
+        ]),
+        ("G-P0-ACCOUNTING", "Core Accounting Entities", "done", vec![
+            ("Chart of Accounts model", "done"),
+            ("Journal Entries system", "done"),
+            ("Fiscal Period management", "done"),
+            ("Company and multi-tenant support", "done"),
+            ("Account mapping framework", "done"),
+        ]),
+        ("G-P0-INTEGRATIONS", "QuickBooks Integration", "active", vec![
+            ("OAuth2 authentication flow", "done"),
+            ("QBO API client implementation", "done"),
+            ("Data sync mechanisms", "done"),
+            ("Mapping engine for QBO entities", "active"),
+            ("Error handling and retry logic", "done"),
+        ]),
+        ("G-P0-FRONTEND", "Frontend Application", "active", vec![
+            ("Svelte/SvelteKit setup", "done"),
+            ("Athenaeum design system integration", "done"),
+            ("Dashboard layouts", "done"),
+            ("Company management UI", "done"),
+            ("Chart of Accounts viewer", "active"),
+            ("Journal Entry creation forms", "active"),
+        ]),
+        ("G-P0-GOVERNANCE", "Metatheos Governance Engine", "active", vec![
+            ("SurrealDB integration", "done"),
+            ("Phase management system", "done"),
+            ("Goal tracking infrastructure", "done"),
+            ("Work item hierarchy (goal/subgoal/task)", "active"),
+            ("Event logging and audit trail", "done"),
+            ("File watcher for markdown sync", "done"),
+        ]),
+    ];
+
+    for (goal_id, title, status, tasks) in p0_goals {
+        // Create goal
+        println!("    ✓ Creating goal: {} - {}", goal_id, title);
+        let goal_payload = json!({
+            "id": goal_id,
+            "phase_id": "P0",
+            "title": title,
+            "description": format!("Real progress on {}", title),
+            "status": status,
+            "priority": "high",
+            "dependencies": [],
+            "tags": vec!["aequitas", "foundation"],
+        });
+
+        // Validate before writing to database
+        metatheos_core::store::validation::validate_goal_input(&goal_payload)
+            .map_err(|e| format!("Goal validation failed for {}: {}", goal_id, e))?;
+
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("goal", goal_id))
+            .content(goal_payload)
+            .await
+            .map_err(|e| format!("Failed to create goal {}: {}", goal_id, e))?;
+
+        // Create work items (tasks) for this goal
+        for (idx, (task_title, task_status)) in tasks.iter().enumerate() {
+            let task_id = format!("{}-T{:02}", goal_id, idx + 1);
+            let task_payload = json!({
+                "id": task_id,
+                "goal_id": goal_id,
+                "parent_id": null,
+                "level": "task",
+                "title": task_title,
+                "description": format!("Implementation: {}", task_title),
+                "status": task_status,
+                "order_index": idx,
+            });
+
+            // Validate before writing to database
+            metatheos_core::store::validation::validate_work_item_input(&task_payload)
+                .map_err(|e| format!("Work item validation failed for {}: {}", task_id, e))?;
+
+            let _: Option<serde::de::IgnoredAny> = db
+                .create(("work_item", task_id.as_str()))
+                .content(task_payload)
+                .await
+                .map_err(|e| format!("Failed to create work item {}: {}", task_id, e))?;
+        }
+        println!("      └─ Created {} work items for {}", tasks.len(), goal_id);
+    }
+    println!("  ✓ P0 goals created");
+
+    // P1: Canon - Schema and validation work
+    println!("  → Seeding P1 goals...");
+    let p1_goals = vec![
+        ("G-P1-SCHEMA", "Database Schema Definition", "active", vec![
+            ("Define SCHEMAFULL tables in SurrealDB", "done"),
+            ("Canonical phase/goal/work_item models", "done"),
+            ("Schema migration infrastructure", "done"),
+            ("Field validation with ASSERT constraints", "active"),
+        ]),
+        ("G-P1-VALIDATION", "Input Validation Layer", "active", vec![
+            ("Pydantic models for API validation", "done"),
+            ("Request/response schemas", "active"),
+            ("Error message standardization", "open"),
+        ]),
+    ];
+
+    for (goal_id, title, status, tasks) in p1_goals {
+        println!("    ✓ Creating goal: {} - {}", goal_id, title);
+        let goal_payload = json!({
+            "id": goal_id,
+            "phase_id": "P1",
+            "title": title,
+            "description": format!("Canonical definitions: {}", title),
+            "status": status,
+            "priority": "high",
+            "dependencies": [],
+            "tags": vec!["canon", "schema"],
+        });
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("goal", goal_id))
+            .content(goal_payload)
+            .await
+            .map_err(|e| format!("Failed to create goal {}: {}", goal_id, e))?;
+
+        for (idx, (task_title, task_status)) in tasks.iter().enumerate() {
+            let task_id = format!("{}-T{:02}", goal_id, idx + 1);
+            let task_payload = json!({
+                "id": task_id,
+                "goal_id": goal_id,
+                "parent_id": null,
+                "level": "task",
+                "title": task_title,
+                "description": format!("Implementation: {}", task_title),
+                "status": task_status,
+                "order_index": idx,
+            });
+            let _: Option<serde::de::IgnoredAny> = db
+                .create(("work_item", task_id.as_str()))
+                .content(task_payload)
+                .await
+                .map_err(|e| format!("Failed to create work item {}: {}", task_id, e))?;
+        }
+        println!("      └─ Created {} work items for {}", tasks.len(), goal_id);
+    }
+    println!("  ✓ P1 goals created");
+
+    // P2: The Engine - Business logic and processing
+    println!("  → Seeding P2 goals...");
+    let p2_goals = vec![
+        ("G-P2-LEDGER", "Ledger Posting Engine", "open", vec![
+            ("Double-entry validation logic", "open"),
+            ("Account balance calculation", "open"),
+            ("Trial balance generation", "open"),
+        ]),
+        ("G-P2-MAPPINGS", "Mapping Engine", "active", vec![
+            ("QBO to Aequitas mapping rules", "active"),
+            ("Master chart to company chart mapping", "active"),
+            ("Automated mapping suggestions", "open"),
+        ]),
+    ];
+
+    for (goal_id, title, status, tasks) in p2_goals {
+        println!("    ✓ Creating goal: {} - {}", goal_id, title);
+        let goal_payload = json!({
+            "id": goal_id,
+            "phase_id": "P2",
+            "title": title,
+            "description": format!("Processing engine: {}", title),
+            "status": status,
+            "priority": "normal",
+            "dependencies": [],
+            "tags": vec!["engine", "processing"],
+        });
+        let _: Option<serde::de::IgnoredAny> = db
+            .create(("goal", goal_id))
+            .content(goal_payload)
+            .await
+            .map_err(|e| format!("Failed to create goal {}: {}", goal_id, e))?;
+
+        for (idx, (task_title, task_status)) in tasks.iter().enumerate() {
+            let task_id = format!("{}-T{:02}", goal_id, idx + 1);
+            let task_payload = json!({
+                "id": task_id,
+                "goal_id": goal_id,
+                "parent_id": null,
+                "level": "task",
+                "title": task_title,
+                "description": format!("Implementation: {}", task_title),
+                "status": task_status,
+                "order_index": idx,
+            });
+            let _: Option<serde::de::IgnoredAny> = db
+                .create(("work_item", task_id.as_str()))
+                .content(task_payload)
+                .await
+                .map_err(|e| format!("Failed to create work item {}: {}", task_id, e))?;
+        }
+        println!("      └─ Created {} work items for {}", tasks.len(), goal_id);
+    }
+    println!("  ✓ P2 goals created");
+
+    // Count what we created
+    let mut goal_count_resp = db.query("SELECT count() FROM goal GROUP ALL").await.map_err(|e| e.to_string())?;
+    let goal_count: usize = goal_count_resp.take::<Option<serde_json::Value>>(0)
+        .ok()
+        .and_then(|v| v)
+        .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+        .map(|c| c as usize)
+        .unwrap_or(0);
+
+    let mut wi_count_resp = db.query("SELECT count() FROM work_item GROUP ALL").await.map_err(|e| e.to_string())?;
+    let wi_count: usize = wi_count_resp.take::<Option<serde_json::Value>>(0)
+        .ok()
+        .and_then(|v| v)
+        .and_then(|v| v.get("count").and_then(|c| c.as_u64()))
+        .map(|c| c as usize)
+        .unwrap_or(0);
+
+    println!("✓ Seeded detailed work items based on Aequitas progress");
+    println!("  └─ Total: {} goals with {} work items (tasks) in database", goal_count, wi_count);
+    Ok(())
 }
 
 #[tauri::command]

@@ -5,34 +5,154 @@
 :root {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* ============================================================
+   METATHEOS COLOR SYSTEM
+   - Manual theme control (light/dark)
+   - Semantic color mapping
+   - Intentional, not automatic
+   ============================================================ */
+
+/* Dark/Night Mode - Warm, contemplative, trustworthy */
+:root,
+:root.dark,
+[data-theme="dark"] {
   color-scheme: dark;
+
+  /* Base palette */
+  --palette-accent: #c7522a;      /* Burnt terracotta - emphasis */
+  --palette-highlight: #e5c185;    /* Warm sand - progress */
+  --palette-text: #fbf2c4;         /* Cream - primary text */
+  --palette-success: #74a892;      /* Sage green - active/success */
+  --palette-structure: #008585;    /* Deep teal - links/phase scope */
+
+  /* Semantic colors */
+  --color-bg-base: #1a1f2e;
+  --color-bg-elevated: #252b3d;
+  --color-surface: rgba(37, 43, 61, 0.8);
+  --color-surface-hover: rgba(59, 66, 87, 0.9);
+  --color-border: rgba(116, 168, 146, 0.2);
+  --color-border-hover: rgba(116, 168, 146, 0.4);
+
+  --color-text-primary: var(--palette-text);
+  --color-text-secondary: rgba(251, 242, 196, 0.7);
+  --color-text-muted: rgba(251, 242, 196, 0.5);
+
+  --color-accent: var(--palette-structure);
+  --color-accent-hover: #009999;
+  --color-emphasis: var(--palette-accent);
+  --color-emphasis-soft: rgba(199, 82, 42, 0.15);
+  --color-highlight: var(--palette-highlight);
+  --color-highlight-soft: rgba(229, 193, 133, 0.15);
+
+  --color-success: var(--palette-success);
+  --color-success-bg: rgba(116, 168, 146, 0.15);
+  --color-danger: var(--palette-accent);
+  --color-danger-bg: rgba(199, 82, 42, 0.15);
+
+  --color-phase-active: var(--palette-success);
+  --color-phase-active-bg: rgba(116, 168, 146, 0.1);
+  --color-phase-active-border: var(--palette-success);
+  --color-phase-planned: var(--palette-structure);
+  --color-phase-planned-bg: rgba(0, 133, 133, 0.1);
+
+  /* Gradient overlays */
+  --gradient-bg: radial-gradient(circle at 20% 20%, rgba(116, 168, 146, 0.08), transparent 40%),
+                 radial-gradient(circle at 80% 0%, rgba(229, 193, 133, 0.06), transparent 35%),
+                 var(--color-bg-base);
+}
+
+/* Light/Day Mode - Energetic, professional, clear */
+:root.light,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Base palette */
+  --palette-danger: #d9042b;       /* Crimson - critical/urgency */
+  --palette-deep: #730220;         /* Deep burgundy - structure */
+  --palette-info: #03658c;         /* Ocean blue - informational */
+  --palette-progress: #f29f05;     /* Amber - progress/energy */
+  --palette-emphasis: #f27b50;     /* Coral - emphasis/interaction */
+
+  /* Semantic colors */
+  --color-bg-base: #fafafa;
+  --color-bg-elevated: #ffffff;
+  --color-surface: rgba(255, 255, 255, 0.95);
+  --color-surface-hover: rgba(247, 247, 247, 1);
+  --color-border: rgba(115, 2, 32, 0.15);
+  --color-border-hover: rgba(115, 2, 32, 0.3);
+
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: rgba(26, 26, 26, 0.75);
+  --color-text-muted: rgba(26, 26, 26, 0.5);
+
+  --color-accent: var(--palette-info);
+  --color-accent-hover: #024b6e;
+  --color-emphasis: var(--palette-emphasis);
+  --color-emphasis-soft: rgba(242, 123, 80, 0.12);
+  --color-highlight: var(--palette-progress);
+  --color-highlight-soft: rgba(242, 159, 5, 0.12);
+
+  --color-success: #16a34a;
+  --color-success-bg: rgba(22, 163, 74, 0.1);
+  --color-danger: var(--palette-danger);
+  --color-danger-bg: rgba(217, 4, 43, 0.1);
+
+  --color-phase-active: var(--palette-progress);
+  --color-phase-active-bg: rgba(242, 159, 5, 0.08);
+  --color-phase-active-border: var(--palette-progress);
+  --color-phase-planned: var(--palette-info);
+  --color-phase-planned-bg: rgba(3, 101, 140, 0.08);
+
+  /* Gradient overlays */
+  --gradient-bg: radial-gradient(circle at 20% 20%, rgba(3, 101, 140, 0.04), transparent 40%),
+                 radial-gradient(circle at 80% 0%, rgba(242, 159, 5, 0.03), transparent 35%),
+                 var(--color-bg-base);
 }
 
 @layer base {
   body {
-    @apply text-gray-100;
-    background: radial-gradient(circle at 20% 20%, rgba(168, 208, 230, 0.1), transparent 35%),
-      radial-gradient(circle at 80% 0%, rgba(248, 233, 161, 0.05), transparent 30%),
-      #374785;
+    color: var(--color-text-primary);
+    background: var(--gradient-bg);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-4 py-2 rounded-lg font-semibold transition-all duration-150;
+    @apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
   }
 
   .btn-primary {
-    @apply text-white shadow-lg shadow-indigo-600/30;
-    background: linear-gradient(120deg, #6366f1, #22d3ee);
+    background: var(--color-accent);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
   }
 
   .btn-secondary {
-    @apply bg-gray-800/80 text-gray-100 border border-gray-700 hover:bg-gray-700/80;
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    background: var(--color-surface-hover);
+    border-color: var(--color-border-hover);
   }
 
   .card {
-    @apply rounded-xl p-6 border border-slate-800 bg-slate-900/80 backdrop-blur shadow-xl shadow-black/30;
+    @apply rounded-xl p-6 backdrop-blur shadow-xl;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   }
 
   .badge {
@@ -40,34 +160,53 @@
   }
 
   .badge-active {
-    @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+    background: var(--color-success-bg);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
   }
 
   .badge-blocked {
-    @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
   }
 
   .badge-completed {
-    @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+    background: var(--color-accent);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-accent);
   }
 
   .badge-partial {
-    @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200;
+    background: var(--color-highlight-soft);
+    color: var(--color-highlight);
+    border: 1px solid var(--color-highlight);
   }
 
   .badge-planned {
-    @apply bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200;
+    background: var(--color-phase-planned-bg);
+    color: var(--color-phase-planned);
+    border: 1px solid var(--color-phase-planned);
   }
 
   .badge-archived {
-    @apply bg-gray-700 text-gray-200;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
   }
 }
 
 .glass-panel {
-  @apply bg-slate-900/70 border border-slate-800 backdrop-blur rounded-2xl shadow-lg shadow-black/20;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .pill {
-  @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 border border-slate-700;
+  @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
 }
