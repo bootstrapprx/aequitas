@@ -6,16 +6,24 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
+import { MetatheosAuthProvider } from "@/contexts/MetatheosAuthContext";
+import { MetatheosThemeProvider } from "@/contexts/MetatheosThemeContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import MetatheosProtectedRoute from "@/components/metatheos/MetatheosProtectedRoute";
 import PasswordResetGuard from "@/components/auth/PasswordResetGuard";
 import OnboardingGuard from "@/components/auth/OnboardingGuard";
 
 // Layouts
 import DashboardLayout from "./components/dashboard/DashboardLayout";
+import MetatheosAppShell from "./components/metatheos/AppShell";
 
 // General Pages
 import Landing from "./pages/Landing";
 import LandingPage from "./pages/LandingPage";
+import MetatheosLanding from "./pages/metatheos/Landing";
+import MetatheosLogin from "./pages/metatheos/Login";
+import MetatheosHome from "./pages/metatheos/Home";
+import MetatheosPlaceholder from "./pages/metatheos/Placeholder";
 import NotFound from "./pages/NotFound";
 import { SessionLogger } from "./components/SessionLogger";
 
@@ -67,7 +75,6 @@ import QuickBooksSyncPage from "./pages/sync/QuickBooksSyncPage";
 import DocumentationPage from "./pages/DocumentationPage";
 
 // Auth Pages
-import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage, { LegacyCompanyRegisterPage } from "./pages/auth/RegisterPage";
 import PaymentSuccessPage from "./pages/auth/PaymentSuccessPage";
 import ChangePasswordPage from "./pages/auth/ChangePasswordPage";
@@ -96,76 +103,99 @@ const App = () => (
       <TooltipProvider>
         <AuthProvider>
           <CompanyProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <SessionLogger />
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/landing-old" element={<Landing />} />
-
-                {/* Auth Routes */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/register/company" element={<LegacyCompanyRegisterPage />} />
-                <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
-                <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
-                <Route
-                  path="/auth/setup"
-                  element={
-                    <ProtectedRoute>
-                      <PostAuthSetupPage />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Change Password Route - Protected but accessible even with force_password_reset */}
-                <Route
-                  path="/change-password"
-                  element={
-                    <ProtectedRoute>
-                      <ChangePasswordPage />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Phase 5 - Onboarding Wizard (Outside Dashboard Layout) */}
-                <Route
-                  path="/onboarding/:companyId"
-                  element={
-                    <ProtectedRoute>
-                      <OnboardingWizard />
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Protected Dashboard Routes */}
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <PasswordResetGuard>
-                        <OnboardingGuard>
-                          <DashboardLayout />
-                        </OnboardingGuard>
-                      </PasswordResetGuard>
-                    </ProtectedRoute>
-                  }
+            <MetatheosAuthProvider>
+              <MetatheosThemeProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter
+                  future={{
+                    v7_startTransition: true,
+                    v7_relativeSplatPath: true,
+                  }}
                 >
-                  {/* Main Dashboard */}
-                  <Route path="dashboard" element={<CompanyDashboard />} />
-                  <Route path="dashboard/overview" element={<CompanyDashboard />} />
-                  <Route path="dashboard/old" element={<DashboardPage />} />
+                  <SessionLogger />
+                  <Routes>
+                    <Route path="/" element={<MetatheosLanding />} />
+                    <Route path="/aequitas" element={<LandingPage />} />
+                    <Route path="/landing-old" element={<Landing />} />
 
-                  {/* Registration Module */}
-                  <Route path="companies" element={<Companies />} />
-                  <Route path="companies/register" element={<CompanyRegistration />} />
-                  <Route path="registration/users" element={<UsersListPage />} />
+                    {/* Metatheos Auth Routes */}
+                    <Route path="/login" element={<MetatheosLogin />} />
+
+                    {/* Metatheos Protected Routes */}
+                    <Route
+                      path="/"
+                      element={
+                        <MetatheosProtectedRoute>
+                          <MetatheosAppShell />
+                        </MetatheosProtectedRoute>
+                      }
+                    >
+                      <Route path="home" element={<MetatheosHome />} />
+                      <Route path="phases" element={<MetatheosPlaceholder title="Phases" description="Lifecycle oversight." />} />
+                      <Route path="goals" element={<MetatheosPlaceholder title="Goals" description="Governance targets and checkpoints." />} />
+                      <Route path="timeline" element={<MetatheosPlaceholder title="Timeline" description="Sequence of verified events." />} />
+                      <Route path="audits" element={<MetatheosPlaceholder title="Audits" description="Review trails and attestations." />} />
+                      <Route path="prompts" element={<MetatheosPlaceholder title="Prompts" description="Directive inputs and constraints." />} />
+                      <Route path="assistant" element={<MetatheosPlaceholder title="Assistant" description="Guided analysis and synthesis." />} />
+                    </Route>
+
+                    {/* Auth Routes */}
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/register/company" element={<LegacyCompanyRegisterPage />} />
+                    <Route path="/auth/payment-success" element={<PaymentSuccessPage />} />
+                    <Route path="/auth/callback/:provider" element={<OAuthCallbackPage />} />
+                    <Route
+                      path="/auth/setup"
+                      element={
+                        <ProtectedRoute>
+                          <PostAuthSetupPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Change Password Route - Protected but accessible even with force_password_reset */}
+                    <Route
+                      path="/change-password"
+                      element={
+                        <ProtectedRoute>
+                          <ChangePasswordPage />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Phase 5 - Onboarding Wizard (Outside Dashboard Layout) */}
+                    <Route
+                      path="/onboarding/:companyId"
+                      element={
+                        <ProtectedRoute>
+                          <OnboardingWizard />
+                        </ProtectedRoute>
+                      }
+                    />
+
+                    {/* Protected Dashboard Routes */}
+                    <Route
+                      path="/"
+                      element={
+                        <ProtectedRoute>
+                          <PasswordResetGuard>
+                            <OnboardingGuard>
+                              <DashboardLayout />
+                            </OnboardingGuard>
+                          </PasswordResetGuard>
+                        </ProtectedRoute>
+                      }
+                    >
+                      {/* Main Dashboard */}
+                      <Route path="dashboard" element={<CompanyDashboard />} />
+                      <Route path="dashboard/overview" element={<CompanyDashboard />} />
+                      <Route path="dashboard/old" element={<DashboardPage />} />
+
+                      {/* Registration Module */}
+                      <Route path="companies" element={<Companies />} />
+                      <Route path="companies/register" element={<CompanyRegistration />} />
+                      <Route path="registration/users" element={<UsersListPage />} />
 
 
 
@@ -241,7 +271,9 @@ const App = () => (
                 {/* Catch-all */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
+                </BrowserRouter>
+              </MetatheosThemeProvider>
+            </MetatheosAuthProvider>
           </CompanyProvider>
         </AuthProvider>
       </TooltipProvider>

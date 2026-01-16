@@ -1,0 +1,434 @@
+.metatheos {
+  --meta-font-heading: "Playfair Display", Georgia, serif;
+  --meta-font-body: "DM Sans", system-ui, sans-serif;
+  --meta-transition: 420ms ease;
+  position: relative;
+  min-height: 100vh;
+  color: var(--meta-text);
+  background: var(--meta-bg);
+  font-family: var(--meta-font-body);
+  letter-spacing: 0.01em;
+  overflow-x: hidden;
+}
+
+.metatheos[data-theme="dark"] {
+  --meta-bg: #061515;
+  --meta-bg-2: #041010;
+  --meta-surface: #0c201f;
+  --meta-surface-2: #112826;
+  --meta-panel: rgba(16, 33, 32, 0.72);
+  --meta-panel-border: rgba(229, 193, 133, 0.16);
+  --meta-text: #e5c185;
+  --meta-heading: #fbf2c4;
+  --meta-muted: #9bb3a1;
+  --meta-accent: #c7522a;
+  --meta-accent-2: #74a892;
+  --meta-accent-3: #008585;
+  --meta-edge: rgba(229, 193, 133, 0.18);
+  --meta-glow: rgba(0, 133, 133, 0.16);
+  --meta-shadow: 0 24px 50px rgba(3, 9, 9, 0.45);
+  --meta-button-text: #fbf2c4;
+  --meta-focus: rgba(116, 168, 146, 0.3);
+  --meta-line: rgba(255, 255, 255, 0.03);
+  color-scheme: dark;
+}
+
+.metatheos[data-theme="light"] {
+  --meta-bg: #f6eee6;
+  --meta-bg-2: #f1e7de;
+  --meta-surface: #f2e5dc;
+  --meta-surface-2: #eeded4;
+  --meta-panel: rgba(244, 232, 224, 0.88);
+  --meta-panel-border: rgba(115, 2, 32, 0.12);
+  --meta-text: #730220;
+  --meta-heading: #3a0b19;
+  --meta-muted: #7f3d46;
+  --meta-accent: #d9042b;
+  --meta-accent-2: #03658c;
+  --meta-accent-3: #f29f05;
+  --meta-edge: rgba(115, 2, 32, 0.18);
+  --meta-glow: rgba(242, 159, 5, 0.18);
+  --meta-shadow: 0 18px 40px rgba(84, 18, 34, 0.18);
+  --meta-button-text: #f6eee6;
+  --meta-focus: rgba(3, 101, 140, 0.2);
+  --meta-line: rgba(0, 0, 0, 0.05);
+  color-scheme: light;
+}
+
+.metatheos::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top, var(--meta-glow) 0%, transparent 55%),
+    linear-gradient(180deg, var(--meta-bg) 0%, var(--meta-bg-2) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 140px,
+      var(--meta-line) 140px,
+      var(--meta-line) 141px
+    );
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.metatheos > * {
+  position: relative;
+  z-index: 1;
+}
+
+.metatheos * {
+  transition:
+    background-color var(--meta-transition),
+    color var(--meta-transition),
+    border-color var(--meta-transition),
+    box-shadow var(--meta-transition);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .metatheos * {
+    transition: none;
+  }
+  .metatheos-fade-in {
+    animation: none;
+  }
+}
+
+.metatheos h1,
+.metatheos h2,
+.metatheos h3,
+.metatheos h4 {
+  font-family: var(--meta-font-heading);
+  color: var(--meta-heading);
+  letter-spacing: 0.03em;
+}
+
+.metatheos a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.metatheos-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 0.7rem;
+  color: var(--meta-muted);
+}
+
+.metatheos-muted {
+  color: var(--meta-muted);
+}
+
+.metatheos-divider {
+  height: 1px;
+  background: var(--meta-edge);
+  margin: 1.5rem 0;
+}
+
+.metatheos-fade-in {
+  animation: metatheos-fade 700ms ease both;
+}
+
+@keyframes metatheos-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.metatheos-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: transparent;
+}
+
+.metatheos-button--primary {
+  background: var(--meta-accent);
+  color: var(--meta-button-text);
+  box-shadow: var(--meta-shadow);
+}
+
+.metatheos-button--ghost {
+  border-color: var(--meta-edge);
+  color: var(--meta-text);
+}
+
+.metatheos-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.metatheos-input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--meta-edge);
+  background: var(--meta-surface-2);
+  color: var(--meta-text);
+  font-size: 1rem;
+}
+
+.metatheos-input:focus {
+  outline: none;
+  border-color: var(--meta-accent-2);
+  box-shadow: 0 0 0 3px var(--meta-focus);
+}
+
+.metatheos-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+.metatheos-sidebar {
+  padding: 2.5rem 1.8rem;
+  background: var(--meta-surface);
+  border-right: 1px solid var(--meta-edge);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.metatheos-brand {
+  font-family: var(--meta-font-heading);
+  font-size: 1.1rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+.metatheos-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.metatheos-nav-link {
+  position: relative;
+  padding: 0.7rem 1rem 0.7rem 1.8rem;
+  border-radius: 12px;
+  color: var(--meta-muted);
+  border: 1px solid transparent;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+.metatheos-nav-link::before {
+  content: "";
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--meta-accent-2);
+  transform: translateY(-50%);
+  opacity: 0.35;
+}
+
+.metatheos-nav-link--active {
+  color: var(--meta-heading);
+  background: var(--meta-panel);
+  border-color: var(--meta-panel-border);
+  box-shadow: var(--meta-shadow);
+}
+
+.metatheos-nav-link--active::before {
+  opacity: 1;
+  background: var(--meta-accent);
+}
+
+.metatheos-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.6rem 2.8rem;
+  border-bottom: 1px solid var(--meta-edge);
+  background: var(--meta-surface);
+}
+
+.metatheos-topbar-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.metatheos-topbar-title span:first-child {
+  font-family: var(--meta-font-heading);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.metatheos-topbar-actions {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.metatheos-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: transparent;
+}
+
+.metatheos-content {
+  padding: 2.8rem 3.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.metatheos-panel {
+  padding: 2rem;
+  border-radius: 18px;
+  background: var(--meta-panel);
+  border: 1px solid var(--meta-panel-border);
+  box-shadow: var(--meta-shadow);
+}
+
+.metatheos-panel h2 {
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.metatheos-landing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.metatheos-landing-inner {
+  max-width: 640px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.metatheos-landing-title {
+  font-size: clamp(2.2rem, 4vw, 3.6rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.metatheos-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.metatheos-login-card {
+  width: min(420px, 90vw);
+  padding: 2.5rem;
+  border-radius: 18px;
+  background: var(--meta-panel);
+  border: 1px solid var(--meta-panel-border);
+  box-shadow: var(--meta-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.metatheos-login-card label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.65rem;
+  color: var(--meta-muted);
+}
+
+.metatheos-login-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.metatheos-error {
+  color: var(--meta-accent);
+  font-size: 0.85rem;
+}
+
+.metatheos-home-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.metatheos-home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.metatheos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.metatheos-list li {
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--meta-panel-border);
+}
+
+.metatheos-placeholder {
+  max-width: 700px;
+}
+
+@media (max-width: 960px) {
+  .metatheos-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .metatheos-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--meta-edge);
+  }
+
+  .metatheos-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .metatheos-topbar {
+    padding: 1.4rem 1.8rem;
+  }
+
+  .metatheos-content {
+    padding: 2rem 1.8rem 3rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .metatheos-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .metatheos-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .metatheos-content {
+    padding: 1.6rem 1.4rem 2.4rem;
+  }
+}

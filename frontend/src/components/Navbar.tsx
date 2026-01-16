@@ -46,11 +46,11 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
             {/* Metatheos Admin Access - Separate Container */}
-            <a href="http://localhost:1420" target="_blank" rel="noopener noreferrer">
+            <Link to="/login">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" title="Metatheos Admin">
                 <Lock className="h-4 w-4" />
               </Button>
-            </a>
+            </Link>
             <Link to="/login">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 Enter

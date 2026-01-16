@@ -4,6 +4,7 @@ import App from './App';
 import { QueryClientProvider } from '@/context/queryClient';
 import { ManualModeProvider } from '@/contexts/ManualModeContext';
 import './index.css';
+import './styles/metatheos.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
