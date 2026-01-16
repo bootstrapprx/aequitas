@@ -24,8 +24,8 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(CYAN)Docker Commands:$(RESET)"
 	@echo "  $(GREEN)make dev$(RESET)              Start all Docker services (frontend, backend, postgres, ollama)"
-	@echo "  $(GREEN)make up$(RESET)               Alias for make dev
-  $(GREEN)make up-all$(RESET)           Start Aequitas + Metatheos concurrently"
+	@echo "  $(GREEN)make up$(RESET)               Alias for make dev"
+	@echo "  $(GREEN)make up-all$(RESET)           Start Aequitas + Metatheos concurrently"
 	@echo "  $(GREEN)make stop$(RESET)             Stop all Docker services"
 	@echo "  $(GREEN)make logs$(RESET)             Follow Docker container logs"
 	@echo "  $(GREEN)make reset$(RESET)            Full reset: stop, remove volumes, rebuild and start"
@@ -112,12 +112,8 @@ metatheos-dev: ## Start Metatheos GUI (Tauri)
 	@echo "Starting Metatheos GUI..."
 	cd metatheos/metatheos-gui && cargo tauri dev
 
-dev-all: ## Start Aequitas (Docker) and Metatheos (Tauri) concurrently
-	@echo "Starting Aequitas + Metatheos..."
-	@echo "NOTE: This runs 'make dev' in the background. Use 'make stop' to kill Docker services."
-	make dev & \
-	sleep 10 && \
-	make metatheos-dev
+dev-all: ## Start Aequitas + Metatheos (Docker)
+	@make dev
 
 up-all: dev-all ## Alias for dev-all
 

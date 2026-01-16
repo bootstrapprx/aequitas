@@ -17,7 +17,7 @@ services:
     image: ollama/ollama
     container_name: aequitas-ollama-dev
     environment:
-      - OLLAMA_DISABLE_CUDA=1  # Force CPU-only mode (no NVIDIA drivers)
+      - OLLAMA_DISABLE_CUDA=1 # Force CPU-only mode (no NVIDIA drivers)
     ports:
       - "11435:11434"
     volumes:
@@ -62,6 +62,30 @@ services:
       - VITE_PROXY_TARGET=http://backend:8000
     depends_on:
       - backend
+    networks:
+      - aequitas-dev-net
+
+  metatheos-server:
+    build:
+      context: ./governance/metatheos
+      dockerfile: metatheos-server/Dockerfile
+    container_name: metatheos-server
+    volumes:
+      - ./governance:/app/governance
+    environment:
+      - AEQUITAS_GOVERNANCE=/app/governance
+    networks:
+      - aequitas-dev-net
+
+  metatheos-frontend:
+    build:
+      context: ./governance/metatheos/metatheos-gui
+      dockerfile: Dockerfile
+    container_name: metatheos-frontend
+    ports:
+      - "1420:80"
+    depends_on:
+      - metatheos-server
     networks:
       - aequitas-dev-net
 

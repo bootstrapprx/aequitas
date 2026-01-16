@@ -1,3 +1,4 @@
+pub mod api;
 pub mod canon;
 pub mod dashboard;
 pub mod domain;

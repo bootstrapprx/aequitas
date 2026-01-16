@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
-{ label: "Chambers", href: "#features" },
-{ label: "Scribe's Chamber", href: "#chartforge" },
-{ label: "Tariffs", href: "#pricing" },
-{ label: "Chronicles", href: "#about" },
-{ label: "Metatheos (Admin)", href: "http://localhost:1420", isExternal: true },
+const navItems = [
+  { label: "Chambers", href: "#features" },
+  { label: "Scribe's Chamber", href: "#chartforge" },
+  { label: "Tariffs", href: "#pricing" },
+  { label: "Chronicles", href: "#about" },
 ];
 
 const Navbar = () => {
@@ -45,6 +45,12 @@ const Navbar = () => {
 
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
+            {/* Metatheos Admin Access - Separate Container */}
+            <a href="http://localhost:1420" target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" title="Metatheos Admin">
+                <Lock className="h-4 w-4" />
+              </Button>
+            </a>
             <Link to="/login">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 Enter

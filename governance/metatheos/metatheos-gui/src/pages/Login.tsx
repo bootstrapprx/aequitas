@@ -14,14 +14,24 @@ export default function Login() {
         e.preventDefault();
         setIsLoading(true);
 
-        // TODO: Implement actual auth logic (invoke Rust backend)
-        console.log("Attempting login...");
+        try {
+            // Test connection via get_all_phases or just assume success for now if network works
+            // In future: apiInvoke("authenticate", { password })
+            // For now, let's just trace capability
+            console.log("Attempting login...");
 
-        setTimeout(() => {
-            // Mock success for now
+            // Just simulate delay, but could verify HEALTH
+            // const health = await fetch('/health').then(r => r.json()).catch(() => null);
+            // console.log("Server Health:", health);
+
+            setTimeout(() => {
+                setIsLoading(false);
+                navigate('/dashboard');
+            }, 800);
+        } catch (error) {
+            console.error("Login failed:", error);
             setIsLoading(false);
-            navigate('/dashboard');
-        }, 1000);
+        }
     };
 
     return (

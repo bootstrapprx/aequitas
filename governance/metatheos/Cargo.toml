@@ -1,5 +1,5 @@
 [workspace]
-members = ["metatheos-core", "metatheos-cli", "metatheos-gui/src-tauri"]
+members = ["metatheos-core", "metatheos-cli", "metatheos-gui/src-tauri", "metatheos-server"]
 resolver = "2"
 
 [workspace.package]

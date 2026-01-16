@@ -1,14 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
-
-function Dashboard() {
-  return (
-    <div className="p-8">
-      <h1>Dashboard Placeholder</h1>
-      <p>Welcome to the React-based Metatheos.</p>
-    </div>
-  );
-}
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
