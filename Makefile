@@ -24,7 +24,8 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(CYAN)Docker Commands:$(RESET)"
 	@echo "  $(GREEN)make dev$(RESET)              Start all Docker services (frontend, backend, postgres, ollama)"
-	@echo "  $(GREEN)make up$(RESET)               Alias for make dev"
+	@echo "  $(GREEN)make up$(RESET)               Alias for make dev
+  $(GREEN)make up-all$(RESET)           Start Aequitas + Metatheos concurrently"
 	@echo "  $(GREEN)make stop$(RESET)             Stop all Docker services"
 	@echo "  $(GREEN)make logs$(RESET)             Follow Docker container logs"
 	@echo "  $(GREEN)make reset$(RESET)            Full reset: stop, remove volumes, rebuild and start"
@@ -117,6 +118,8 @@ dev-all: ## Start Aequitas (Docker) and Metatheos (Tauri) concurrently
 	make dev & \
 	sleep 10 && \
 	make metatheos-dev
+
+up-all: dev-all ## Alias for dev-all
 
 stop:
 	@echo "Stopping Unified Dev Mode..."

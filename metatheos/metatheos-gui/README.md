@@ -1,118 +1,73 @@
-# Meta Engine GUI
+# React + TypeScript + Vite
 
-Desktop application for the Aequitas Meta Engine governance tool.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Requirements
+Currently, two official plugins are available:
 
-- Rust 1.92+
-- Node.js 18+
-- npm
-- Tauri system dependencies (see https://tauri.app/v2/guides/prerequisites/)
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Development
+## React Compiler
 
-### First Time Setup
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-```bash
-# Install npm dependencies
-npm install
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
+
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-### Run Development Server
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-**IMPORTANT:** You must use `cargo tauri dev`, not just `npm run dev`
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-```bash
-# This launches the Tauri desktop app
-cargo tauri dev
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
-
-This command will:
-1. Start the Vite dev server on port 5174
-2. Build the Rust backend
-3. Launch the native desktop window
-
-### Why not just `npm run dev`?
-
-Running `npm run dev` alone only starts the web server without the Tauri runtime. The app requires Tauri's backend to:
-- Load governance data from the filesystem
-- Execute validation commands
-- Query goals and decisions
-
-**You will see errors** if you open `http://localhost:5174` directly in a browser.
-
-## Build Production
-
-```bash
-# Build the production desktop app
-npm run build
-cargo tauri build
-```
-
-The app will be in: `src-tauri/target/release/`
-
-## Configuration
-
-The app looks for the governance folder at:
-
-1. Environment variable: `$AEQUITAS_GOVERNANCE`
-2. Default: `$HOME/Documents/workfolder/aequitas/governance`
-
-Set custom path:
-```bash
-export AEQUITAS_GOVERNANCE=/path/to/governance
-cargo tauri dev
-```
-
-## Project Structure
-
-```
-meta-gui/
-├── src/                    # Svelte frontend
-│   ├── App.svelte         # Main app + navigation
-│   ├── main.js            # Entry point
-│   ├── app.css            # Global styles
-│   └── lib/               # Components
-│       ├── Dashboard.svelte
-│       ├── GoalExplorer.svelte
-│       └── AuditViewer.svelte
-├── src-tauri/             # Rust backend
-│   ├── src/
-│   │   ├── main.rs        # Tauri app
-│   │   ├── commands.rs    # Command handlers
-│   │   └── state.rs       # App state
-│   └── tauri.conf.json    # Tauri config
-├── package.json
-├── vite.config.js
-└── tailwind.config.js
-```
-
-## Features
-
-- **Dashboard** — Overview of governance health
-- **Goal Explorer** — Browse and filter goals
-- **Audit Viewer** — Validation results
-
-## Troubleshooting
-
-### Error: "Tauri is not available"
-
-**Cause:** You're running in a browser, not the Tauri app.
-
-**Solution:** Use `cargo tauri dev` instead of `npm run dev`
-
-### Error: "Governance folder not found"
-
-**Cause:** The governance path is incorrect.
-
-**Solution:** Set `AEQUITAS_GOVERNANCE` environment variable:
-```bash
-export AEQUITAS_GOVERNANCE=/absolute/path/to/governance
-cargo tauri dev
-```
-
-### Port 5174 already in use
-
-**Cause:** Another process is using port 5174.
-
-**Solution:** Change port in `vite.config.js` and `src-tauri/tauri.conf.json`

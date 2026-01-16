@@ -5,11 +5,11 @@ import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
 
-const navItems = [
-  { label: "Chambers", href: "#features" },
-  { label: "Scribe's Chamber", href: "#chartforge" },
-  { label: "Tariffs", href: "#pricing" },
-  { label: "Chronicles", href: "#about" },
+{ label: "Chambers", href: "#features" },
+{ label: "Scribe's Chamber", href: "#chartforge" },
+{ label: "Tariffs", href: "#pricing" },
+{ label: "Chronicles", href: "#about" },
+{ label: "Metatheos (Admin)", href: "http://localhost:1420", isExternal: true },
 ];
 
 const Navbar = () => {
