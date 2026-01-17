@@ -2,13 +2,13 @@ import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { label: "Home", path: "/home" },
-  { label: "Phases", path: "/phases" },
-  { label: "Goals", path: "/goals" },
-  { label: "Timeline", path: "/timeline" },
-  { label: "Audits", path: "/audits" },
-  { label: "Prompts", path: "/prompts" },
-  { label: "Assistant", path: "/assistant" },
+  { label: "Home", path: "/metatheos/home" },
+  { label: "Phases", path: "/metatheos/phases" },
+  { label: "Goals", path: "/metatheos/goals" },
+  { label: "Timeline", path: "/metatheos/timeline" },
+  { label: "Audits", path: "/metatheos/audits" },
+  { label: "Prompts", path: "/metatheos/prompts" },
+  { label: "Assistant", path: "/metatheos/assistant" },
 ];
 
 const Sidebar = () => {

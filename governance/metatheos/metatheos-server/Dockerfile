@@ -1,5 +1,7 @@
 # Build Stage
-FROM rust:1.76 as builder
+FROM rust:latest as builder
+
+RUN apt-get update && apt-get install -y clang libclang-dev
 
 WORKDIR /app
 

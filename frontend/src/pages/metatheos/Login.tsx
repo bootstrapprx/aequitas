@@ -18,7 +18,7 @@ const Login = () => {
 
     try {
       await login(identifier, password);
-      navigate("/home");
+      navigate("/metatheos/home");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       setError(message);

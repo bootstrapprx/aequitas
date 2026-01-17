@@ -10,7 +10,7 @@ const Landing = () => {
         <p>Observation, governance, verification.</p>
         <p className="metatheos-muted">Admin access only.</p>
         <div>
-          <Link to="/login" className="metatheos-button metatheos-button--primary">
+          <Link to="/metatheos/login" className="metatheos-button metatheos-button--primary">
             Enter
           </Link>
         </div>

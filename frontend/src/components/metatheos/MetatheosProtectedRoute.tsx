@@ -15,7 +15,7 @@ const MetatheosProtectedRoute = ({ children }: { children: ReactNode }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/metatheos/login" replace />;
   }
 
   return <>{children}</>;

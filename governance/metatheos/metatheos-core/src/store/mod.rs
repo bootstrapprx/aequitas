@@ -14,6 +14,7 @@ pub mod queries;
 pub mod schema;
 pub mod validation;
 
+#[derive(Debug)]
 pub struct SurrealStore {
     pub db: Surreal<Db>,
 }
@@ -923,4 +924,376 @@ impl SurrealStore {
 
         Ok(notes)
     }
+
+    // =========================================================================
+    // NEW METHODS FOR UI BACKEND ALIGNMENT
+    // =========================================================================
+
+    /// Get read mode from meta configuration
+    /// Values: "canonical_only", "dual_read" (default), "legacy_only"
+    pub async fn get_read_mode(&self) -> crate::dto::ReadMode {
+        match self.get_meta("read_mode").await {
+            Ok(Some(v)) => crate::dto::ReadMode::from_str(&v),
+            _ => crate::dto::ReadMode::default(),
+        }
+    }
+
+    /// Log read mode on startup
+    pub async fn log_read_mode(&self) {
+        let mode = self.get_read_mode().await;
+        tracing::info!("SurrealStore read_mode: {}", mode);
+    }
+
+    /// Get single phase by ID
+    pub async fn get_phase_by_id(&self, phase_id: &str) -> Result<Option<Phase>> {
+        // Try canonical table first
+        let canonical_query = "SELECT phase_id, title, status, description, content, start_date, target_date, dependencies, file_path FROM phase WHERE phase_id = $id";
+        if let Ok(mut resp) = self.db.query(canonical_query).bind(("id", phase_id.to_string())).await {
+            #[derive(serde::Deserialize)]
+            struct PhaseRow {
+                phase_id: String,
+                title: String,
+                status: serde_json::Value,
+                #[serde(default)]
+                description: serde_json::Value,
+                #[serde(default)]
+                content: serde_json::Value,
+                start_date: Option<serde_json::Value>,
+                target_date: Option<serde_json::Value>,
+                #[serde(default)]
+                dependencies: serde_json::Value,
+                #[serde(default)]
+                file_path: serde_json::Value,
+            }
+
+            if let Ok(rows) = resp.take::<Vec<PhaseRow>>(0) {
+                if let Some(p) = rows.into_iter().next() {
+                    return Ok(Some(Phase {
+                        phase_id: p.phase_id,
+                        title: p.title,
+                        status: p.status.as_str().unwrap_or("planned").to_string(),
+                        start_date: p.start_date
+                            .and_then(|v| v.as_str().map(|s| s.to_string()))
+                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        target_date: p.target_date
+                            .and_then(|v| v.as_str().map(|s| s.to_string()))
+                            .and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        dependencies: p.dependencies
+                            .as_array()
+                            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                            .unwrap_or_default(),
+                        file_path: PathBuf::from(p.file_path.as_str().unwrap_or("")),
+                        content: {
+                            let c = p.content.as_str().unwrap_or("");
+                            if c.is_empty() { p.description.as_str().unwrap_or("").to_string() } else { c.to_string() }
+                        },
+                    }));
+                }
+            }
+        }
+
+        // Fallback to legacy table
+        let legacy_query = "SELECT * FROM phases WHERE phase_id = $id";
+        let mut response = self.db.query(legacy_query).bind(("id", phase_id.to_string())).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Phase query failed: {}", e)))?;
+        
+        #[derive(serde::Deserialize)]
+        struct PhaseLegacy {
+            phase_id: String,
+            title: String,
+            status: String,
+            start_date: Option<String>,
+            target_date: Option<String>,
+            dependencies: Vec<String>,
+            file_path: String,
+            content: String,
+        }
+
+        let rows: Vec<PhaseLegacy> = response.take(0)
+            .map_err(|e| MetaError::DatabaseQuery(format!("Phase deserialization failed: {}", e)))?;
+
+        Ok(rows.into_iter().next().map(|p| Phase {
+            phase_id: p.phase_id,
+            title: p.title,
+            status: p.status,
+            start_date: p.start_date.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            target_date: p.target_date.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            dependencies: p.dependencies,
+            file_path: PathBuf::from(p.file_path),
+            content: p.content,
+        }))
+    }
+
+    /// Get single goal by ID
+    pub async fn get_goal_by_id(&self, goal_id: &str) -> Result<Option<Goal>> {
+        // Try canonical table first
+        let canonical_query = "SELECT id, phase_id, title, description, status, owner, dependencies, tags, updated FROM goal WHERE id = $id";
+        if let Ok(mut resp) = self.db.query(canonical_query).bind(("id", goal_id.to_string())).await {
+            #[derive(serde::Deserialize)]
+            struct GoalRow {
+                id: String,
+                phase_id: String,
+                title: String,
+                #[serde(default)]
+                description: Option<String>,
+                status: String,
+                owner: Option<String>,
+                #[serde(default)]
+                dependencies: Option<Vec<String>>,
+                #[serde(default)]
+                tags: Option<Vec<String>>,
+                updated: Option<String>,
+            }
+
+            if let Ok(rows) = resp.take::<Vec<GoalRow>>(0) {
+                if let Some(g) = rows.into_iter().next() {
+                    return Ok(Some(Goal {
+                        goal_id: g.id,
+                        title: g.title,
+                        status: GoalStatus::from_str(&g.status).unwrap_or_else(|| GoalStatus::Unknown(g.status)),
+                        phase: Some(g.phase_id),
+                        owner: g.owner,
+                        parent_id: None,
+                        level: Some("goal".to_string()),
+                        dependencies: g.dependencies.unwrap_or_default(),
+                        canon: Vec::new(),
+                        updated: g.updated.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        tags: g.tags.unwrap_or_default(),
+                        file_path: PathBuf::new(),
+                        content: g.description.unwrap_or_default(),
+                    }));
+                }
+            }
+        }
+
+        // Fallback to legacy table
+        let legacy_query = "SELECT * FROM goals WHERE goal_id = $id";
+        let mut response = self.db.query(legacy_query).bind(("id", goal_id.to_string())).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Goal query failed: {}", e)))?;
+
+        #[derive(serde::Deserialize)]
+        struct GoalLegacy {
+            goal_id: String,
+            title: String,
+            status: Option<serde_json::Value>,
+            phase: Option<String>,
+            owner: Option<String>,
+            parent_id: Option<String>,
+            level: Option<String>,
+            dependencies: Option<serde_json::Value>,
+            canon: Option<serde_json::Value>,
+            tags: Option<serde_json::Value>,
+            updated: Option<String>,
+            file_path: Option<String>,
+            content: Option<String>,
+        }
+
+        let rows: Vec<GoalLegacy> = response.take(0)
+            .map_err(|e| MetaError::DatabaseQuery(format!("Goal deserialization failed: {}", e)))?;
+
+        Ok(rows.into_iter().next().map(|g| Goal {
+            goal_id: g.goal_id,
+            title: g.title,
+            status: g.status.as_ref()
+                .and_then(|v| v.as_str())
+                .and_then(GoalStatus::from_str)
+                .unwrap_or_else(|| GoalStatus::Unknown("unknown".to_string())),
+            phase: g.phase,
+            owner: g.owner,
+            parent_id: g.parent_id,
+            level: g.level.or_else(|| Some("goal".to_string())),
+            dependencies: g.dependencies
+                .and_then(|v| v.as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()))
+                .unwrap_or_default(),
+            canon: g.canon
+                .and_then(|v| v.as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()))
+                .unwrap_or_default(),
+            updated: g.updated.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+            tags: g.tags
+                .and_then(|v| v.as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()))
+                .unwrap_or_default(),
+            file_path: g.file_path.map(PathBuf::from).unwrap_or_default(),
+            content: g.content.unwrap_or_default(),
+        }))
+    }
+
+    /// Get goals filtered by phase ID
+    pub async fn get_goals_by_phase(&self, phase_id: &str) -> Result<Vec<Goal>> {
+        // Try canonical table first
+        let canonical_query = "SELECT id, phase_id, title, description, status, owner, dependencies, tags, updated FROM goal WHERE phase_id = $phase_id";
+        if let Ok(mut resp) = self.db.query(canonical_query).bind(("phase_id", phase_id.to_string())).await {
+            #[derive(serde::Deserialize)]
+            struct GoalRow {
+                id: String,
+                phase_id: String,
+                title: String,
+                #[serde(default)]
+                description: Option<String>,
+                status: String,
+                owner: Option<String>,
+                #[serde(default)]
+                dependencies: Option<Vec<String>>,
+                #[serde(default)]
+                tags: Option<Vec<String>>,
+                updated: Option<String>,
+            }
+
+            if let Ok(rows) = resp.take::<Vec<GoalRow>>(0) {
+                if !rows.is_empty() {
+                    return Ok(rows.into_iter().map(|g| Goal {
+                        goal_id: g.id,
+                        title: g.title,
+                        status: GoalStatus::from_str(&g.status).unwrap_or_else(|| GoalStatus::Unknown(g.status)),
+                        phase: Some(g.phase_id),
+                        owner: g.owner,
+                        parent_id: None,
+                        level: Some("goal".to_string()),
+                        dependencies: g.dependencies.unwrap_or_default(),
+                        canon: Vec::new(),
+                        updated: g.updated.and_then(|s| NaiveDate::parse_from_str(&s, "%Y-%m-%d").ok()),
+                        tags: g.tags.unwrap_or_default(),
+                        file_path: PathBuf::new(),
+                        content: g.description.unwrap_or_default(),
+                    }).collect());
+                }
+            }
+        }
+
+        // Fallback to legacy table
+        let legacy_query = "SELECT * FROM goals WHERE phase = $phase_id";
+        let _response = self.db.query(legacy_query).bind(("phase_id", phase_id.to_string())).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Goals by phase query failed: {}", e)))?;
+
+        // Reuse the existing deserialization pattern
+        let all_goals = self.get_all_goals().await?;
+        Ok(all_goals.into_iter().filter(|g| g.phase.as_deref() == Some(phase_id)).collect())
+    }
+
+    /// Get recent events with optional filters
+    pub async fn get_recent_events(&self, limit: usize, phase_id: Option<&str>, goal_id: Option<&str>) -> Result<Vec<Event>> {
+        let mut query = String::from("SELECT * FROM event");
+        let mut conditions = Vec::new();
+
+        if let Some(pid) = phase_id {
+            conditions.push(format!("(entity_type = 'phase' AND entity_id = '{}')", pid));
+        }
+        if let Some(gid) = goal_id {
+            conditions.push(format!("(entity_type = 'goal' AND entity_id = '{}')", gid));
+        }
+
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" OR "));
+        }
+
+        query.push_str(&format!(" ORDER BY created_at DESC LIMIT {}", limit));
+
+        let mut response = self.db.query(&query).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Events query failed: {}", e)))?;
+
+        #[derive(serde::Deserialize)]
+        struct EventRow {
+            id: String,
+            entity_type: String,
+            entity_id: String,
+            action: String,
+            actor: String,
+            #[serde(default)]
+            payload: serde_json::Value,
+            created_at: String,
+        }
+
+        let rows: Vec<EventRow> = response.take(0).unwrap_or_default();
+
+        Ok(rows.into_iter().map(|e| Event {
+            id: e.id,
+            entity_type: e.entity_type,
+            entity_id: e.entity_id,
+            action: crate::domain::event::EventAction::from_str(&e.action).unwrap_or(crate::domain::event::EventAction::Update),
+            actor: e.actor,
+            payload: e.payload,
+            created_at: chrono::DateTime::parse_from_rfc3339(&e.created_at)
+                .map(|dt| dt.with_timezone(&chrono::Utc))
+                .unwrap_or_else(|_| chrono::Utc::now()),
+        }).collect())
+    }
+
+    /// Get all annotations with optional filters
+    pub async fn get_all_annotations_filtered(&self, limit: usize, phase_id: Option<&str>, goal_id: Option<&str>) -> Result<Vec<Annotation>> {
+        let mut query = String::from("SELECT * FROM annotation");
+        let mut conditions = Vec::new();
+
+        if let Some(pid) = phase_id {
+            conditions.push(format!("(entity_type = 'phase' AND entity_id = '{}')", pid));
+        }
+        if let Some(gid) = goal_id {
+            conditions.push(format!("(entity_type = 'goal' AND entity_id = '{}')", gid));
+        }
+
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" OR "));
+        }
+
+        query.push_str(&format!(" ORDER BY created_at DESC LIMIT {}", limit));
+
+        let mut response = self.db.query(&query).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Annotations query failed: {}", e)))?;
+
+        let rows: Vec<Annotation> = response.take(0).unwrap_or_default();
+        Ok(rows)
+    }
+
+    /// Count work items in database
+    pub async fn count_work_items(&self) -> Result<usize> {
+        let mut response = self.db.query("SELECT count() as cnt FROM work_item GROUP ALL").await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Work item count failed: {}", e)))?;
+
+        #[derive(serde::Deserialize)]
+        struct CountResult { cnt: i64 }
+
+        let rows: Vec<CountResult> = response.take(0).unwrap_or_default();
+        Ok(rows.first().map(|r| r.cnt as usize).unwrap_or(0))
+    }
+
+    /// Count events in database
+    pub async fn count_events(&self) -> Result<usize> {
+        let mut response = self.db.query("SELECT count() as cnt FROM event GROUP ALL").await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Event count failed: {}", e)))?;
+
+        #[derive(serde::Deserialize)]
+        struct CountResult { cnt: i64 }
+
+        let rows: Vec<CountResult> = response.take(0).unwrap_or_default();
+        Ok(rows.first().map(|r| r.cnt as usize).unwrap_or(0))
+    }
+
+    /// Count annotations in database
+    pub async fn count_annotations(&self) -> Result<usize> {
+        let mut response = self.db.query("SELECT count() as cnt FROM annotation GROUP ALL").await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Annotation count failed: {}", e)))?;
+
+        #[derive(serde::Deserialize)]
+        struct CountResult { cnt: i64 }
+
+        let rows: Vec<CountResult> = response.take(0).unwrap_or_default();
+        Ok(rows.first().map(|r| r.cnt as usize).unwrap_or(0))
+    }
+
+    /// Get day by date (YYYY-MM-DD format)
+    pub async fn get_day(&self, date: &str) -> Result<Option<crate::Day>> {
+        let query = "SELECT * FROM day WHERE id = $id";
+        let mut response = self.db.query(query).bind(("id", date.to_string())).await
+            .map_err(|e| MetaError::DatabaseQuery(format!("Day query failed: {}", e)))?;
+
+        let rows: Vec<crate::Day> = response.take(0).unwrap_or_default();
+        Ok(rows.into_iter().next())
+    }
+
+    /// Get today's day record
+    pub async fn get_today(&self) -> Result<Option<crate::Day>> {
+        let today = chrono::Local::now().format("%Y-%m-%d").to_string();
+        self.get_day(&today).await
+    }
 }
+

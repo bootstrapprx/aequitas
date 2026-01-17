@@ -1,4 +1,4 @@
-.PHONY: help up dev stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend shared services
+.PHONY: help up dev dev-cached up-all-cached stop reset-db logs reset rebuild install-deps install-frontend install-backend clean-deps reinstall-frontend reinstall-backend shared services
 
 # Default target
 .DEFAULT_GOAL := help
@@ -24,8 +24,10 @@ help: ## Show this help message
 	@echo ""
 	@echo "$(CYAN)Docker Commands:$(RESET)"
 	@echo "  $(GREEN)make dev$(RESET)              Start all Docker services (frontend, backend, postgres, ollama)"
+	@echo "  $(GREEN)make dev-cached$(RESET)       Start all Docker services without rebuilding images (cached only)"
 	@echo "  $(GREEN)make up$(RESET)               Alias for make dev"
 	@echo "  $(GREEN)make up-all$(RESET)           Start Aequitas + Metatheos concurrently"
+	@echo "  $(GREEN)make up-all-cached$(RESET)    Start Aequitas + Metatheos without rebuilding images"
 	@echo "  $(GREEN)make stop$(RESET)             Stop all Docker services"
 	@echo "  $(GREEN)make logs$(RESET)             Follow Docker container logs"
 	@echo "  $(GREEN)make reset$(RESET)            Full reset: stop, remove volumes, rebuild and start"
@@ -108,6 +110,17 @@ dev: preflight ## Start all Docker services
 	@echo "Ollama: http://localhost:11435"
 	@echo "Postgres: localhost:5432"
 
+dev-cached: preflight ## Start all Docker services without rebuilding images
+	@echo "Starting Cached Dev Mode..."
+	@echo "Starting Docker services (Postgres, Ollama, Backend, Frontend, Metatheos) using existing images"
+	docker compose -f $(DOCKER_COMPOSE_DEV) up -d --no-build
+	@echo "Cached Dev Mode is running."
+	@echo "Frontend: http://localhost:5173"
+	@echo "Backend: http://localhost:8000"
+	@echo "Metatheos UI: http://localhost:1420"
+	@echo "Ollama: http://localhost:11435"
+	@echo "Postgres: localhost:5432"
+
 metatheos-dev: ## Start Metatheos GUI (Tauri)
 	@echo "Starting Metatheos GUI..."
 	cd metatheos/metatheos-gui && cargo tauri dev
@@ -116,6 +129,8 @@ dev-all: ## Start Aequitas + Metatheos (Docker)
 	@make dev
 
 up-all: dev-all ## Alias for dev-all
+
+up-all-cached: dev-cached ## Alias for dev-cached
 
 stop:
 	@echo "Stopping Unified Dev Mode..."
@@ -247,4 +262,3 @@ services:
 	else \
 		echo "No 'services' directory found."; \
 	fi
-
