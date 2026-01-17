@@ -23,6 +23,8 @@ import LandingPage from "./pages/LandingPage";
 import MetatheosLanding from "./pages/metatheos/Landing";
 import MetatheosLogin from "./pages/metatheos/Login";
 import MetatheosHome from "./pages/metatheos/Home";
+import MetatheosPhases from "./pages/metatheos/Phases";
+import MetatheosTimeline from "./pages/metatheos/Timeline";
 import MetatheosPlaceholder from "./pages/metatheos/Placeholder";
 import NotFound from "./pages/NotFound";
 import { SessionLogger } from "./components/SessionLogger";
@@ -134,9 +136,9 @@ const App = () => (
                     >
                       <Route index element={<MetatheosHome />} />
                       <Route path="home" element={<MetatheosHome />} />
-                      <Route path="phases" element={<MetatheosPlaceholder title="Phases" description="Lifecycle oversight." />} />
+                      <Route path="phases" element={<MetatheosPhases />} />
                       <Route path="goals" element={<MetatheosPlaceholder title="Goals" description="Governance targets and checkpoints." />} />
-                      <Route path="timeline" element={<MetatheosPlaceholder title="Timeline" description="Sequence of verified events." />} />
+                      <Route path="timeline" element={<MetatheosTimeline />} />
                       <Route path="audits" element={<MetatheosPlaceholder title="Audits" description="Review trails and attestations." />} />
                       <Route path="prompts" element={<MetatheosPlaceholder title="Prompts" description="Directive inputs and constraints." />} />
                       <Route path="assistant" element={<MetatheosPlaceholder title="Assistant" description="Guided analysis and synthesis." />} />

@@ -17,6 +17,12 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         secure: false,
       },
+      "/metatheos-api": {
+        target: process.env.VITE_METATHEOS_PROXY_TARGET || "http://localhost:3000",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/metatheos-api/, ""),
+      },
       "/ollama": {
         target: "http://localhost:11435",
         changeOrigin: true,

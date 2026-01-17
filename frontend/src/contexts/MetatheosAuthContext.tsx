@@ -35,7 +35,7 @@ const MetatheosAuthContext = createContext<MetatheosAuthContextValue | undefined
 
 const TOKEN_KEY = "metatheos_token";
 const USER_KEY = "metatheos_user";
-const BASE_URL = import.meta.env.VITE_METATHEOS_API_URL || import.meta.env.VITE_API_URL || "";
+const BASE_URL = import.meta.env.VITE_METATHEOS_API_URL || "/metatheos-api";
 
 const requestJson = async <T,>(path: string, options: RequestInit = {}): Promise<T> => {
   const response = await fetch(`${BASE_URL}${path}`, {
@@ -116,7 +116,7 @@ export const MetatheosAuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       try {
-        const me = await requestJson<MetatheosUser>("/auth/me", {
+        const me = await requestJson<MetatheosUser>("/api/auth/me", {
           headers: {
             Authorization: `Bearer ${storedToken}`,
           },
@@ -146,7 +146,7 @@ export const MetatheosAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     try {
-      const response = await requestJson<LoginResponse>("/auth/login", {
+      const response = await requestJson<LoginResponse>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify(payload),
       });
@@ -162,7 +162,7 @@ export const MetatheosAuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       try {
-        const me = await requestJson<MetatheosUser>("/auth/me", {
+        const me = await requestJson<MetatheosUser>("/api/auth/me", {
           headers: {
             Authorization: `Bearer ${nextToken}`,
           },
@@ -195,7 +195,7 @@ export const MetatheosAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const activeToken = token || localStorage.getItem(TOKEN_KEY);
     if (activeToken) {
       try {
-        await requestJson("/auth/logout", {
+        await requestJson("/api/auth/logout", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${activeToken}`,
