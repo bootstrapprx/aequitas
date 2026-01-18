@@ -181,7 +181,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
         <h2 className="text-2xl font-bold text-gray-900 mb-2 embossed-gold">
           Choose Your Accounting Template
         </h2>
-        <p className="text-gray-600">
+        <p className="text-gray-600 dark:text-gray-300">
           Select the template that matches your jurisdiction and business type.
         </p>
       </div>
@@ -204,7 +204,7 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
 
       {/* Template Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="md:col-span-2 text-sm text-gray-600">
+        <div className="md:col-span-2 text-sm text-gray-600 dark:text-gray-300">
           All templates create a complete, working accounting system. You can customize accounts later.
         </div>
         <AnimatePresence>
@@ -216,8 +216,8 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
             const IconComponent = displayInfo?.icon === 'standard'
               ? Book
               : displayInfo?.icon === 'simplified'
-              ? BookOpen
-              : FileText;
+                ? BookOpen
+                : FileText;
 
             return (
               <motion.div
@@ -225,19 +225,21 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
+                onClick={() => !isDisabled && handleTemplateClick(template)}
+                className={`transition-all ${isDisabled
+                    ? 'cursor-not-allowed'
+                    : 'cursor-pointer'
+                  }`}
               >
                 <AtheneumCard
                   hover={!isDisabled}
-                  className={`transition-all ${
-                    isDisabled
-                      ? 'opacity-60 cursor-not-allowed bg-gray-50'
-                      : 'cursor-pointer hover:shadow-xl'
-                  } ${
-                    selectedTemplate?.id === template.id
+                  className={`${isDisabled
+                      ? 'opacity-60 bg-gray-50'
+                      : 'hover:shadow-xl'
+                    } ${selectedTemplate?.id === template.id
                       ? 'ring-2 ring-emerald-500 shadow-lg'
                       : 'shadow-md'
-                  }`}
-                  onClick={() => handleTemplateClick(template)}
+                    }`}
                 >
                   <AtheneumCardHeader
                     icon={<IconComponent className={`h-5 w-5 ${isDisabled ? 'text-gray-400' : 'text-emerald-600'}`} />}
@@ -261,19 +263,17 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
                   <AtheneumCardContent>
                     <div className="space-y-4">
                       {/* Kernel Size Badge */}
-                      <div className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-sm ${
-                        isDisabled
-                          ? 'bg-gray-200 text-gray-600'
-                          : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                      }`}>
+                      <div className={`inline-flex items-center px-3 py-1.5 rounded-md font-semibold text-sm ${isDisabled
+                        ? 'bg-gray-200 text-gray-600'
+                        : 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                        }`}>
                         {displayInfo?.badge || `${template.account_count || 0} accounts`}
                       </div>
 
                       {/* Description */}
                       <div className="space-y-2">
-                        <p className={`text-sm leading-relaxed whitespace-pre-line ${
-                          isDisabled ? 'text-gray-600' : 'text-gray-700'
-                        }`}>
+                        <p className={`text-sm leading-relaxed whitespace-pre-line ${isDisabled ? 'text-gray-600' : 'text-gray-700'
+                          }`}>
                           {displayInfo?.description || template.description}
                         </p>
                         {template.name === 'US GAAP Simplified' && (
@@ -319,11 +319,10 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
 
                       {/* Select Button */}
                       <Button
-                        className={`w-full mt-4 ${
-                          isDisabled
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
-                            : 'shadow-gold'
-                        }`}
+                        className={`w-full mt-4 ${isDisabled
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed hover:bg-gray-300'
+                          : 'shadow-gold'
+                          }`}
                         disabled={isDisabled}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -343,8 +342,8 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
 
       {/* No Templates Available */}
       {templates && templates.length === 0 && (
-        <Alert>
-          <AlertDescription>
+        <Alert className="border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30">
+          <AlertDescription className="text-amber-900 dark:text-amber-200">
             No templates are currently available. Please contact support to request a template for your jurisdiction.
           </AlertDescription>
         </Alert>

@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { Search, Plus, RefreshCw, FileText, Lock, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCompany } from '@/contexts/CompanyContext';
 import type { Company } from '@/types/company';
 
 interface CompanyAccount {
@@ -34,25 +35,8 @@ interface CompanyChartStats {
 
 export default function CompanyChartPage() {
   const [search, setSearch] = useState('');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-
-  // Get companies
-  const { data: companies } = useQuery<Company[]>({
-    queryKey: ['companies'],
-    queryFn: async () => {
-      const response = await api.get<Company[]>('/companies/');
-      return response.data;
-    },
-  });
-  const selectedCompanyData = companies?.find((company) => company.id === selectedCompanyId);
-  const isActiveCompany = selectedCompanyData?.onboarding_status === 'ACTIVE';
-
-  // Auto-select first company
-  React.useEffect(() => {
-    if (companies && companies.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId(companies[0].id);
-    }
-  }, [companies, selectedCompanyId]);
+  const { selectedCompanyId, selectedCompany } = useCompany();
+  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
 
   // Get company chart
   const {
@@ -64,7 +48,7 @@ export default function CompanyChartPage() {
     queryFn: async () => {
       if (!selectedCompanyId) return [];
       const response = await api.get(`/companies/${selectedCompanyId}/chart`);
-      return response.data as CompanyAccount[];
+      return (response as any).data as CompanyAccount[];
     },
     enabled: !!selectedCompanyId,
   });
@@ -75,7 +59,7 @@ export default function CompanyChartPage() {
     queryFn: async () => {
       if (!selectedCompanyId) return null;
       const response = await api.get(`/companies/${selectedCompanyId}/chart/stats`);
-      return response.data as CompanyChartStats;
+      return (response as any).data as CompanyChartStats;
     },
     enabled: !!selectedCompanyId,
   });
@@ -99,19 +83,19 @@ export default function CompanyChartPage() {
     }
 
     try {
-      await api.post(`/companies/${selectedCompanyId}/chart/reset`);
+      await api.post(`/companies/${selectedCompanyId}/chart/reset`, {});
       refetchAccounts();
     } catch (error) {
       console.error('Failed to reset chart:', error);
     }
   };
 
-  if (!companies || companies.length === 0) {
+  if (!selectedCompanyId) {
     return (
       <div className="p-6">
         <Alert>
           <AlertDescription>
-            No companies found. Please create a company first.
+            No company selected. Please select a company from the dropdown above.
           </AlertDescription>
         </Alert>
       </div>
@@ -152,27 +136,7 @@ export default function CompanyChartPage() {
         </Alert>
       )}
 
-      {/* Company Selector */}
-      {companies && companies.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Select Company</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <select
-              className="w-full p-2 border rounded"
-              value={selectedCompanyId || ''}
-              onChange={(e) => setSelectedCompanyId(e.target.value)}
-            >
-              {companies.map((company: any) => (
-                <option key={company.id} value={company.id}>
-                  {company.name} ({company.ucid})
-                </option>
-              ))}
-            </select>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Stats */}
       {stats && (
@@ -267,11 +231,10 @@ export default function CompanyChartPage() {
                         <td className="p-3">{account.description}</td>
                         <td className="p-3">
                           <span
-                            className={`px-2 py-1 rounded text-xs font-semibold ${
-                              account.type === 'H'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
+                            className={`px-2 py-1 rounded text-xs font-semibold ${account.type === 'H'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                              }`}
                           >
                             {account.type === 'H' ? 'Header' : 'Detail'}
                           </span>

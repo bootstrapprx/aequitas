@@ -1176,7 +1176,7 @@ def setup_fiscal_periods(
             fiscal_period = FiscalPeriod(
                 id=uuid4(),
                 company_id=company_id,
-                name=period_data.name,
+                period_number=period_data.name,  # Use name as period_number
                 start_date=period_data.start_date,
                 end_date=period_data.end_date,
                 period_type=period_type_enum,

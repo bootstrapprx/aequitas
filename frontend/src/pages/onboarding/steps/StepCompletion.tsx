@@ -48,7 +48,7 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-4xl font-bold text-gray-900 mb-4 embossed-gold"
+          className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4 embossed-gold"
         >
           Accounting Is Ready!
         </motion.h1>
@@ -57,9 +57,9 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="text-lg text-gray-600 max-w-2xl mx-auto"
+          className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
         >
-          Your company, <strong>{status?.company_name}</strong>, is now ready to record
+          Your company, <strong className="text-gray-900 dark:text-gray-100">{status?.company_name}</strong>, is now ready to record
           transactions and generate financial reports.
         </motion.p>
       </div>
@@ -72,8 +72,8 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
               <AtheneumCardContent>
                 <div className="text-center py-4">
                   <FileText className="h-8 w-8 text-emerald-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-emerald-800">Ready</p>
-                  <p className="text-sm text-gray-600">Chart of Accounts</p>
+                  <p className="text-2xl font-bold text-emerald-800">{status?.total_accounts || 0}</p>
+                  <p className="text-sm text-gray-600">Active Accounts</p>
                 </div>
               </AtheneumCardContent>
             </AtheneumCard>
@@ -82,7 +82,7 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
               <AtheneumCardContent>
                 <div className="text-center py-4">
                   <Scale className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-                  <p className="text-2xl font-bold text-blue-800">Active</p>
+                  <p className="text-2xl font-bold text-blue-800">{status?.open_periods || 0} Open</p>
                   <p className="text-sm text-gray-600">Fiscal Periods</p>
                 </div>
               </AtheneumCardContent>
@@ -92,7 +92,7 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
               <AtheneumCardContent>
                 <div className="text-center py-4">
                   <WaxSealBadge type="approved" size="lg" />
-                  <p className="text-2xl font-bold text-purple-800 mt-2">Compliant</p>
+                  <p className="text-2xl font-bold text-purple-800 mt-2">Kernel 2025.2</p>
                   <p className="text-sm text-gray-600">GAAP Standards</p>
                 </div>
               </AtheneumCardContent>
@@ -110,7 +110,7 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
         <AtheneumCard>
           <AtheneumCardContent>
             <div className="py-6 space-y-6">
-              <h3 className="text-xl font-bold text-gray-900 text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-6">
                 What would you like to do next?
               </h3>
 
@@ -120,13 +120,13 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
                   variant="outline"
                   size="lg"
                   className="h-auto py-6 flex flex-col items-start hover:border-emerald-500 hover:shadow-gold transition-all"
-                  onClick={() => navigate('/accountancy/journal')}
+                  onClick={() => window.location.href = '/accountancy/journal'}
                 >
                   <div className="flex items-center space-x-3 mb-2">
                     <FileText className="h-6 w-6 text-emerald-600" />
                     <span className="font-bold text-lg">Create First Journal Entry</span>
                   </div>
-                  <p className="text-sm text-gray-600 text-left">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 text-left">
                     Start recording transactions in the Scribe's Chamber
                   </p>
                   <ArrowRight className="h-4 w-4 ml-auto mt-2 text-emerald-600" />
@@ -137,13 +137,13 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
                   variant="outline"
                   size="lg"
                   className="h-auto py-6 flex flex-col items-start hover:border-blue-500 hover:shadow-gold transition-all"
-                  onClick={() => navigate('/accountancy/trial-balance')}
+                  onClick={() => window.location.href = '/accountancy/trial-balance'}
                 >
                   <div className="flex items-center space-x-3 mb-2">
                     <Scale className="h-6 w-6 text-blue-600" />
                     <span className="font-bold text-lg">View Trial Balance</span>
                   </div>
-                  <p className="text-sm text-gray-600 text-left">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 text-left">
                     Check the balance of your accounts in the Hall of Balance
                   </p>
                   <ArrowRight className="h-4 w-4 ml-auto mt-2 text-blue-600" />
@@ -154,13 +154,13 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
                   variant="outline"
                   size="lg"
                   className="h-auto py-6 flex flex-col items-start hover:border-purple-500 hover:shadow-gold transition-all"
-                  onClick={() => navigate('/admin/users')}
+                  onClick={() => window.location.href = '/admin/users'}
                 >
                   <div className="flex items-center space-x-3 mb-2">
                     <Users className="h-6 w-6 text-purple-600" />
                     <span className="font-bold text-lg">Invite Team Members</span>
                   </div>
-                  <p className="text-sm text-gray-600 text-left">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 text-left">
                     Add users and assign permissions to your accounting team
                   </p>
                   <ArrowRight className="h-4 w-4 ml-auto mt-2 text-purple-600" />
@@ -170,7 +170,7 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
                 <Button
                   size="lg"
                   className="h-auto py-6 flex flex-col items-start shadow-gold bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => navigate('/dashboard')}
+                  onClick={() => window.location.href = '/dashboard'}
                 >
                   <div className="flex items-center space-x-3 mb-2">
                     <span className="font-bold text-lg">Go to Dashboard</span>
