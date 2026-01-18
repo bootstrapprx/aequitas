@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.base import Base
-from app.db.models.enums import OnboardingStatus
+from app.db.models.enums import OnboardingStatus, KernelLayer
 
 class SubscriptionType(str, enum.Enum):
     NATIVE = "native"
@@ -56,11 +56,15 @@ class Company(Base):
         nullable=False,
         index=True
     )
-    onboarding_current_step = Column(Integer, default=0, nullable=False)  # 0-6
+    onboarding_current_step = Column(Integer, default=0, nullable=False)  # 0-8
     onboarding_started_at = Column(DateTime(timezone=True), nullable=True)
     onboarding_completed_at = Column(DateTime(timezone=True), nullable=True)
     onboarding_session_lock = Column(UUID(as_uuid=True), nullable=True)  # Session lock UUID
     onboarding_session_locked_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Kernel binding
+    kernel_version = Column(String(10), nullable=True)
+    kernel_layer = Column(Enum(KernelLayer), nullable=True)
     
     modules = relationship("CompanyModule", back_populates="company", cascade="all, delete-orphan")
     accounts = relationship("CompanyAccount", back_populates="company", cascade="all, delete-orphan")

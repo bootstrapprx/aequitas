@@ -26,7 +26,7 @@ interface OnboardingStatus {
   onboarding_status: 'DRAFT' | 'TEMPLATE_SELECTED' | 'CHART_READY' | 'CHART_FINALIZED' | 'ACTIVE';
   current_step: number;
   can_resume: boolean;
-  step_6_activated: boolean;
+  step_8_activated: boolean;
 }
 
 const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ companyId }) => {
@@ -45,12 +45,13 @@ const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ companyId }) => {
   });
 
   // Don't show if completed or dismissed
-  if (!status || status.step_6_activated || dismissed) {
+  if (!status || status.step_8_activated || dismissed) {
     return null;
   }
 
   // Calculate progress
-  const progress = ((status.current_step + 1) / 8) * 100;
+  const totalSteps = 9;
+  const progress = ((status.current_step + 1) / totalSteps) * 100;
 
   const handleResume = () => {
     navigate(`/onboarding/${companyId}`);
@@ -106,7 +107,7 @@ const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ companyId }) => {
               <div className="mb-3">
                 <Progress value={progress} className="h-2 bg-amber-200" />
                 <p className="text-xs text-amber-700 mt-1">
-                  Step {status.current_step + 1} of 8
+                  Step {status.current_step + 1} of {totalSteps}
                 </p>
               </div>
 
@@ -121,7 +122,7 @@ const OnboardingBanner: React.FC<OnboardingBannerProps> = ({ companyId }) => {
                 </Button>
 
                 <span className="text-xs text-amber-700">
-                  Takes ~{Math.ceil((8 - status.current_step) * 2)} minutes to complete
+                  Takes ~{Math.ceil((totalSteps - status.current_step) * 2)} minutes to complete
                 </span>
               </div>
             </div>

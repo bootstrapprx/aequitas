@@ -52,8 +52,9 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
   const [fiscalYearStart, setFiscalYearStart] = useState('01-01');
+  const [periodCount, setPeriodCount] = useState(12);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FiscalPeriodForm>({
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FiscalPeriodForm>({
     defaultValues: {
       fiscal_year_start: '01-01',
       period_count: 12
@@ -65,21 +66,23 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
     mutationFn: async (data: FiscalPeriodForm) => {
       // Generate periods based on fiscal year start
       const currentYear = new Date().getFullYear();
+      const monthsPerPeriod = data.period_count === 4 ? 3 : data.period_count === 1 ? 12 : 1;
+      const periodType = data.period_count === 4 ? 'QUARTER' : data.period_count === 1 ? 'YEAR' : 'MONTH';
       const periods = [];
 
       for (let i = 0; i < data.period_count; i++) {
         const startMonth = parseInt(data.fiscal_year_start.split('-')[0]);
-        const monthIndex = (startMonth - 1 + i) % 12;
-        const year = currentYear + Math.floor((startMonth - 1 + i) / 12);
+        const monthIndex = (startMonth - 1 + i * monthsPerPeriod) % 12;
+        const year = currentYear + Math.floor((startMonth - 1 + i * monthsPerPeriod) / 12);
 
         const startDate = new Date(year, monthIndex, 1);
-        const endDate = new Date(year, monthIndex + 1, 0);
+        const endDate = new Date(year, monthIndex + monthsPerPeriod, 0);
 
         periods.push({
           name: `Period ${i + 1} - ${startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
-          period_type: 'MONTH',
+          period_type: periodType,
           is_open: i === 0 // First period is open
         });
       }
@@ -168,7 +171,14 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
                 <Label htmlFor="period_count" className="required">
                   Number of Periods
                 </Label>
-                <Select defaultValue="12">
+                <Select
+                  value={periodCount.toString()}
+                  onValueChange={(value) => {
+                    const parsed = parseInt(value, 10);
+                    setPeriodCount(parsed);
+                    setValue('period_count', parsed);
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -178,7 +188,7 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
                     <SelectItem value="1">1 Annual Period</SelectItem>
                   </SelectContent>
                 </Select>
-                <input type="hidden" {...register('period_count')} value={12} />
+                <input type="hidden" {...register('period_count')} value={periodCount} />
               </div>
             </div>
 

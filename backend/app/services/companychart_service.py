@@ -22,6 +22,7 @@ from app.schemas.company_account import CompanyAccountCreate, CompanyAccountUpda
 from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 from app.core.exceptions import ValidationError, ErrorCode
+from app.core.kernel import L0_KERNEL_CODES
 from app.services.validators.template_account_validator import TemplateAccountValidator
 from app.services.audit_service import AuditService
 
@@ -219,6 +220,17 @@ class CompanyChartService:
         Raises:
             ValidationError: If deletion is not allowed
         """
+        if account.code in L0_KERNEL_CODES:
+            raise ValidationError(
+                message=(
+                    f"Cannot delete kernel account.\n"
+                    f"Account: {account.code} ({account.description})\n"
+                    f"L0 kernel accounts are protected and cannot be removed."
+                ),
+                code=ErrorCode.KERNEL_PROTECTED_ACCOUNT,
+                details={"account_code": account.code}
+            )
+
         # Check if locked
         if account.is_locked:
             raise ValidationError(

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.template import Template, TemplateValidationResult, ChartTemplateSummary
 from app.services.template_service import TemplateService
-from app.db.models.chart_template import ChartTemplate
+from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount
 
 router = APIRouter()
 
@@ -16,18 +16,23 @@ def list_available_templates(db: Session = Depends(get_db)):
     Lists all predefined Chart of Accounts templates available on the server.
     """
     templates = db.query(ChartTemplate).filter(ChartTemplate.is_active == True).all()
-    return [
-        ChartTemplateSummary(
-            id=template.id,
-            name=template.name,
-            jurisdiction=template.jurisdiction,
-            version=template.version,
-            description=template.description,
-            is_active=template.is_active,
-            account_count=len(template.accounts) if template.accounts is not None else 0
+    response: List[ChartTemplateSummary] = []
+    for template in templates:
+        account_count = db.query(ChartTemplateAccount).filter(
+            ChartTemplateAccount.template_id == template.id
+        ).count()
+        response.append(
+            ChartTemplateSummary(
+                id=template.id,
+                name=template.name,
+                jurisdiction=template.jurisdiction,
+                version=template.version,
+                description=template.description,
+                is_active=template.is_active and account_count > 0,
+                account_count=account_count
+            )
         )
-        for template in templates
-    ]
+    return response
 
 @router.get("/{template_name}", response_model=Dict[str, Any], summary="Get Template Preview")
 def get_template_preview(template_name: str, db: Session = Depends(get_db)):

@@ -17,6 +17,8 @@ from app.db.session import get_db
 from app.services.kernel_remediation_service import KernelRemediationService, log_remediation_event
 from app.api.dependencies import get_current_user
 from app.db.models.user import User
+from app.core.access_control import require_company_access
+from app.core.security import check_superuser
 
 
 router = APIRouter()
@@ -31,6 +33,8 @@ class RemediationStatusResponse(BaseModel):
     is_compliant: bool
     missing_account_count: int
     missing_accounts: List[str]
+    mismatched_account_count: int
+    mismatched_accounts: Dict[str, Dict[str, str]]
     has_posted_transactions: bool
     remediation_recommended: bool
 
@@ -61,18 +65,25 @@ def get_kernel_status(
     """
     service = KernelRemediationService(db)
 
-    # Verify user owns company (add authorization check here)
-    # if not user_owns_company(current_user.id, company_id, db):
-    #     raise HTTPException(status_code=403, detail="Not authorized")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
 
     is_compliant = service.is_company_kernel_compliant(company_id)
     missing = service.get_missing_kernel_accounts(company_id)
+    mismatches = service.get_kernel_mismatches(company_id)
     has_transactions = service.has_posted_transactions(company_id)
 
     return RemediationStatusResponse(
         is_compliant=is_compliant,
         missing_account_count=len(missing),
         missing_accounts=missing,
+        mismatched_account_count=len(mismatches),
+        mismatched_accounts=mismatches,
         has_posted_transactions=has_transactions,
         remediation_recommended=not is_compliant
     )
@@ -102,9 +113,13 @@ def remediate_company_chart(
     """
     service = KernelRemediationService(db)
 
-    # Verify user owns company (add authorization check here)
-    # if not user_owns_company(current_user.id, company_id, db):
-    #     raise HTTPException(status_code=403, detail="Not authorized")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
 
     # Check if remediation needed
     if service.is_company_kernel_compliant(company_id):
@@ -159,9 +174,7 @@ def remediate_all_companies_admin(
     Returns:
         Summary statistics
     """
-    # Verify user is admin (add authorization check here)
-    # if not current_user.is_admin:
-    #     raise HTTPException(status_code=403, detail="Admin access required")
+    check_superuser(current_user)
 
     service = KernelRemediationService(db)
 

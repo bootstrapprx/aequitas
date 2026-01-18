@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import Any
@@ -6,7 +6,7 @@ from typing import Any
 from app.api import deps
 from app.services.dexter.engine import dexter_engine
 from app.services.dexter.models import OnboardingPreprocessRequest, OnboardingPreprocessResponse
-from app.db.models.company import Company
+from app.core.access_control import require_company_access
 
 router = APIRouter()
 
@@ -22,15 +22,13 @@ async def preprocess_onboarding_step(
     CANONICAL REF: DEXTER_CANON.md §7.1
     """
     # Verify company access
-    company = db.query(Company).filter(Company.id == company_id).first()
-    if not company:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Company not found",
-        )
-    
-    # Check if user is associated with company (simplified check for MVP)
-    # real check would be in deps or explicit query on UserCompany
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     
     # Process
     try:

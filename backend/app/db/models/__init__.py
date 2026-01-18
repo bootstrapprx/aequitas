@@ -63,6 +63,7 @@ from .enums import (
     PeriodStatus,
     PeriodType,
     MasterAccountType,
+    KernelLayer,
 )
 
 __all__ = [
@@ -118,4 +119,5 @@ __all__ = [
     "PeriodStatus",
     "PeriodType",
     "MasterAccountType",
+    "KernelLayer",
 ]

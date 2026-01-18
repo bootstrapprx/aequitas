@@ -61,6 +61,17 @@ interface OnboardingStatus {
   locked_by_session: string | null;
   started_at: string | null;
   completed_at: string | null;
+  trade_name?: string | null;
+  country?: string | null;
+  currency?: string | null;
+  timezone?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  legal_nature?: string | null;
+  economic_activity?: string | null;
+  is_standalone?: boolean | null;
+  kernel_version?: string | null;
+  kernel_layer?: 'L0' | 'L1' | 'L2' | null;
   step_0_welcome_seen: boolean;
   step_1_company_details_complete: boolean;
   step_2_company_type_complete: boolean;
@@ -306,7 +317,7 @@ const OnboardingWizard: React.FC = () => {
               </div>
 
               <div className="bg-card text-card-foreground border border-border rounded-lg shadow-xl p-8 mb-6 transition-all duration-300">
-                {currentStep === 0 && <Step0Welcome onNext={handleNext} status={status} />}
+                {currentStep === 0 && <Step0Welcome companyId={companyId!} onNext={handleNext} status={status} />}
                 {currentStep === 1 && (
                   <Step1CompanyDetails
                     companyId={companyId!}

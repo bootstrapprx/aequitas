@@ -11,7 +11,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
-from app.db.models.enums import OnboardingStatus
+from app.db.models.enums import OnboardingStatus, KernelLayer
 
 
 # ============================================================================
@@ -24,12 +24,25 @@ class OnboardingStatusResponse(BaseModel):
     company_id: UUID
     company_name: str
     onboarding_status: OnboardingStatus
-    current_step: int = Field(..., ge=0, le=6)
+    current_step: int = Field(..., ge=0, le=8)
     can_resume: bool
     is_locked: bool  # Multi-session lock
     locked_by_session: Optional[UUID] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+
+    # Company details snapshot for resume
+    trade_name: Optional[str] = None
+    country: Optional[str] = None
+    currency: Optional[str] = None
+    timezone: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    legal_nature: Optional[str] = None
+    economic_activity: Optional[str] = None
+    is_standalone: Optional[bool] = None
+    kernel_version: Optional[str] = None
+    kernel_layer: Optional[KernelLayer] = None
 
     # Step completion flags
     step_0_welcome_seen: bool = False
@@ -390,11 +403,17 @@ __all__ = [
     "OnboardingStatusResponse",
     "CompanyDetailsRequest",
     "CompanyDetailsResponse",
+    "CompanyTypeRequest",
+    "CompanyTypeResponse",
     "TemplateSelectionRequest",
     "TemplateSelectionResponse",
     "ChartMaterializationRequest",
     "ChartMaterializationProgress",
     "ChartMaterializationResponse",
+    "ModuleSelectionRequest",
+    "ModuleSelectionResponse",
+    "OrganizationScopeRequest",
+    "OrganizationScopeResponse",
     "AccountCustomization",
     "CustomAccountCreate",
     "AccountReviewRequest",

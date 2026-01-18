@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel, EmailStr, field_validator
 from app.db.models.company import SubscriptionType
+from app.db.models.enums import OnboardingStatus, KernelLayer
 
 def _normalize_optional_email(value):
     """Convert empty/whitespace-only email strings to None to satisfy EmailStr."""
@@ -62,6 +63,18 @@ class CompanyResponse(CompanyBase):
     id: UUID
     ucid: str
     subscription_type: SubscriptionType
+    trade_name: Optional[str] = None
+    timezone: Optional[str] = None
+    currency: Optional[str] = None
+    legal_nature: Optional[str] = None
+    economic_activity: Optional[str] = None
+    is_standalone: Optional[bool] = None
+    onboarding_status: OnboardingStatus
+    onboarding_current_step: int
+    onboarding_started_at: Optional[datetime] = None
+    onboarding_completed_at: Optional[datetime] = None
+    kernel_version: Optional[str] = None
+    kernel_layer: Optional[KernelLayer] = None
     
     class Config:
         from_attributes = True

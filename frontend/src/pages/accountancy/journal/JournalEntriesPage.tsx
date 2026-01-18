@@ -150,7 +150,7 @@ const JournalEntriesPage = () => {
         }
       />
 
-      {selectedCompany && (selectedCompany.onboarding_status === 'ACTIVE' || selectedCompany.is_active) && (
+      {selectedCompany && selectedCompany.onboarding_status === 'ACTIVE' && (
         <Card>
           <CardContent className="flex items-start gap-3 py-4">
             <Feather className="h-5 w-5 text-muted-foreground mt-0.5" />

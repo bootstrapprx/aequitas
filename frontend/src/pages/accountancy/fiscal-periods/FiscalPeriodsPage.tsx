@@ -154,7 +154,7 @@ const FiscalPeriodsPage = () => {
   const getTypeDisplay = (type: PeriodType) => {
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
-  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE' || selectedCompany?.is_active;
+  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
 
   // Empty state when no company is selected
   if (!selectedCompanyId) {

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Step5Props {
     companyId: string;
@@ -18,6 +19,7 @@ interface Step5Props {
 
 const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBack, status }) => {
     const [isStandalone, setIsStandalone] = useState<boolean>(true);
+    const [apiError, setApiError] = useState<string | null>(null);
 
     // Hydrate logic
     useEffect(() => {
@@ -47,12 +49,12 @@ const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBac
             });
         },
         onSuccess: () => {
+            setApiError(null);
             onNext();
         },
         onError: (error) => {
-            console.log('Error saving scope or materializing chart', error);
-            // Proceed if chart already exists (idempotency fallback)
-            // But for now, let it fail so user sees error.
+            const errorMessage = (error as any)?.response?.data?.detail || 'Failed to save scope or materialize chart.';
+            setApiError(errorMessage);
         }
     });
 
@@ -63,10 +65,16 @@ const Step5OrganizationScope: React.FC<Step5Props> = ({ companyId, onNext, onBac
                 <p className="text-muted-foreground">
                     Is this a standalone entity or part of a corporate group?
                 </p>
-                <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2">
-                    This step defines how your accounting structure is organized. You are not posting transactions yet.
-                </div>
+            <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2">
+                This step defines how your accounting structure is organized. You are not posting transactions yet.
             </div>
+        </div>
+
+        {apiError && (
+            <Alert variant="destructive">
+                <AlertDescription>{apiError}</AlertDescription>
+            </Alert>
+        )}
 
             <div className="grid gap-6 max-w-2xl mx-auto">
                 <div

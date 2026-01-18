@@ -8,7 +8,7 @@ This service implements the company onboarding wizard state machine
 with atomic operations, validation, and state transitions.
 
 CANONICAL STATE MACHINE:
-NOT_STARTED → MATERIALIZING → ACTIVE
+DRAFT -> TEMPLATE_SELECTED -> CHART_READY -> CHART_FINALIZED -> ACTIVE
 
 CRITICAL RULES:
 - State transitions are irreversible
@@ -21,20 +21,22 @@ CRITICAL RULES:
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import and_
 
 from app.db.models.company import Company
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount, CompanyTemplateUsage
 from app.db.models.company_account import CompanyAccount
 from app.db.models.company_module import CompanyModule
 from app.db.models.fiscal_period import FiscalPeriod
-from app.db.models.enums import OnboardingStatus, PeriodStatus, AccountType, NormalBalance
+from app.db.models.enums import OnboardingStatus, PeriodStatus, AccountType, NormalBalance, KernelLayer
+from app.core.kernel import KERNEL_VERSION, L0_KERNEL_CODES, map_category_to_account_type, map_normal_balance
 from app.schemas.onboarding import (
     OnboardingStatusResponse,
     CompanyDetailsRequest,
     CompanyDetailsResponse,
+    CompanyTypeRequest,
+    CompanyTypeResponse,
     TemplateSelectionRequest,
     TemplateSelectionResponse,
     ChartMaterializationResponse,
@@ -56,6 +58,17 @@ from app.core.exceptions import ValidationError
 # ============================================================================
 
 SESSION_LOCK_TIMEOUT_MINUTES = 30
+
+# Wizard step indices (next step to display)
+STEP_WELCOME = 0
+STEP_COMPANY_DETAILS = 1
+STEP_COMPANY_TYPE = 2
+STEP_TEMPLATE_SELECTION = 3
+STEP_MODULES = 4
+STEP_SCOPE = 5
+STEP_ACCOUNT_REVIEW = 6
+STEP_FISCAL_PERIODS = 7
+STEP_ACTIVATION = 8
 
 
 # ============================================================================
@@ -139,6 +152,8 @@ def reset_onboarding(db: Session, company_id: UUID, current_user) -> Dict[str, A
         company.onboarding_completed_at = None
         company.onboarding_session_lock = None
         company.onboarding_session_locked_at = None
+        company.kernel_version = None
+        company.kernel_layer = None
 
         # Commit transaction
         db.commit()
@@ -207,6 +222,32 @@ def release_session_lock(db: Session, company_id: UUID, session_id: UUID) -> Non
 
 
 # ============================================================================
+# Start Onboarding
+# ============================================================================
+
+def start_onboarding(db: Session, company_id: UUID) -> OnboardingStatusResponse:
+    """
+    Mark onboarding as started (welcome acknowledged).
+
+    Idempotent: safe to call multiple times.
+    """
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise ValidationError("Company not found")
+
+    if company.onboarding_status == OnboardingStatus.ACTIVE:
+        return get_onboarding_status(db, company_id)
+
+    if not company.onboarding_started_at:
+        company.onboarding_started_at = datetime.utcnow()
+
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_COMPANY_DETAILS)
+    db.commit()
+
+    return get_onboarding_status(db, company_id)
+
+
+# ============================================================================
 # Onboarding Status & Progress
 # ============================================================================
 
@@ -229,17 +270,55 @@ def get_onboarding_status(db: Session, company_id: UUID) -> OnboardingStatusResp
             is_locked = True
             locked_by_session = company.onboarding_session_lock
 
-    # Determine step completion flags based on current step and status
-    step_1_complete = bool(company.country and company.currency and company.timezone) and company.onboarding_current_step >= 1
-    step_2_complete = bool(company.legal_nature and company.economic_activity) and company.onboarding_current_step >= 2
-    step_3_chart_materialized = company.onboarding_current_step >= 3
-    step_4_modules_complete = company.onboarding_current_step >= 4
-    step_5_scope_complete = company.onboarding_current_step >= 5
-    step_6_chart_finalized = company.onboarding_status == OnboardingStatus.CHART_FINALIZED or company.onboarding_current_step >= 6
-    step_7_fiscal_periods_complete = db.query(FiscalPeriod).filter(
+    # Determine step completion flags based on persisted truth
+    template_usage = db.query(CompanyTemplateUsage).filter(
+        CompanyTemplateUsage.company_id == company_id
+    ).first()
+    modules_selected = db.query(CompanyModule).filter(
+        CompanyModule.company_id == company_id,
+        CompanyModule.is_active == True
+    ).count() > 0
+    fiscal_periods_count = db.query(FiscalPeriod).filter(
         FiscalPeriod.company_id == company_id
-    ).count() > 0 and company.onboarding_current_step >= 7
+    ).count()
+
+    step_1_complete = bool(company.country and company.currency and company.timezone)
+    step_2_complete = bool(company.legal_nature and company.economic_activity)
+    step_3_template_selected = template_usage is not None
+    step_4_modules_complete = modules_selected
+    step_5_scope_complete = company.onboarding_current_step >= STEP_ACCOUNT_REVIEW
+    step_6_account_review_complete = company.onboarding_status in [
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]
+    step_7_fiscal_periods_complete = fiscal_periods_count > 0
     step_8_activated = company.onboarding_status == OnboardingStatus.ACTIVE
+
+    derived_step = company.onboarding_current_step
+    if company.onboarding_started_at or company.onboarding_current_step > 0:
+        derived_step = max(derived_step, STEP_COMPANY_DETAILS)
+    if step_1_complete:
+        derived_step = max(derived_step, STEP_COMPANY_TYPE)
+    if step_2_complete:
+        derived_step = max(derived_step, STEP_TEMPLATE_SELECTION)
+    if step_3_template_selected:
+        derived_step = max(derived_step, STEP_MODULES)
+    if step_4_modules_complete:
+        derived_step = max(derived_step, STEP_SCOPE)
+    if company.onboarding_status in [
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
+        derived_step = max(derived_step, STEP_ACCOUNT_REVIEW)
+    if step_6_account_review_complete:
+        derived_step = max(derived_step, STEP_FISCAL_PERIODS)
+    if step_7_fiscal_periods_complete:
+        derived_step = max(derived_step, STEP_ACTIVATION)
+
+    if derived_step > company.onboarding_current_step:
+        company.onboarding_current_step = derived_step
+        db.commit()
 
     return OnboardingStatusResponse(
         company_id=company.id,
@@ -251,13 +330,24 @@ def get_onboarding_status(db: Session, company_id: UUID) -> OnboardingStatusResp
         locked_by_session=locked_by_session,
         started_at=company.onboarding_started_at,
         completed_at=company.onboarding_completed_at,
-        step_0_welcome_seen=company.onboarding_current_step > 0,
+        trade_name=company.trade_name,
+        country=company.country,
+        currency=company.currency,
+        timezone=company.timezone,
+        email=company.email,
+        phone=company.phone,
+        legal_nature=company.legal_nature,
+        economic_activity=company.economic_activity,
+        is_standalone=company.is_standalone,
+        kernel_version=company.kernel_version,
+        kernel_layer=company.kernel_layer,
+        step_0_welcome_seen=company.onboarding_started_at is not None or company.onboarding_current_step > 0,
         step_1_company_details_complete=step_1_complete,
         step_2_company_type_complete=step_2_complete,
-        step_3_template_selected=step_3_chart_materialized, # 2b
+        step_3_template_selected=step_3_template_selected,
         step_4_modules_complete=step_4_modules_complete,
         step_5_scope_complete=step_5_scope_complete,
-        step_6_account_review_complete=step_6_chart_finalized,
+        step_6_account_review_complete=step_6_account_review_complete,
         step_7_fiscal_periods_complete=step_7_fiscal_periods_complete,
         step_8_activated=step_8_activated,
     )
@@ -270,7 +360,8 @@ def get_onboarding_status(db: Session, company_id: UUID) -> OnboardingStatusResp
 def update_company_details(
     db: Session,
     company_id: UUID,
-    data: CompanyDetailsRequest
+    data: CompanyDetailsRequest,
+    current_user
 ) -> CompanyDetailsResponse:
     """
     Step 1: Update company details.
@@ -291,8 +382,13 @@ def update_company_details(
             "If you need to change these details, please contact support."
         )
 
-    # Currency/country lock after template selection (step 2+)
-    if company.onboarding_current_step >= 2:
+    # Currency/country lock after template selection
+    if company.onboarding_status in [
+        OnboardingStatus.TEMPLATE_SELECTED,
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
         if company.currency and company.currency != data.currency:
             raise ValidationError(
                 "Currency cannot be changed after template selection. "
@@ -306,21 +402,35 @@ def update_company_details(
 
     # Update fields
     company.name = data.name
-    company.trade_name = data.trade_name
+    if data.trade_name is not None:
+        company.trade_name = data.trade_name
     company.country = data.country
     company.currency = data.currency
     company.timezone = data.timezone
-    company.email = data.email
-    company.phone = data.phone
-    company.legal_nature = data.legal_nature
-    company.economic_activity = data.economic_activity
+    email_value = data.email.strip() if isinstance(data.email, str) else data.email
+    if email_value == "":
+        email_value = None
+    if email_value is not None:
+        company.email = email_value
+    elif not company.email and getattr(current_user, "email", None):
+        company.email = current_user.email
+
+    phone_value = data.phone.strip() if isinstance(data.phone, str) else data.phone
+    if phone_value == "":
+        phone_value = None
+    if phone_value is not None:
+        company.phone = phone_value
+    if data.legal_nature is not None:
+        company.legal_nature = data.legal_nature
+    if data.economic_activity is not None:
+        company.economic_activity = data.economic_activity
 
     # Update onboarding state
     if not company.onboarding_started_at:
         company.onboarding_started_at = datetime.utcnow()
 
     # Mark Step 1 complete
-    company.onboarding_current_step = max(company.onboarding_current_step, 1)
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_COMPANY_TYPE)
 
     db.commit()
     db.refresh(company)
@@ -330,7 +440,7 @@ def update_company_details(
         message="Company details saved successfully.",
         company_id=company.id,
         current_step=company.onboarding_current_step,
-        next_step=2
+        next_step=STEP_COMPANY_TYPE
     )
 
 
@@ -341,27 +451,37 @@ def update_company_details(
 def update_company_type(
     db: Session,
     company_id: UUID,
-    data: Any # Typed as CompanyTypeRequest
-) -> Any: # Typed as CompanyTypeResponse
+    data: CompanyTypeRequest
+) -> CompanyTypeResponse:
     """Step 2: Set Legal Nature and Activity."""
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise ValidationError("Company not found")
-        
+
+    if company.onboarding_status == OnboardingStatus.ACTIVE:
+        raise ValidationError(
+            "Company type cannot be changed after activation."
+        )
+
+    if not all([company.country, company.currency, company.timezone]):
+        raise ValidationError(
+            "Please complete company details before setting company type."
+        )
+
     company.legal_nature = data.legal_nature
     company.economic_activity = data.economic_activity
     
     # Mark Step 2 complete -> Step 3 (Template)
-    company.onboarding_current_step = max(company.onboarding_current_step, 3)
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_TEMPLATE_SELECTION)
     
     db.commit()
     
-    return {
+    return CompanyTypeResponse(
         "success": True, 
         "message": "Company type saved.",
         "current_step": company.onboarding_current_step,
-        "next_step": 3
-    }
+        "next_step": STEP_TEMPLATE_SELECTION
+    )
 
 
 # ============================================================================
@@ -372,7 +492,8 @@ def update_company_type(
 def select_template(
     db: Session,
     company_id: UUID,
-    data: TemplateSelectionRequest
+    data: TemplateSelectionRequest,
+    current_user=None
 ) -> TemplateSelectionResponse:
     """
     Step 2: Select accounting template.
@@ -387,18 +508,27 @@ def select_template(
         raise ValidationError("Company not found")
 
     # State validation - can only select template if chart not yet materialized
-    if company.onboarding_current_step >= 4:
+    if company.onboarding_status in [
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
         raise ValidationError(
             "Template has already been selected and chart materialized. "
             "The accounting structure is now locked to maintain data integrity. "
             "To change template, please re-run onboarding."
         )
 
-    # Validate company details are complete
+    # Validate company details and type are complete
     if not all([company.country, company.currency, company.timezone]):
         raise ValidationError(
             "Please complete company details before selecting a template. "
             "Go back to Step 1 and fill in all required fields."
+        )
+    if not all([company.legal_nature, company.economic_activity]):
+        raise ValidationError(
+            "Please complete company type before selecting a template. "
+            "Go back to Step 2 and fill in all required fields."
         )
 
     # Validate template exists and is active
@@ -412,24 +542,75 @@ def select_template(
             "Please choose a different template or contact support."
         )
 
-    # Check for existing template usage (shouldn't happen, but safety check)
+    # Ensure template has accounts
+    template_account_count = db.query(ChartTemplateAccount).filter(
+        ChartTemplateAccount.template_id == template.id
+    ).count()
+    if template_account_count == 0:
+        raise ValidationError(
+            "The selected template has no accounts defined. "
+            "Please choose a different template or contact support."
+        )
+
+    # Validate template includes all L0 kernel codes
+    template_codes = {
+        row.code for row in db.query(ChartTemplateAccount.code).filter(
+            ChartTemplateAccount.template_id == template.id
+        ).all()
+    }
+    missing_l0 = L0_KERNEL_CODES - template_codes
+    if missing_l0:
+        raise ValidationError(
+            f"Template missing mandatory L0 kernel accounts: {sorted(missing_l0)}"
+        )
+
+    if not template.version or not template.version.startswith(KERNEL_VERSION):
+        raise ValidationError(
+            f"Template version {template.version} is not compatible with kernel {KERNEL_VERSION}."
+        )
+
+    if template.name == "US GAAP Standard":
+        kernel_layer = KernelLayer.L1
+    elif template.name == "US GAAP Simplified":
+        kernel_layer = KernelLayer.L2
+    else:
+        raise ValidationError(
+            "Template does not declare a supported kernel layer."
+        )
+
+    # Check for existing template usage (idempotent if same)
     existing_usage = db.query(CompanyTemplateUsage).filter(
         CompanyTemplateUsage.company_id == company_id
     ).first()
     if existing_usage:
-        raise ValidationError("Template has already been assigned to this company.")
+        if existing_usage.template_id != template.id:
+            raise ValidationError("Template has already been assigned to this company.")
+    else:
+        # Create template usage record
+        template_usage = CompanyTemplateUsage(
+            company_id=company_id,
+            template_id=data.template_id,
+            assigned_at=datetime.utcnow(),
+            assigned_by=getattr(current_user, "id", None)
+        )
+        db.add(template_usage)
 
-    # Create template usage record
-    template_usage = CompanyTemplateUsage(
-        company_id=company_id,
-        template_id=data.template_id,
-        assigned_at=datetime.utcnow()
-    )
-    db.add(template_usage)
+    # Bind kernel metadata
+    if company.kernel_version and company.kernel_version != KERNEL_VERSION:
+        raise ValidationError(
+            f"Company already bound to kernel {company.kernel_version}. Reset onboarding to change kernels."
+        )
+    if company.kernel_layer and company.kernel_layer != kernel_layer:
+        raise ValidationError(
+            f"Company already bound to kernel layer {company.kernel_layer.value}."
+        )
+
+    company.kernel_version = KERNEL_VERSION
+    company.kernel_layer = kernel_layer
 
     # Update company step (status transitions to TEMPLATE_SELECTED)
     # Advance to Step 4 (Modules)
-    company.onboarding_current_step = max(company.onboarding_current_step, 4)
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_MODULES)
     company.onboarding_status = OnboardingStatus.TEMPLATE_SELECTED
 
     db.commit()
@@ -440,8 +621,8 @@ def select_template(
         message=f"Template '{template.name}' selected successfully. You can now build your chart of accounts.",
         template_id=template.id,
         template_name=template.name,
-        current_step=2,
-        next_step=3
+        current_step=company.onboarding_current_step,
+        next_step=STEP_MODULES
     )
 
 
@@ -470,45 +651,24 @@ def materialize_chart(
     if not company:
         raise ValidationError("Company not found")
 
-    # State validation - must have selected template (Step 3)
-    # Step numbering:
-    # 0=Welcome, 1=Details, 2=Type, 3=Template, 4=Modules, 5=Scope, 6=Review
-    # Template Selection (Step 3) sets next_step=4.
-    if company.onboarding_current_step < 4:
+    if company.onboarding_status not in [
+        OnboardingStatus.TEMPLATE_SELECTED,
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
         raise ValidationError(
             "Please select a template before creating your chart of accounts. "
             "Go back to Step 3 to choose a template."
         )
 
-    # Explicit Check: Verify if accounts actually exist to ensure idempotency.
-    # This safeguards against status desync or retries where DB committed but response failed.
-    existing_accounts_count = db.query(CompanyAccount).filter(
-        CompanyAccount.company_id == company_id
-    ).count()
-
-    if company.onboarding_status in [
-        OnboardingStatus.CHART_READY,
-        OnboardingStatus.CHART_FINALIZED,
-        OnboardingStatus.ACTIVE
-    ] or existing_accounts_count > 0:
-        
-        # State Integrity: If chart exists but status lags, fast-forward status
-        if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED and existing_accounts_count > 0:
-            company.onboarding_status = OnboardingStatus.CHART_READY
-            
-        # Ensure we are at least on Step 6 (Review)
-        company.onboarding_current_step = max(company.onboarding_current_step, 6)
-        db.commit()
-
-        return ChartMaterializationResponse(
-            success=True,
-            message="Chart of accounts already materialized.",
-            accounts_created=0,
-            mandatory_accounts=existing_accounts_count, # Use actual count
-            optional_accounts=0,
-            current_step=company.onboarding_current_step,
-            next_step=6
+    if company.onboarding_current_step < STEP_ACCOUNT_REVIEW:
+        raise ValidationError(
+            "Please complete module selection and organization scope before creating the chart."
         )
+
+    if not company.currency:
+        raise ValidationError("Company currency is required before chart materialization.")
 
     # Get template usage
     template_usage = db.query(CompanyTemplateUsage).filter(
@@ -517,8 +677,10 @@ def materialize_chart(
     if not template_usage:
         raise ValidationError("No template selected. Please go back to Step 2.")
 
-    # Get template accounts
-    template_accounts = db.query(ChartTemplateAccount).filter(
+    # Get template accounts with master account data
+    template_accounts = db.query(ChartTemplateAccount).options(
+        joinedload(ChartTemplateAccount.master_account)
+    ).filter(
         ChartTemplateAccount.template_id == template_usage.template_id
     ).order_by(ChartTemplateAccount.sort_order).all()
 
@@ -536,26 +698,73 @@ def materialize_chart(
                 CompanyModule.is_active == True
             ).all()
         )
+        if not active_modules:
+            raise ValidationError("Please select at least one module before materialization.")
+
+        expected_template_accounts = [
+            ta for ta in template_accounts
+            if not ta.required_module or ta.required_module in active_modules
+        ]
+        if not expected_template_accounts:
+            raise ValidationError("No accounts available for the selected modules.")
 
         # Map template account IDs to new company account IDs
         account_id_map: Dict[UUID, UUID] = {}
         accounts_created = []
 
+        existing_template_ids = {
+            row.template_account_id for row in db.query(CompanyAccount.template_account_id).filter(
+                CompanyAccount.company_id == company_id,
+                CompanyAccount.template_account_id.isnot(None)
+            ).all()
+        }
+        if existing_template_ids:
+            expected_ids = {ta.id for ta in expected_template_accounts}
+            missing_ids = expected_ids - existing_template_ids
+            if missing_ids:
+                raise ValidationError(
+                    "Chart materialization is incomplete. "
+                    "Please reset onboarding before retrying."
+                )
+
+            if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED:
+                company.onboarding_status = OnboardingStatus.CHART_READY
+            company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACCOUNT_REVIEW)
+            db.commit()
+
+            mandatory_count = sum(1 for ta in expected_template_accounts if ta.is_mandatory)
+            optional_count = len(expected_template_accounts) - mandatory_count
+
+            return ChartMaterializationResponse(
+                success=True,
+                message="Chart of accounts already materialized.",
+                accounts_created=0,
+                mandatory_accounts=mandatory_count,
+                optional_accounts=optional_count,
+                current_step=company.onboarding_current_step,
+                next_step=STEP_ACCOUNT_REVIEW
+            )
+
         # First pass: Create all accounts without parent relationships
-        for template_account in template_accounts:
-            # Module Filtering: Skip account if it requires a module that isn't active
-            if template_account.required_module and template_account.required_module not in active_modules:
-                continue
+        for template_account in expected_template_accounts:
+            master_account = template_account.master_account
+            if not master_account:
+                raise ValidationError(
+                    f"Template account {template_account.code} is missing master account linkage."
+                )
 
             company_account = CompanyAccount(
                 id=uuid4(),
                 company_id=company_id,
                 code=template_account.code,
                 name=template_account.name,
-                account_type=template_account.master_account.account_type,
-                normal_balance=template_account.master_account.normal_balance,
+                description=master_account.description or template_account.name,
+                type=master_account.type or "D",
+                account_type=map_category_to_account_type(master_account.category),
+                normal_balance=map_normal_balance(master_account.normal_balance),
+                currency=company.currency,
                 is_active=True,
-                is_locked=False,  # Not locked yet (no transactions)
+                is_locked=False,
                 template_account_id=template_account.id,
                 mapped_master_account_id=template_account.master_account_id,
                 created_at=datetime.utcnow()
@@ -565,7 +774,7 @@ def materialize_chart(
             accounts_created.append(company_account)
 
         # Second pass: Set parent relationships
-        for template_account in template_accounts:
+        for template_account in expected_template_accounts:
             # Skip if account was filtered out
             if template_account.id not in account_id_map:
                 continue
@@ -581,16 +790,16 @@ def materialize_chart(
 
         # Update company step (status transitions to CHART_READY)
         # Advance to Review (Step 6)
-        company.onboarding_current_step = max(company.onboarding_current_step, 6)
+        company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACCOUNT_REVIEW)
         company.onboarding_status = OnboardingStatus.CHART_READY
 
         db.commit()
 
         # Count account types
         mandatory_count = sum(
-            1 for ta in template_accounts if ta.is_mandatory
+            1 for ta in expected_template_accounts if ta.is_mandatory
         )
-        optional_count = len(template_accounts) - mandatory_count
+        optional_count = len(expected_template_accounts) - mandatory_count
 
         return ChartMaterializationResponse(
             success=True,
@@ -599,11 +808,16 @@ def materialize_chart(
             mandatory_accounts=mandatory_count,
             optional_accounts=optional_count,
             current_step=company.onboarding_current_step,
-            next_step=6
+            next_step=STEP_ACCOUNT_REVIEW
         )
+    except ValidationError:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
-        raise e
+        raise ValidationError(
+            "Chart materialization failed. No accounts were created."
+        ) from e
 
 
 # ============================================================================
@@ -622,6 +836,21 @@ def select_modules(
     if not company:
         raise ValidationError("Company not found")
 
+    if company.onboarding_status in [
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
+        raise ValidationError(
+            "Modules cannot be changed after chart materialization."
+        )
+
+    if company.onboarding_status != OnboardingStatus.TEMPLATE_SELECTED:
+        raise ValidationError("Please select a template before configuring modules.")
+
+    if not data.modules:
+        raise ValidationError("At least one module must be selected.")
+
     # Clear existing modules
     db.query(CompanyModule).filter(CompanyModule.company_id == company_id).delete()
     
@@ -634,14 +863,14 @@ def select_modules(
         ))
         
     # Advance to Step 5 (Scope)
-    company.onboarding_current_step = max(company.onboarding_current_step, 5)
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_SCOPE)
     db.commit()
     
     return {
         "success": True,
         "message": "Modules configured.",
         "current_step": company.onboarding_current_step,
-        "next_step": 5
+        "next_step": STEP_SCOPE
     }
 
 
@@ -658,17 +887,34 @@ def set_organization_scope(
     company = db.query(Company).filter(Company.id == company_id).first()
     if not company:
         raise ValidationError("Company not found")
+
+    if company.onboarding_status in [
+        OnboardingStatus.CHART_READY,
+        OnboardingStatus.CHART_FINALIZED,
+        OnboardingStatus.ACTIVE,
+    ]:
+        raise ValidationError("Organization scope cannot be changed after chart materialization.")
+
+    if company.onboarding_status != OnboardingStatus.TEMPLATE_SELECTED:
+        raise ValidationError("Please select a template before setting organization scope.")
+
+    modules_selected = db.query(CompanyModule).filter(
+        CompanyModule.company_id == company_id,
+        CompanyModule.is_active == True
+    ).count() > 0
+    if not modules_selected:
+        raise ValidationError("Please select modules before setting organization scope.")
         
     company.is_standalone = data.is_standalone
     
-    company.onboarding_current_step = max(company.onboarding_current_step, 5)
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACCOUNT_REVIEW)
     db.commit()
     
     return {
         "success": True,
         "message": "Organization scope saved.",
         "current_step": company.onboarding_current_step,
-        "next_step": 6
+        "next_step": STEP_ACCOUNT_REVIEW
     }
 
 
@@ -703,16 +949,52 @@ def customize_accounts(
         raise ValidationError("Company not found")
 
     # State validation - must have Organization Scope set (step 5+)
-    if company.onboarding_current_step < 6:
+    if company.onboarding_current_step < STEP_ACCOUNT_REVIEW:
         raise ValidationError(
             "Please complete organization scope setup before customizing accounts. "
             "Complete Step 5 first."
         )
 
-    if company.onboarding_status == OnboardingStatus.CHART_FINALIZED and data.finalized:
+    if company.onboarding_status == OnboardingStatus.ACTIVE:
+        raise ValidationError("Accounts cannot be customized after activation.")
+
+    if company.onboarding_status == OnboardingStatus.CHART_FINALIZED:
+        if data.finalized:
+            total_accounts = db.query(CompanyAccount).filter(
+                CompanyAccount.company_id == company_id
+            ).count()
+            active_accounts = db.query(CompanyAccount).filter(
+                CompanyAccount.company_id == company_id,
+                CompanyAccount.is_active == True
+            ).count()
+            disabled_accounts = total_accounts - active_accounts
+            mandatory_accounts = db.query(CompanyAccount).join(
+                ChartTemplateAccount,
+                CompanyAccount.template_account_id == ChartTemplateAccount.id
+            ).filter(
+                CompanyAccount.company_id == company_id,
+                ChartTemplateAccount.is_mandatory == True
+            ).count()
+
+            return AccountReviewResponse(
+                success=True,
+                message="Accounts already finalized. Proceed to fiscal periods.",
+                total_accounts=total_accounts,
+                mandatory_accounts=mandatory_accounts,
+                custom_accounts=0,
+                disabled_accounts=disabled_accounts,
+                current_step=company.onboarding_current_step,
+                next_step=STEP_FISCAL_PERIODS
+            )
+
         raise ValidationError(
             "Accounts have already been finalized. "
             "You can proceed to set up fiscal periods."
+        )
+
+    if company.onboarding_status != OnboardingStatus.CHART_READY:
+        raise ValidationError(
+            "Chart of accounts must be materialized before customization."
         )
 
     try:
@@ -768,11 +1050,14 @@ def customize_accounts(
                 company_id=company_id,
                 code=custom_account.code,
                 name=custom_account.name,
+                description=custom_account.name,
+                type="D",
                 account_type=account_type_enum,
                 normal_balance=normal_balance_enum,
                 parent_id=custom_account.parent_id,
                 is_active=True,
                 is_locked=False,
+                currency=company.currency or "USD",
                 template_account_id=None,  # Custom account
                 created_at=datetime.utcnow()
             )
@@ -782,7 +1067,7 @@ def customize_accounts(
         # Update company step if finalized (status transitions to CHART_FINALIZED)
         if data.finalized:
             # Advance to Fiscal Periods (Step 7)
-            company.onboarding_current_step = max(company.onboarding_current_step, 7)
+            company.onboarding_current_step = max(company.onboarding_current_step, STEP_FISCAL_PERIODS)
             company.onboarding_status = OnboardingStatus.CHART_FINALIZED
 
         db.commit()
@@ -814,8 +1099,8 @@ def customize_accounts(
             custom_accounts=len(custom_accounts_created),
             disabled_accounts=disabled_accounts,
 
-            current_step=6,
-            next_step=7
+            current_step=company.onboarding_current_step,
+            next_step=STEP_FISCAL_PERIODS
         )
 
     except ValidationError:
@@ -852,7 +1137,7 @@ def setup_fiscal_periods(
         raise ValidationError("Company not found")
 
     # State validation - must have finalized chart (Step 6 Complete -> Step 7+)
-    if company.onboarding_current_step < 7:
+    if company.onboarding_status != OnboardingStatus.CHART_FINALIZED:
         raise ValidationError(
             "Please finalize your chart of accounts before setting up fiscal periods. "
             "Complete Step 6 first."
@@ -863,9 +1148,18 @@ def setup_fiscal_periods(
         FiscalPeriod.company_id == company_id
     ).count()
     if existing_periods > 0:
-        raise ValidationError(
-            "Fiscal periods have already been created. "
-            "You can proceed to activate accounting."
+        company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACTIVATION)
+        db.commit()
+        return FiscalPeriodSetupResponse(
+            success=True,
+            message="Fiscal periods already exist. You can now activate accounting.",
+            periods_created=0,
+            open_periods=db.query(FiscalPeriod).filter(
+                FiscalPeriod.company_id == company_id,
+                FiscalPeriod.status == PeriodStatus.OPEN
+            ).count(),
+            current_step=company.onboarding_current_step,
+            next_step=STEP_ACTIVATION
         )
 
     try:
@@ -897,7 +1191,7 @@ def setup_fiscal_periods(
 
         # Update company step (status remains CHART_FINALIZED until activation)
         # Advance to Activation (Step 8)
-        company.onboarding_current_step = max(company.onboarding_current_step, 8)
+        company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACTIVATION)
 
         db.commit()
 
@@ -907,8 +1201,8 @@ def setup_fiscal_periods(
             periods_created=len(periods_created),
             open_periods=open_periods,
 
-            current_step=7,
-            next_step=8
+            current_step=company.onboarding_current_step,
+            next_step=STEP_ACTIVATION
         )
 
     except IntegrityError as e:
@@ -955,16 +1249,38 @@ def activate_accounting(
 
     # State validation
     if company.onboarding_status == OnboardingStatus.ACTIVE:
-        raise ValidationError("Accounting has already been activated for this company.")
+        total_accounts = db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company_id,
+            CompanyAccount.is_active == True
+        ).count()
+        open_periods = db.query(FiscalPeriod).filter(
+            FiscalPeriod.company_id == company_id,
+            FiscalPeriod.status == PeriodStatus.OPEN
+        ).count()
+        return ActivationResponse(
+            success=True,
+            message=f"Accounting already active for {company.name}.",
+            company_id=company.id,
+            company_name=company.name,
+            activated_at=company.onboarding_completed_at,
+            total_accounts=total_accounts,
+            open_periods=open_periods,
+            next_actions=[
+                "Create your first journal entry",
+                "View the trial balance",
+                "Generate financial statements",
+                "Invite team members"
+            ]
+        )
 
     # Ensure all prerequisites are met
     if company.onboarding_status != OnboardingStatus.CHART_FINALIZED:
         raise ValidationError(
-            "Invalid onboarding state. Company must be in MATERIALIZING state to activate."
+            "Invalid onboarding state. Company must finalize accounts before activation."
         )
 
     # Must have completed all steps (step 7 = fiscal periods)
-    if company.onboarding_current_step < 7:
+    if company.onboarding_current_step < STEP_ACTIVATION:
         raise ValidationError(
             "Please complete all previous steps before activation. "
             "Ensure company details, template selection, chart customization, and fiscal periods are all complete."
@@ -991,10 +1307,30 @@ def activate_accounting(
             "At least one period must be OPEN to record transactions."
         )
 
+    if company.kernel_version != KERNEL_VERSION or not company.kernel_layer:
+        raise ValidationError(
+            "Kernel is not bound to this company. Activation is blocked."
+        )
+
+    from app.services.kernel_remediation_service import KernelRemediationService
+    remediation_service = KernelRemediationService(db)
+    missing_kernel = remediation_service.get_missing_kernel_accounts(company_id)
+    mismatches = remediation_service.get_kernel_mismatches(company_id)
+    if missing_kernel or mismatches:
+        details = []
+        if missing_kernel:
+            details.append(f"Missing L0 accounts: {sorted(missing_kernel)}")
+        if mismatches:
+            mismatch_lines = [f"{code}: {fields}" for code, fields in sorted(mismatches.items())]
+            details.append("Mismatched kernel accounts: " + "; ".join(mismatch_lines))
+        raise ValidationError(
+            "Kernel compliance check failed. Activation blocked. " + " ".join(details)
+        )
+
     try:
         # Final state transition
         company.onboarding_status = OnboardingStatus.ACTIVE
-        company.onboarding_current_step = 6
+        company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACTIVATION)
         company.onboarding_completed_at = datetime.utcnow()
 
         # Release session lock
@@ -1059,10 +1395,14 @@ __all__ = [
     "reset_onboarding",
     "acquire_session_lock",
     "release_session_lock",
+    "start_onboarding",
     "get_onboarding_status",
     "update_company_details",
+    "update_company_type",
     "select_template",
     "materialize_chart",
+    "select_modules",
+    "set_organization_scope",
     "customize_accounts",
     "setup_fiscal_periods",
     "activate_accounting",

@@ -8,9 +8,10 @@ from uuid import UUID
 from app.db.session import get_db
 from app.db.models.user import User
 from app.services.companychart_service import CompanyChartService
-from app.core.exceptions import ValidationError, ErrorCode
+from app.core.exceptions import ValidationError
 from app.core.security import check_superuser
 from app.core.rate_limiting import rate_limit_critical, rate_limit_write
+from app.core.access_control import require_company_access
 from app.db.models.enums import LockedReason
 from app.schemas.company_account import (
     CompanyAccountSchema,
@@ -28,9 +29,17 @@ router = APIRouter()
 def get_company_chart(
     company_id: UUID,
     active_only: bool = Query(True, description="Filter only active accounts"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get all accounts for a company's chart of accounts."""
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     accounts = service.get_company_chart(company_id, active_only=active_only)
     return accounts
@@ -40,9 +49,17 @@ def get_company_chart(
 def get_company_chart_tree(
     company_id: UUID,
     active_only: bool = Query(True, description="Filter only active accounts"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get company's chart of accounts as a hierarchical tree structure."""
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     accounts = service.get_company_chart(company_id, active_only=active_only)
     tree = service.build_tree(accounts)
@@ -52,9 +69,17 @@ def get_company_chart_tree(
 @router.get("/companies/{company_id}/chart/stats", response_model=Dict[str, Any])
 def get_company_chart_stats(
     company_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get statistics about a company's chart of accounts."""
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     stats = service.get_chart_stats(company_id)
     return stats
@@ -64,9 +89,17 @@ def get_company_chart_stats(
 def get_company_account_by_code(
     company_id: UUID,
     code: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Get a specific account by code."""
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     account = service.get_account_by_code(company_id, code)
     if not account:
@@ -83,9 +116,17 @@ def get_company_account_by_code(
 def create_company_account(
     company_id: UUID,
     account_data: CompanyAccountCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Create a new account in the company's chart of accounts."""
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     # Ensure company_id in path matches the one in the request body
     if account_data.company_id != company_id:
         raise HTTPException(
@@ -110,7 +151,8 @@ def update_company_account(
     company_id: UUID,
     code: str,
     account_data: CompanyAccountUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Update an existing account in the company's chart of accounts.
@@ -120,6 +162,13 @@ def update_company_account(
     - Can change: description, currency, json_data
     - To modify immutable fields, unlock the account first (requires superuser)
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         account = service.update_account(company_id, code, account_data)
@@ -138,7 +187,8 @@ def update_company_account(
 def delete_company_account(
     company_id: UUID,
     code: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Delete (soft delete) an account from the company's chart of accounts.
@@ -149,6 +199,13 @@ def delete_company_account(
     - Cannot delete template-mandatory accounts
     - Cannot delete accounts with transactions (GAAP compliance)
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         success = service.delete_account(company_id, code)
@@ -162,12 +219,20 @@ def delete_company_account(
 @router.post("/companies/{company_id}/chart/reset", response_model=Dict[str, Any])
 def reset_company_chart_to_master(
     company_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Reset company's chart of accounts to match the master chart.
     This will deactivate all existing accounts and create new ones from master.
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         result = service.reset_to_master_chart(company_id)
@@ -179,13 +244,21 @@ def reset_company_chart_to_master(
 @router.post("/companies/{company_id}/chart/initialize", response_model=Dict[str, Any])
 def initialize_company_chart(
     company_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Initialize company's chart of accounts from master chart.
     This is typically called automatically during company creation,
     but can be called manually for companies that were created before this feature.
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         result = service.initialize_from_master_chart(company_id)
@@ -208,7 +281,8 @@ def lock_company_account(
     account_id: UUID,
     lock_request: CompanyAccountLockRequest,
     user_id: Optional[UUID] = Query(None, description="User ID (required for Manual locks)"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Lock an account to prevent immutable field changes.
@@ -232,6 +306,13 @@ def lock_company_account(
     - Prevents retroactive structural changes
     - Maintains audit trail integrity
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         # Verify account belongs to company
@@ -283,6 +364,13 @@ def unlock_company_account(
     - Cannot unlock if transactions exist in current period
     - Unlock reason must be provided for audit
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     # CRITICAL SECURITY: Enforce superuser privileges
     check_superuser(current_user)
 
@@ -307,7 +395,8 @@ def unlock_company_account(
 def check_account_deletable(
     company_id: UUID,
     account_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Check if an account can be deleted.
@@ -327,6 +416,13 @@ def check_account_deletable(
     - Bulk deletion planning
     - Account cleanup workflows
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     service = CompanyChartService(db)
     try:
         # Verify account belongs to company

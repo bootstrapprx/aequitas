@@ -16,19 +16,10 @@ from app.db.models.company import Company
 from app.db.models.company_account import CompanyAccount
 from app.db.models.master_account import MasterAccount
 from app.db.models.journal_entry import JournalEntry
-from app.db.models.enums import AccountType, NormalBalance
+from app.core.kernel import L0_KERNEL_CODES, map_category_to_account_type, map_normal_balance
 
 
-# L0 Universal Kernel - MANDATORY for all companies
-L0_KERNEL_CODES = {
-    '10000', '10100', '12000', '14000', '15000', '15900',
-    '20000', '21000', '22000', '23000',
-    '30000', '32000', '39999',
-    '40000', '49000', '50000',
-    '60000', '61000', '62000', '69000'
-}
-
-SYSTEM_ACCOUNT_CODES = {'32000', '39999'}  # Retained Earnings, Current Period Earnings
+SYSTEM_ACCOUNT_CODES = {"32000", "39999"}  # Retained Earnings, Current Period Earnings
 
 
 class KernelRemediationService:
@@ -39,7 +30,7 @@ class KernelRemediationService:
 
     def is_company_kernel_compliant(self, company_id: UUID) -> bool:
         """
-        Check if company has all L0 kernel accounts.
+        Check if company has all L0 kernel accounts with correct types.
 
         Args:
             company_id: UUID of company to check
@@ -55,7 +46,8 @@ class KernelRemediationService:
         }
 
         missing = L0_KERNEL_CODES - company_codes
-        return len(missing) == 0
+        mismatches = self.get_kernel_mismatches(company_id)
+        return len(missing) == 0 and not mismatches
 
     def get_missing_kernel_accounts(self, company_id: UUID) -> List[str]:
         """
@@ -76,6 +68,51 @@ class KernelRemediationService:
 
         missing = L0_KERNEL_CODES - company_codes
         return sorted(list(missing))
+
+    def get_kernel_mismatches(self, company_id: UUID) -> Dict[str, Dict[str, str]]:
+        """
+        Return L0 kernel accounts with incorrect account_type or normal_balance.
+
+        Returns:
+            Dict keyed by account code with mismatch detail.
+        """
+        master_accounts = self.db.query(MasterAccount).filter(
+            MasterAccount.code.in_(L0_KERNEL_CODES)
+        ).all()
+        master_by_code = {acc.code: acc for acc in master_accounts}
+
+        company_accounts = self.db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company_id,
+            CompanyAccount.code.in_(L0_KERNEL_CODES)
+        ).all()
+        company_by_code = {acc.code: acc for acc in company_accounts}
+
+        mismatches: Dict[str, Dict[str, str]] = {}
+        for code in L0_KERNEL_CODES:
+            master = master_by_code.get(code)
+            company_account = company_by_code.get(code)
+            if not master or not company_account:
+                continue
+
+            expected_type = map_category_to_account_type(master.category)
+            expected_balance = map_normal_balance(master.normal_balance)
+
+            mismatch_fields: Dict[str, str] = {}
+            if company_account.account_type != expected_type:
+                mismatch_fields["account_type"] = (
+                    f"{company_account.account_type.value if company_account.account_type else None}"
+                    f" != {expected_type.value}"
+                )
+            if company_account.normal_balance != expected_balance:
+                mismatch_fields["normal_balance"] = (
+                    f"{company_account.normal_balance.value if company_account.normal_balance else None}"
+                    f" != {expected_balance.value}"
+                )
+
+            if mismatch_fields:
+                mismatches[code] = mismatch_fields
+
+        return mismatches
 
     def has_posted_transactions(self, company_id: UUID) -> bool:
         """
@@ -153,26 +190,8 @@ class KernelRemediationService:
         for code in sorted(missing_codes):
             master = master_by_code[code]
 
-            # Map master chart categories to CompanyAccount AccountType enum
-            # Master chart may have "Cost of Goods Sold" and "Other" which aren't in the enum
-            category_mapping = {
-                "Asset": AccountType.ASSET,
-                "Liability": AccountType.LIABILITY,
-                "Equity": AccountType.EQUITY,
-                "Revenue": AccountType.REVENUE,
-                "Expense": AccountType.EXPENSE,
-                "Cost of Goods Sold": AccountType.EXPENSE,  # COGS is a type of expense
-                "Other": AccountType.EXPENSE,  # Default to expense
-            }
-
-            account_type = category_mapping.get(master.category, AccountType.EXPENSE)
-
-            # Map normal balance strings to enum
-            normal_balance_mapping = {
-                "Debit": NormalBalance.DEBIT,
-                "Credit": NormalBalance.CREDIT,
-            }
-            normal_balance = normal_balance_mapping.get(master.normal_balance, NormalBalance.DEBIT)
+            account_type = map_category_to_account_type(master.category)
+            normal_balance = map_normal_balance(master.normal_balance)
 
             company_account = CompanyAccount(
                 id=uuid4(),

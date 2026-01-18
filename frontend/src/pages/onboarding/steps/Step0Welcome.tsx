@@ -10,19 +10,40 @@
  * - Start button
  */
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Scroll, Shield, Check, X } from 'lucide-react';
 
 import { AtheneumCard, AtheneumCardHeader, AtheneumCardContent } from '@/components/athenaeum';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { api } from '@/lib/api';
 
 interface Step0WelcomeProps {
+  companyId: string;
   onNext: () => void;
   status: any;
 }
 
-const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
+const Step0Welcome: React.FC<Step0WelcomeProps> = ({ companyId, onNext, status }) => {
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const startMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post(`/onboarding/${companyId}/start`, {});
+      return response as any;
+    },
+    onSuccess: () => {
+      setApiError(null);
+      onNext();
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.detail || 'Failed to start onboarding.';
+      setApiError(errorMessage);
+    }
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -30,6 +51,11 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
+      {apiError && (
+        <Alert variant="destructive">
+          <AlertDescription>{apiError}</AlertDescription>
+        </Alert>
+      )}
       {/* Main Welcome */}
       <div className="text-center mb-8">
         <motion.div
@@ -126,11 +152,12 @@ const Step0Welcome: React.FC<Step0WelcomeProps> = ({ onNext, status }) => {
           transition={{ delay: 0.9 }}
         >
           <Button
-            onClick={onNext}
+            onClick={() => startMutation.mutate()}
             size="lg"
             className="px-12 py-6 text-lg shadow-gold hover:shadow-2xl transition-all"
+            disabled={startMutation.isPending}
           >
-            Start Setup
+            {startMutation.isPending ? 'Starting...' : 'Start Setup'}
           </Button>
         </motion.div>
       </div>

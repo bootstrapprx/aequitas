@@ -70,6 +70,9 @@ class ErrorCode(str, Enum):
     CIRCULAR_REFERENCE = "ACCT_1041"
     """Circular reference detected in account hierarchy"""
 
+    KERNEL_PROTECTED_ACCOUNT = "ACCT_1050"
+    """Kernel account is protected and cannot be deleted"""
+
     # Journal Entry Errors (2xxx)
     JOURNAL_IMBALANCE = "JRNL_2001"
     """Journal entry debits do not equal credits"""

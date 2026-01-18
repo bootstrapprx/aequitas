@@ -9,6 +9,7 @@ from app.db.models.user import User
 from app.api.v1.auth import get_current_user
 from app.core.security import check_superuser
 from app.core.rate_limiting import rate_limit_critical, rate_limit_write
+from app.core.access_control import require_company_access
 from app.schemas.ledger import (
     AccountLedger,
     TrialBalanceResponse,
@@ -228,10 +229,13 @@ def create_fiscal_period(
     Period types: month, quarter, year
     Status: open, closed, locked
     """
-    # Check permissions
-    perm_service = PermissionService(db)
-    if not perm_service.can_manage_company(current_user.id, period_data.company_id):
-        raise HTTPException(status_code=403, detail="No permission to create fiscal periods for this company")
+    require_company_access(
+        db,
+        current_user,
+        period_data.company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
 
     service = FiscalPeriodService(db)
     try:
@@ -260,10 +264,13 @@ def list_fiscal_periods(
     - status: Optional (open, closed, locked)
     - year: Optional year filter
     """
-    # Check permissions
-    perm_service = PermissionService(db)
-    if not perm_service.can_view_company(current_user.id, company_id):
-        raise HTTPException(status_code=403, detail="No permission to view fiscal periods for this company")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
 
     service = FiscalPeriodService(db)
 
@@ -306,10 +313,13 @@ def close_fiscal_period(
     if not period:
         raise HTTPException(status_code=404, detail="Fiscal period not found")
 
-    # Check permissions
-    perm_service = PermissionService(db)
-    if not perm_service.can_manage_company(current_user.id, period.company_id):
-        raise HTTPException(status_code=403, detail="No permission to close this fiscal period")
+    require_company_access(
+        db,
+        current_user,
+        period.company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
 
     try:
         closed_period = service.close_fiscal_period(period_id, current_user.id)
@@ -355,10 +365,13 @@ def reopen_fiscal_period(
     if not period:
         raise HTTPException(status_code=404, detail="Fiscal period not found")
 
-    # Check permissions (superuser can manage all companies, but verify access)
-    perm_service = PermissionService(db)
-    if not perm_service.can_manage_company(current_user.id, period.company_id):
-        raise HTTPException(status_code=403, detail="No permission to reopen this fiscal period")
+    require_company_access(
+        db,
+        current_user,
+        period.company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
 
     try:
         reopened_period = service.reopen_fiscal_period(period_id, reopened_by=current_user.id)
@@ -380,10 +393,13 @@ def create_monthly_periods(
 
     Convenience endpoint to quickly set up a full year of monthly periods.
     """
-    # Check permissions
-    perm_service = PermissionService(db)
-    if not perm_service.can_manage_company(current_user.id, company_id):
-        raise HTTPException(status_code=403, detail="No permission to create fiscal periods for this company")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
 
     service = FiscalPeriodService(db)
     periods = service.create_monthly_periods(company_id, year)

@@ -22,6 +22,7 @@ from app.db.models.user_company import UserCompany
 from app.schemas.user import UserResponse
 from app.services.company_service import CompanyService
 from app.services.permission_service import PermissionService
+from app.core.access_control import require_company_access
 from sqlalchemy import or_, cast
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -123,11 +124,19 @@ def create_company(
 @router.get("/{company_id}", response_model=CompanyResponse)
 def get_company_by_id(
     company_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Get a company by its ID.
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     company = CompanyService.get_company_by_id(db, company_id)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -136,6 +145,7 @@ def get_company_by_id(
 @router.get("/ucid/{ucid}", response_model=CompanyResponse)
 def get_company_by_ucid(
     ucid: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -144,17 +154,32 @@ def get_company_by_ucid(
     company = CompanyService.get_company_by_ucid(db, ucid)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
+    require_company_access(
+        db,
+        current_user,
+        company.id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     return company
 
 @router.put("/{company_id}", response_model=CompanyResponse)
 def update_company(
     company_id: UUID,
     company_update: CompanyUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Update a company.
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     company = CompanyService.update_company(db, company_id, company_update)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -163,11 +188,19 @@ def update_company(
 @router.delete("/{company_id}")
 def delete_company(
     company_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Soft delete a company.
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     success = CompanyService.delete_company(db, company_id)
     if not success:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -177,6 +210,7 @@ def delete_company(
 def inactivate_company(
     ucid: str,
     confirmation: CompanyInactivate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
     # TODO: Add user dependency to get user_id
 ):
@@ -184,8 +218,17 @@ def inactivate_company(
     Inactivate a company. Requires name confirmation.
     """
     try:
-        # Mock user_id for now until auth is fully integrated in this context
-        user_id = "system" 
+        company = CompanyService.get_company_by_ucid(db, ucid)
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        require_company_access(
+            db,
+            current_user,
+            company.id,
+            require_admin=True,
+            allow_superuser=True,
+        )
+        user_id = str(current_user.id)
         return CompanyService.inactivate_company(db, ucid, confirmation.confirmation, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -194,13 +237,24 @@ def inactivate_company(
 def activate_company(
     ucid: str,
     confirmation: CompanyInactivate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Activate a company. Requires name confirmation.
     """
     try:
-        user_id = "system"
+        company = CompanyService.get_company_by_ucid(db, ucid)
+        if not company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        require_company_access(
+            db,
+            current_user,
+            company.id,
+            require_admin=True,
+            allow_superuser=True,
+        )
+        user_id = str(current_user.id)
         return CompanyService.activate_company(db, ucid, confirmation.confirmation, user_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -208,11 +262,22 @@ def activate_company(
 @router.post("/{ucid}/restore", response_model=CompanyResponse, deprecated=True)
 def restore_company(
     ucid: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Restore a soft-deleted company. Deprecated in favor of /activate.
     """
+    company = CompanyService.get_company_by_ucid(db, ucid)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    require_company_access(
+        db,
+        current_user,
+        company.id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     company = CompanyService.restore_company(db, ucid)
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -221,6 +286,7 @@ def restore_company(
 @router.get("/{company_id}/users", response_model=List[UserResponse])
 def get_company_users(
     company_id: UUID,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -233,6 +299,13 @@ def get_company_users(
     Returns:
         List of users with access to the company
     """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
     # Verify company exists
     company = CompanyService.get_company_by_id(db, company_id)
     if not company:
@@ -264,11 +337,13 @@ def get_company_chart_status(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    # Verify user belongs to company (Strict, no superuser bypass)
-    permission_service = PermissionService(db)
-    user_company = permission_service.get_user_company(current_user.id, company_id)
-    if not user_company:
-        raise HTTPException(status_code=403, detail="Not authorized for this company")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=False,
+    )
     
     # Master chart status (Global check, but context-aware)
     master_count = db.query(MasterAccount).count()
@@ -321,11 +396,13 @@ def get_company_dashboard_stats(
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    # 1. Permission Check
-    permission_service = PermissionService(db)
-    user_company = permission_service.get_user_company(current_user.id, company_id)
-    if not user_company:
-        raise HTTPException(status_code=403, detail="Not authorized for this company")
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=False,
+        allow_superuser=True,
+    )
     
     # 2. Chart Status Logic (Inlined for performance/atomicity)
     master_count = db.query(MasterAccount).count()

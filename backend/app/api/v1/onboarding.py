@@ -4,7 +4,7 @@ Phase 5 Onboarding API Endpoints
 CANONICAL REFERENCE:
 - docs/canonical/PHASE_5_ONBOARDING_GUIDE.md
 
-API endpoints for the 6-step company onboarding wizard.
+API endpoints for the onboarding wizard.
 All operations are protected and require authentication.
 """
 from typing import List
@@ -16,6 +16,7 @@ from app.db.session import get_db
 from app.api.v1.auth import get_current_user
 from app.db.models.user import User
 from app.core.exceptions import ValidationError
+from app.core.access_control import require_company_access
 from app.services import onboarding_service
 from app.schemas.onboarding import (
     OnboardingStatusResponse,
@@ -76,7 +77,43 @@ def reset_onboarding(
     Use this endpoint only to support explicit wizard re-run requests.
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.reset_onboarding(db, company_id, current_user)
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+# ============================================================================
+# Start Onboarding
+# ============================================================================
+
+@router.post("/{company_id}/start", response_model=OnboardingStatusResponse)
+def start_onboarding(
+    company_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Mark onboarding as started (welcome acknowledged).
+    """
+    try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
+        return onboarding_service.start_onboarding(db, company_id)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -98,7 +135,7 @@ def get_onboarding_status(
     Get current onboarding wizard status and progress.
 
     Returns:
-    - Current step (0-6)
+    - Current step (0-8)
     - Onboarding state (DRAFT, TEMPLATE_SELECTED, etc.)
     - Completion flags for each step
     - Session lock status
@@ -110,6 +147,13 @@ def get_onboarding_status(
     - Determine which step to display
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=False,
+            allow_superuser=True,
+        )
         return onboarding_service.get_onboarding_status(db, company_id)
     except ValidationError as e:
         raise HTTPException(
@@ -142,6 +186,13 @@ def acquire_session_lock(
     - lock_expires_at: When lock will expire
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         from datetime import datetime, timedelta
         from app.services.onboarding_service import SESSION_LOCK_TIMEOUT_MINUTES
 
@@ -188,6 +239,13 @@ def release_session_lock(
     - Component unmounts
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         onboarding_service.release_session_lock(
             db, company_id, lock_request.session_id
         )
@@ -229,7 +287,14 @@ def update_company_details(
     - Changes allowed only in DRAFT or TEMPLATE_SELECTED state
     """
     try:
-        return onboarding_service.update_company_details(db, company_id, details)
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
+        return onboarding_service.update_company_details(db, company_id, details, current_user)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -250,6 +315,13 @@ def update_company_type(
 ):
     """Step 2: Company Type & Activity."""
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.update_company_type(db, company_id, request)
     except ValidationError as e:
         raise HTTPException(
@@ -285,7 +357,14 @@ def select_template(
     State transition: DRAFT → TEMPLATE_SELECTED
     """
     try:
-        return onboarding_service.select_template(db, company_id, selection)
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
+        return onboarding_service.select_template(db, company_id, selection, current_user)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -323,6 +402,13 @@ def materialize_chart(
     State transition: TEMPLATE_SELECTED → CHART_READY
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.materialize_chart(db, company_id)
     except ValidationError as e:
         raise HTTPException(
@@ -344,6 +430,13 @@ def select_modules(
 ):
     """Step 4: Select optional modules."""
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.select_modules(db, company_id, request)
     except ValidationError as e:
         raise HTTPException(
@@ -365,6 +458,13 @@ def set_organization_scope(
 ):
     """Step 5: Set organization scope (Standalone vs Group)."""
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.set_organization_scope(db, company_id, request)
     except ValidationError as e:
         raise HTTPException(
@@ -406,6 +506,13 @@ def customize_accounts(
     - State transition: CHART_READY → CHART_FINALIZED
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.customize_accounts(db, company_id, customization)
     except ValidationError as e:
         raise HTTPException(
@@ -446,6 +553,13 @@ def setup_fiscal_periods(
     - LOCKED: Permanently closed
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.setup_fiscal_periods(db, company_id, periods_setup)
     except ValidationError as e:
         raise HTTPException(
@@ -489,6 +603,13 @@ def activate_accounting(
     State transition: CHART_FINALIZED → ACTIVE
     """
     try:
+        require_company_access(
+            db,
+            current_user,
+            company_id,
+            require_admin=True,
+            allow_superuser=True,
+        )
         return onboarding_service.activate_accounting(db, company_id, activation)
     except ValidationError as e:
         raise HTTPException(

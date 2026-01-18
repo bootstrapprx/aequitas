@@ -99,7 +99,7 @@ const CompanyDashboard = () => {
 
   const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
   const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading);
-  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE' || selectedCompany?.is_active;
+  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
 
   const dismissalKey = useMemo(() => {
     if (!selectedCompanyId) return null;

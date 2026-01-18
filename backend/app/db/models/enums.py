@@ -149,6 +149,17 @@ class OnboardingStatus(str, enum.Enum):
     ACTIVE = "ACTIVE"
 
 
+class KernelLayer(str, enum.Enum):
+    """
+    Kernel layer binding for companies.
+
+    Values: L0, L1, L2
+    """
+    L0 = "L0"
+    L1 = "L1"
+    L2 = "L2"
+
+
 class ModuleType(str, enum.Enum):
     """
     Optional functional modules for companies.
@@ -173,5 +184,6 @@ __all__ = [
     "PeriodType",
     "MasterAccountType",
     "OnboardingStatus",
+    "KernelLayer",
     "ModuleType",
 ]

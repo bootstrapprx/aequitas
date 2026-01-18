@@ -45,7 +45,7 @@ export default function CompanyChartPage() {
     },
   });
   const selectedCompanyData = companies?.find((company) => company.id === selectedCompanyId);
-  const isActiveCompany = selectedCompanyData?.onboarding_status === 'ACTIVE' || selectedCompanyData?.is_active;
+  const isActiveCompany = selectedCompanyData?.onboarding_status === 'ACTIVE';
 
   // Auto-select first company
   React.useEffect(() => {
