@@ -31,10 +31,41 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.db.models.master_account import MasterAccount
+from app.db.models.master_account_intelligence import MasterAccountIntelligence
 from app.db.session import SessionLocal
 from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 import os
+
+
+def _parse_regulatory_mapping(raw_value: str):
+    raw_value = (raw_value or "").strip()
+    if not raw_value:
+        return None
+
+    try:
+        parsed = json.loads(raw_value)
+        if isinstance(parsed, dict):
+            return parsed
+        return {"raw": parsed}
+    except json.JSONDecodeError:
+        pass
+
+    mapping = {}
+    for part in raw_value.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        if " - " in part:
+            key, value = part.split(" - ", 1)
+            key = key.strip()
+            value = value.strip()
+            if key:
+                mapping[key] = value
+                continue
+        mapping["raw"] = f"{mapping['raw']}; {part}" if "raw" in mapping else part
+
+    return mapping or {"raw": raw_value}
 
 def load_enriched_master_chart(
     db: Session,
@@ -151,14 +182,8 @@ def load_enriched_master_chart(
             if account_data.get('default_vendors') and account_data['default_vendors'].strip():
                 default_vendors = [v.strip() for v in account_data['default_vendors'].split(',')]
             
-            # Parse regulatory_mapping (JSON string to dict)
-            regulatory_mapping = None
-            if account_data.get('regulatory_mapping') and account_data['regulatory_mapping'].strip():
-                try:
-                    regulatory_mapping = json.loads(account_data['regulatory_mapping'])
-                except json.JSONDecodeError:
-                    print(f"  Warning: Invalid JSON in regulatory_mapping for {account_data['code']}")
-                    regulatory_mapping = {}
+            # Parse regulatory_mapping (CSV string to JSON-compatible dict)
+            regulatory_mapping = _parse_regulatory_mapping(account_data.get('regulatory_mapping'))
 
             # Normalize account data if normalization is enabled
             if normalize:
@@ -186,8 +211,6 @@ def load_enriched_master_chart(
                 # Enriched fields
                 long_description=account_data.get('long_description'),
                 fs_mapping=account_data.get('fs_mapping'),
-                tags=tags,
-                default_vendors=default_vendors,
                 regulatory_mapping=regulatory_mapping,
                 normal_balance=account_data.get('normal_balance'),
                 cash_flow_classification=account_data.get('cash_flow_classification'),
@@ -197,6 +220,14 @@ def load_enriched_master_chart(
             
             db.add(account)
             db.flush()  # Get the ID without committing
+
+            if tags or default_vendors:
+                intelligence = MasterAccountIntelligence(
+                    master_account_id=account.id,
+                    tags=tags,
+                    default_vendors=default_vendors,
+                )
+                db.add(intelligence)
             
             code_to_id_map[account_data['code']] = account.id
             loaded_count += 1

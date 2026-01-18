@@ -22,7 +22,7 @@ def verify_master_chart(db: Session) -> bool:
         count = db.query(MasterAccount).count()
         if count == 0:
             logger.error("❌ Master chart is NOT loaded!")
-            logger.error("   Please run: python -m app.data.seed_enriched_master_chart")
+            logger.error("   Please run: python -m app.data.reseed_kernel_master_chart")
             return False
         else:
             logger.info(f"✓ Master chart loaded with {count} accounts")
@@ -111,7 +111,7 @@ def startup_checks(db: Session) -> dict:
             results["errors"].append("Master chart is empty - needs to be seeded")
             logger.warning("⚠ Master chart is empty!")
             logger.warning("   New companies will fail to initialize their chart of accounts")
-            logger.warning("   Run: python -m app.data.seed_enriched_master_chart")
+            logger.warning("   Run: python -m app.data.reseed_kernel_master_chart")
         else:
             logger.info(f"✓ Master chart: {count} accounts loaded")
 

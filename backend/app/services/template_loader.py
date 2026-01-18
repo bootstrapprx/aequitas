@@ -216,7 +216,7 @@ class TemplateLoader:
         if master_count == 0:
             print("❌ ERROR: No master accounts found!")
             print("   Please run the master chart seeder first:")
-            print("   python app/data/seed_enriched_master_chart.py\n")
+            print("   python -m app.data.reseed_kernel_master_chart\n")
             return 0
 
         print(f"✓ Found {master_count} master accounts")

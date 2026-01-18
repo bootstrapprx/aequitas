@@ -13,7 +13,7 @@ def init_db(db: Session) -> None:
     Initialize the database with:
     1. Schema Migration (ensure all columns exist)
     2. Superuser (if doesn't exist)
-    3. Master Chart of Accounts (if doesn't exist)
+    3. Kernel Master Chart of Accounts (if doesn't exist)
     
     This ensures the application always has the foundational data needed.
     """
@@ -28,7 +28,7 @@ def init_db(db: Session) -> None:
     # Step 2: Initialize superuser
     _seed_superuser(db)
     
-    # Step 3: Initialize Master Chart of Accounts
+    # Step 3: Initialize Kernel Master Chart of Accounts
     _seed_master_chart(db)
 
 
@@ -66,24 +66,23 @@ def _seed_superuser(db: Session) -> None:
 
 
 def _seed_master_chart(db: Session) -> None:
-    """Seed the Master Chart of Accounts if not already loaded."""
+    """Seed the Kernel Master Chart of Accounts if not already loaded."""
     master_chart_count = db.query(MasterAccount).count()
     if master_chart_count == 0:
         print("\n" + "="*60)
-        print("INITIALIZING MASTER CHART OF ACCOUNTS")
+        print("INITIALIZING KERNEL MASTER CHART")
         print("="*60)
         try:
-            from app.data.seed_enriched_master_chart import load_enriched_master_chart
-            success = load_enriched_master_chart(db, force_reload=False)
-            if success:
-                print("✓ Master Chart of Accounts initialized successfully")
+            from app.data.reseed_kernel_master_chart import reseed_master_chart
+            result = reseed_master_chart(db)
+            if result:
+                print("✓ Kernel Master Chart initialized successfully")
             else:
-                print("⚠ Master Chart initialization skipped (already exists)")
+                print("⚠ Kernel Master Chart initialization skipped")
         except Exception as e:
-            print(f"✗ Error initializing Master Chart: {e}")
+            print(f"✗ Error initializing Kernel Master Chart: {e}")
             print("  You can manually load it by running:")
-            print("  python -m app.data.seed_enriched_master_chart")
+            print("  python -m app.data.reseed_kernel_master_chart")
         print("="*60 + "\n")
     else:
-        print(f"✓ Master Chart already loaded ({master_chart_count} accounts)")
-
+        print(f"✓ Kernel Master Chart already loaded ({master_chart_count} accounts)")

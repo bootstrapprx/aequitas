@@ -477,10 +477,10 @@ def update_company_type(
     db.commit()
     
     return CompanyTypeResponse(
-        "success": True, 
-        "message": "Company type saved.",
-        "current_step": company.onboarding_current_step,
-        "next_step": STEP_TEMPLATE_SELECTION
+        success=True,
+        message="Company type saved.",
+        current_step=company.onboarding_current_step,
+        next_step=STEP_TEMPLATE_SELECTION,
     )
 
 
