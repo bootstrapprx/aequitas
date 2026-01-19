@@ -34,6 +34,7 @@ from app.api.v1 import (
     users,
     users_management,
     dexter_onboarding,
+    user_context,
 )
 from app.api.v1.integrations import staging as integrations_staging
 from app.api.v1.integrations import mappings as integrations_mappings
@@ -159,6 +160,7 @@ app.include_router(organizer_router, prefix="/api/v1/organizer", tags=["Organize
 app.include_router(code_generator_router, prefix="/api/v1/code", tags=["CodeGenerator"])
 app.include_router(settings.router, prefix="/api/v1/settings", tags=["Settings"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(user_context.router, prefix="/api/v1/me", tags=["User Context"])
 app.include_router(oauth.router, prefix="/api/v1/auth/oauth", tags=["OAuth Authentication"])
 app.include_router(invitations.router, prefix="/api/v1/invitations", tags=["Invitations"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])

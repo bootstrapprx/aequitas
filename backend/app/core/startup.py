@@ -7,6 +7,9 @@ UPDATED: 2025-12-11
 """
 import logging
 from sqlalchemy.orm import Session
+from app.core.kernel import L0_KERNEL_CODES
+from app.db.models.company import Company
+from app.db.models.company_account import CompanyAccount
 from app.db.models.master_account import MasterAccount
 from app.core.validators.master_chart_validator import MasterChartValidator
 
@@ -83,61 +86,88 @@ def validate_master_chart_integrity(db: Session) -> dict:
     return results
 
 
+def check_company_kernel_accounts(db: Session) -> dict:
+    """
+    Check that all active companies have required L0 kernel accounts.
+
+    Returns:
+        dict with compliance summary and missing codes per company.
+    """
+    results = {
+        "companies_checked": 0,
+        "companies_compliant": 0,
+        "companies_missing_kernel": 0,
+        "missing_by_company": [],
+    }
+
+    companies = db.query(Company).filter(Company.is_active == True).all()
+    results["companies_checked"] = len(companies)
+
+    for company in companies:
+        company_codes = {
+            row[0] for row in db.query(CompanyAccount.code).filter(
+                CompanyAccount.company_id == company.id,
+                CompanyAccount.is_active == True
+            ).all()
+        }
+
+        missing = sorted(L0_KERNEL_CODES - company_codes)
+        if missing:
+            results["companies_missing_kernel"] += 1
+            results["missing_by_company"].append({
+                "company_id": str(company.id),
+                "ucid": company.ucid,
+                "name": company.name,
+                "missing_codes": missing,
+            })
+        else:
+            results["companies_compliant"] += 1
+
+    return results
+
+
 def startup_checks(db: Session) -> dict:
     """
     Run all startup checks and return status.
 
     Checks:
-    1. Master chart is loaded
-    2. Master chart integrity validation
+    1. Active companies have required L0 kernel accounts
     """
     results = {
-        "master_chart_loaded": False,
-        "master_chart_count": 0,
-        "master_chart_valid": False,
-        "validation_errors": [],
-        "validation_warnings": [],
-        "orphans": 0,
+        "kernel_required_codes": sorted(L0_KERNEL_CODES),
+        "companies_checked": 0,
+        "companies_compliant": 0,
+        "companies_missing_kernel": 0,
+        "missing_by_company": [],
         "errors": []
     }
 
     try:
-        # Check master chart existence
-        count = db.query(MasterAccount).count()
-        results["master_chart_count"] = count
-        results["master_chart_loaded"] = count > 0
+        kernel_results = check_company_kernel_accounts(db)
+        results.update(kernel_results)
 
-        if count == 0:
-            results["errors"].append("Master chart is empty - needs to be seeded")
-            logger.warning("⚠ Master chart is empty!")
-            logger.warning("   New companies will fail to initialize their chart of accounts")
-            logger.warning("   Run: python -m app.data.reseed_kernel_master_chart")
+        if kernel_results["companies_missing_kernel"] == 0:
+            logger.info("✓ Kernel compliance: All active companies have L0 accounts")
         else:
-            logger.info(f"✓ Master chart: {count} accounts loaded")
-
-            # Validate master chart integrity
-            logger.info("  Validating master chart integrity...")
-            validation_results = validate_master_chart_integrity(db)
-
-            results["master_chart_valid"] = validation_results["is_valid"]
-            results["validation_errors"] = validation_results["errors"]
-            results["validation_warnings"] = validation_results["warnings"]
-            results["orphans"] = validation_results["orphan_count"]
-
-            if validation_results["is_valid"]:
-                logger.info("  ✓ Master chart integrity: VALID")
-            else:
-                logger.warning(f"  ⚠ Master chart integrity: INVALID ({len(validation_results['errors'])} errors)")
-                for error in validation_results["errors"][:3]:  # Show first 3 errors
-                    logger.warning(f"    - {error}")
-                if len(validation_results["errors"]) > 3:
-                    logger.warning(f"    ... and {len(validation_results['errors']) - 3} more errors")
-
-            if validation_results["warnings"]:
-                logger.info(f"  ℹ Master chart warnings: {len(validation_results['warnings'])}")
-
-            if validation_results["orphan_count"] > 0:
-                logger.warning(f"  ⚠ Found {validation_results['orphan_count']} orphaned accounts")
+            results["errors"].append(
+                f"{kernel_results['companies_missing_kernel']} company(ies) missing L0 kernel accounts"
+            )
+            logger.warning(
+                "⚠ Kernel compliance: "
+                f"{kernel_results['companies_missing_kernel']} company(ies) missing L0 accounts"
+            )
+            for company in kernel_results["missing_by_company"][:3]:
+                logger.warning(
+                    "  - Missing kernel accounts for %s (%s): %s",
+                    company.get("name"),
+                    company.get("ucid"),
+                    ", ".join(company.get("missing_codes", [])),
+                )
+            if kernel_results["companies_missing_kernel"] > 3:
+                logger.warning(
+                    "  ... and %s more companies with missing kernel accounts",
+                    kernel_results["companies_missing_kernel"] - 3
+                )
 
     except Exception as e:
         error_msg = f"Startup check failed: {str(e)}"

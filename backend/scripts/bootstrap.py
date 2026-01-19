@@ -83,26 +83,25 @@ def seed_master_chart(db: Session):
     """
     Idempotently seeds the Master Chart of Accounts.
     
-    Uses the enriched master chart loader to populate the database.
+    Seeds the kernel chart only when no master accounts exist.
     """
     logger.info("Checking Master Chart of Accounts seed status...")
     try:
-        from app.data.seed_enriched_master_chart import load_enriched_master_chart
-        
-        # We rely on load_enriched_master_chart's built-in idempotency (it checks for existing accounts)
-        # However, we can double check here or just call it.
-        # It has a force_reload param, defaulting to False.
-        
-        result = load_enriched_master_chart(db, force_reload=False, validate=True, normalize=True)
-        
-        if result.get("status") == "skipped":
-             logger.info(f"Master Chart seeding skipped: {result.get('message')}")
-        else:
-             logger.info(f"Master Chart seeded successfully. Loaded: {result.get('loaded_count')}, Skipped: {result.get('skipped_count')}")
-             
+        existing_count = db.query(MasterAccount).count()
+        if existing_count > 0:
+            logger.info(f"Master Chart already present ({existing_count} accounts). Skipping seed.")
+            return True
+
+        from app.data.reseed_kernel_master_chart import reseed_master_chart
+
+        result = reseed_master_chart(db)
+        logger.info(
+            "Kernel Master Chart seeded successfully. "
+            f"Created: {result.get('created')}, Updated: {result.get('updated')}"
+        )
         return True
     except Exception as e:
-        logger.error(f"Failed to seed Master Chart of Accounts: {e}", exc_info=True)
+        logger.error(f"Failed to seed Kernel Master Chart: {e}", exc_info=True)
         return False
 
 def seed_default_fiscal_ruleset(db: Session):
@@ -158,11 +157,25 @@ def main():
     # Create a new session for seeding operations
     db_session = SessionLocal()
     try:
-        if not seed_master_chart(db_session):
+        logger.info(">>> DEBUG: About to call seed_master_chart...")
+        result = seed_master_chart(db_session)
+        logger.info(f">>> DEBUG: seed_master_chart returned: {result}")
+        if not result:
+            logger.error(">>> DEBUG: seed_master_chart FAILED! Exiting with code 1")
             exit(1)
+        logger.info(">>> DEBUG: seed_master_chart completed successfully")
         
-        if not seed_default_fiscal_ruleset(db_session):
+        logger.info(">>> DEBUG: About to call seed_default_fiscal_ruleset...")
+        result = seed_default_fiscal_ruleset(db_session)
+        logger.info(f">>> DEBUG: seed_default_fiscal_ruleset returned: {result}")
+        if not result:
+            logger.error(">>> DEBUG: seed_default_fiscal_ruleset FAILED! Exiting with code 1")
             exit(1)
+        logger.info(">>> DEBUG: seed_default_fiscal_ruleset completed successfully")
+    except Exception as e:
+        logger.error(f">>> DEBUG: Exception in seeding operations: {e}", exc_info=True)
+        db_session.rollback()
+        exit(1)
     finally:
         db_session.close()
 

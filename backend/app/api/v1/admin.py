@@ -19,7 +19,8 @@ from app.schemas.user import (
 )
 from app.schemas.system_settings import SystemSettingsResponse, SystemSettingsUpdate
 from app.services.admin_service import AdminService
-from app.services.companychart_service import CompanyChartService
+from app.core.kernel import L0_KERNEL_CODES
+from app.services.kernel_remediation_service import KernelRemediationService
 from app.services.council_service import CouncilService
 from app.core.password_policy import PasswordPolicy
 
@@ -132,21 +133,20 @@ def migrate_company_charts(
     db: Session = Depends(get_db)
 ):
     """
-    Migrate existing companies to have chart of accounts initialized from master chart.
-    This is a one-time migration for companies created before the auto-initialization feature.
+    Ensure existing companies have required kernel accounts.
     Requires superuser privileges.
     """
     # Check superuser
     check_superuser(current_user)
 
-    chart_service = CompanyChartService(db)
+    remediation_service = KernelRemediationService(db)
 
     # Get all active companies
     companies = db.query(Company).filter(Company.is_active == True).all()
 
     results = {
         "total_companies": len(companies),
-        "migrated": 0,
+        "remediated": 0,
         "skipped": 0,
         "errors": [],
         "details": []
@@ -154,29 +154,28 @@ def migrate_company_charts(
 
     for company in companies:
         try:
-            # Check if company already has accounts
-            existing_accounts = chart_service.get_company_chart(company.id, active_only=False)
-
-            if existing_accounts:
+            missing = remediation_service.get_missing_kernel_accounts(company.id)
+            if not missing:
                 results["skipped"] += 1
                 results["details"].append({
                     "company_id": str(company.id),
                     "ucid": company.ucid,
                     "name": company.name,
                     "status": "skipped",
-                    "reason": f"Already has {len(existing_accounts)} accounts"
+                    "reason": "Kernel accounts already present"
                 })
-            else:
-                # Initialize from master chart
-                init_result = chart_service.initialize_from_master_chart(company.id)
-                results["migrated"] += 1
-                results["details"].append({
-                    "company_id": str(company.id),
-                    "ucid": company.ucid,
-                    "name": company.name,
-                    "status": "migrated",
-                    "accounts_created": init_result["accounts_created"]
-                })
+                continue
+
+            remediation_result = remediation_service.auto_remediate_company(company.id, dry_run=False)
+            results["remediated"] += 1
+            results["details"].append({
+                "company_id": str(company.id),
+                "ucid": company.ucid,
+                "name": company.name,
+                "status": "remediated",
+                "accounts_added": remediation_result.get("added_count", 0),
+                "added_codes": remediation_result.get("added_codes", []),
+            })
         except Exception as e:
             results["errors"].append({
                 "company_id": str(company.id),
@@ -194,14 +193,13 @@ def get_chart_initialization_status(
     db: Session = Depends(get_db)
 ):
     """
-    Get status of master chart and company chart initialization.
+    Get status of kernel compliance and optional master chart catalog.
     Requires superuser privileges.
     """
     # Check superuser
     check_superuser(current_user)
 
     from app.db.models.master_account import MasterAccount
-    from app.db.models.company_account import CompanyAccount
 
     # Master chart status
     master_count = db.query(MasterAccount).count()
@@ -209,29 +207,41 @@ def get_chart_initialization_status(
     # Companies status
     companies = db.query(Company).filter(Company.is_active == True).all()
 
+    remediation_service = KernelRemediationService(db)
     company_status = []
+    kernel_compliant = 0
+    kernel_missing = 0
     for company in companies:
-        company_account_count = db.query(CompanyAccount).filter(
-            CompanyAccount.company_id == company.id
-        ).count()
+        missing_codes = remediation_service.get_missing_kernel_accounts(company.id)
+        missing_count = len(missing_codes)
+        status = "kernel_compliant" if missing_count == 0 else "missing_kernel"
+
+        if missing_count == 0:
+            kernel_compliant += 1
+        else:
+            kernel_missing += 1
 
         company_status.append({
             "company_id": str(company.id),
             "ucid": company.ucid,
             "name": company.name,
-            "account_count": company_account_count,
-            "status": "initialized" if company_account_count > 0 else "not_initialized"
+            "status": status,
+            "missing_kernel_codes": missing_codes,
         })
 
     return {
-        "master_chart": {
+        "catalog": {
             "loaded": master_count > 0,
             "account_count": master_count,
         },
+        "kernel": {
+            "required_count": len(L0_KERNEL_CODES),
+            "required_codes": sorted(L0_KERNEL_CODES),
+        },
         "companies": {
             "total": len(companies),
-            "initialized": sum(1 for c in company_status if c["status"] == "initialized"),
-            "not_initialized": sum(1 for c in company_status if c["status"] == "not_initialized"),
+            "kernel_compliant": kernel_compliant,
+            "kernel_missing": kernel_missing,
             "details": company_status
         }
     }

@@ -53,11 +53,14 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
 
     // Rule 3: If selected company exists AND onboarding_status ≠ ACTIVE
     //         → redirect to /onboarding/:companyId
+    // BUT: Allow explicit navigation to /companies pages
     if (selectedCompany.onboarding_status !== 'ACTIVE') {
       const onboardingPath = `/onboarding/${selectedCompanyId}`;
+      const allowedNonOnboardingPaths = ['/companies', '/companies/register'];
+      const isAllowedPath = allowedNonOnboardingPaths.some(path => location.pathname.startsWith(path));
 
-      // Don't redirect if we're already on the onboarding page
-      if (!location.pathname.startsWith('/onboarding/')) {
+      // Don't redirect if we're already on the onboarding page OR on allowed pages
+      if (!location.pathname.startsWith('/onboarding/') && !isAllowedPath) {
         console.log('[OnboardingGuard] Redirecting to onboarding wizard:', {
           company: selectedCompany.name,
           status: selectedCompany.onboarding_status,
@@ -69,7 +72,8 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
       return;
     }
 
-    // Rule 4: If onboarding_status = ACTIVE → allow dashboard access
+    // Rule 4: If onboarding_status = ACTIVE → allow ALL dashboard access
+    // Post-activation: user can navigate freely
     // (no action needed, render children)
 
   }, [

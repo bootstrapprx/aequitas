@@ -95,12 +95,6 @@ const CompanySelector = ({ className = '', showLabel = true }: CompanySelectorPr
           ))}
         </SelectContent>
       </Select>
-
-      {companies.length === 1 && (
-        <p className="text-xs text-muted-foreground mt-1.5 italic">
-          You have access to one company
-        </p>
-      )}
     </div>
   );
 };

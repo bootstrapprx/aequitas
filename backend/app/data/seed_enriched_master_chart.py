@@ -147,13 +147,17 @@ def load_enriched_master_chart(
         else:
             print(f"  ✓ Chart validation passed")
 
-    # First pass: Create all accounts without parent relationships
+    # CANON B1 COMPLIANCE: Set parent_id during INSERT, not UPDATE
+    # Sort accounts by level to ensure parents are inserted before children
+    accounts_data_sorted = sorted(accounts_data, key=lambda x: int(x.get('level', 0)))
+    
+    # Single pass: Create all accounts WITH parent relationships
     code_to_id_map = {}
     loaded_count = 0
     skipped_count = 0
     validation_warnings = []
 
-    for account_data in accounts_data:
+    for account_data in accounts_data_sorted:
         try:
             # Skip duplicates
             if account_data['code'] in code_to_id_map:
@@ -197,7 +201,15 @@ def load_enriched_master_chart(
                 if account_data.get('normal_balance'):
                     account_data['normal_balance'] = normalizer.normalize_normal_balance(account_data['normal_balance'])
 
-            # Create account with all enriched fields
+            # CANON B1: Set parent_id during INSERT (not via UPDATE)
+            # Lookup parent_id from already-inserted accounts
+            parent_id = None
+            if account_data.get('parent_code') and account_data['parent_code'].strip():
+                parent_id = code_to_id_map.get(account_data['parent_code'])
+                if not parent_id:
+                    print(f"  Warning: Parent code {account_data['parent_code']} not found for {account_data['code']}")
+
+            # Create account with all enriched fields AND parent_id
             account = MasterAccount(
                 code=account_data['code'],
                 description=account_data['description'],
@@ -208,6 +220,7 @@ def load_enriched_master_chart(
                 category=account_data['category'],
                 notes=account_data.get('notes'),
                 parent_code=account_data.get('parent_code') if account_data.get('parent_code') else None,
+                parent_id=parent_id,  # Set during INSERT!
                 # Enriched fields
                 long_description=account_data.get('long_description'),
                 fs_mapping=account_data.get('fs_mapping'),
@@ -240,28 +253,20 @@ def load_enriched_master_chart(
             skipped_count += 1
             continue
     
-    print(f"  First pass complete: {loaded_count} accounts loaded, {skipped_count} skipped")
-    
-    # Second pass: Set parent_id relationships
-    print("  Setting parent relationships...")
-    parent_count = 0
-    
-    for account_data in accounts_data:
-        if account_data.get('parent_code') and account_data['parent_code'].strip():
-            account = db.query(MasterAccount).filter(
-                MasterAccount.code == account_data['code']
-            ).first()
-            
-            if account and account_data['parent_code'] in code_to_id_map:
-                account.parent_id = code_to_id_map[account_data['parent_code']]
-                parent_count += 1
-    
-    print(f"  Set {parent_count} parent relationships")
+    print(f"  Insertion complete: {loaded_count} accounts loaded, {skipped_count} skipped")
     
     # Commit all changes
-    db.commit()
+    try:
+        print(">>> DEBUG: About to commit database changes...")
+        db.commit()
+        print(">>> DEBUG: Database commit successful!")
+    except Exception as e:
+        print(f">>> DEBUG: ERROR during commit: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
-    print(f"\n✓ Successfully loaded {loaded_count} accounts")
+    print(f"\n✓ Successfully loaded {loaded_count} accounts (Canon B1 compliant)")
 
     # Return detailed status
     return {
@@ -271,6 +276,8 @@ def load_enriched_master_chart(
         "validation_warnings": len(validation_warnings) if validate else 0
     }
     
+    # NOTE: Everything below this line is UNREACHABLE CODE (dead code after return)
+    # This should be cleaned up in a future refactor
     # Print summary statistics
     headers = db.query(MasterAccount).filter(MasterAccount.type == 'H').count()
     details = db.query(MasterAccount).filter(MasterAccount.type == 'D').count()

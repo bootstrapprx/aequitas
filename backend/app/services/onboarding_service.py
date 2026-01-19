@@ -767,6 +767,12 @@ def materialize_chart(
                 is_locked=False,
                 template_account_id=template_account.id,
                 mapped_master_account_id=template_account.master_account_id,
+                json_data={
+                    "category": master_account.category,
+                    "fs_mapping": master_account.fs_mapping,
+                    "cash_flow_classification": master_account.cash_flow_classification,
+                    "source": "template",
+                },
                 created_at=datetime.utcnow()
             )
             db.add(company_account)
@@ -1332,6 +1338,12 @@ def activate_accounting(
         company.onboarding_status = OnboardingStatus.ACTIVE
         company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACTIVATION)
         company.onboarding_completed_at = datetime.utcnow()
+
+        # CRITICAL: Set current_company_id on user for post-activation routing
+        # Canon II: Backend creates truth - UI will route based on this
+        user = db.query(User).filter(User.id == data.confirmed_by).first()
+        if user:
+            user.current_company_id = company_id
 
         # Release session lock
         company.onboarding_session_lock = None

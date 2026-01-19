@@ -204,6 +204,12 @@ class KernelRemediationService:
                 normal_balance=normal_balance,
                 mapped_master_account_id=master.id,
                 is_active=True,
+                json_data={
+                    "category": master.category,
+                    "fs_mapping": master.fs_mapping,
+                    "cash_flow_classification": master.cash_flow_classification,
+                    "source": "kernel_remediation",
+                },
                 created_at=datetime.utcnow(),
             )
 

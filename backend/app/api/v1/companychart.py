@@ -17,6 +17,7 @@ from app.schemas.company_account import (
     CompanyAccountSchema,
     CompanyAccountCreate,
     CompanyAccountUpdate,
+    CompanyAccountFromMasterRequest,
     CompanyAccountLockRequest,
     CompanyAccountUnlockRequest
 )
@@ -142,6 +143,36 @@ def create_company_account(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post(
+    "/companies/{company_id}/chart/add-from-master",
+    response_model=CompanyAccountSchema,
+    status_code=201,
+    dependencies=[Depends(rate_limit_write())]
+)
+def add_company_account_from_master(
+    company_id: UUID,
+    request: CompanyAccountFromMasterRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Add a single account from the master chart catalog to a company.
+    """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
+    service = CompanyChartService(db)
+    try:
+        account = service.add_account_from_master(company_id, request.master_account_id)
+        return account
+    except (ValueError, ValidationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.put(
     "/companies/{company_id}/chart/{code}",
     response_model=CompanyAccountSchema,
@@ -248,9 +279,8 @@ def initialize_company_chart(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Initialize company's chart of accounts from master chart.
-    This is typically called automatically during company creation,
-    but can be called manually for companies that were created before this feature.
+    Initialize company's chart of accounts from required kernel accounts.
+    This can be called manually for companies missing kernel accounts.
     """
     require_company_access(
         db,

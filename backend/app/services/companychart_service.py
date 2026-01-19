@@ -15,6 +15,7 @@ from typing import List, Dict, Optional, Any, Tuple
 from sqlalchemy.orm import Session
 from uuid import UUID
 
+from app.db.models.company import Company
 from app.db.models.company_account import CompanyAccount
 from app.db.models.master_account import MasterAccount
 from app.db.models.enums import AccountType, NormalBalance, LockedReason
@@ -22,7 +23,7 @@ from app.schemas.company_account import CompanyAccountCreate, CompanyAccountUpda
 from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 from app.core.exceptions import ValidationError, ErrorCode
-from app.core.kernel import L0_KERNEL_CODES
+from app.core.kernel import L0_KERNEL_CODES, map_normal_balance
 from app.services.validators.template_account_validator import TemplateAccountValidator
 from app.services.audit_service import AuditService
 
@@ -391,6 +392,78 @@ class CompanyChartService:
 
         return db_account
 
+    def add_account_from_master(
+        self,
+        company_id: UUID,
+        master_account_id: UUID
+    ) -> CompanyAccount:
+        """
+        Add a single company account from the master chart catalog.
+
+        This is an explicit, one-account action and never bulk-imports.
+        """
+        company = self.db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            raise ValidationError("Company not found.")
+
+        master_account = self.db.query(MasterAccount).filter(
+            MasterAccount.id == master_account_id
+        ).first()
+        if not master_account:
+            raise ValidationError("Master account not found.")
+
+        existing = self.db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company_id,
+            CompanyAccount.code == master_account.code
+        ).first()
+        if existing:
+            raise ValidationError(
+                f"Account with code '{master_account.code}' already exists for this company."
+            )
+
+        parent_id = None
+        if master_account.parent_id:
+            parent_company = self.db.query(CompanyAccount).filter(
+                CompanyAccount.company_id == company_id,
+                CompanyAccount.mapped_master_account_id == master_account.parent_id
+            ).first()
+            if parent_company:
+                parent_id = parent_company.id
+
+        account_type = self._category_to_account_type(master_account.category)
+        normal_balance = map_normal_balance(master_account.normal_balance)
+
+        name = master_account.long_description or master_account.description or master_account.code
+        description = master_account.description or name
+
+        company_account = CompanyAccount(
+            company_id=company_id,
+            code=master_account.code,
+            name=name,
+            description=description,
+            type=master_account.type or "D",
+            account_type=account_type,
+            normal_balance=normal_balance,
+            parent_id=parent_id,
+            mapped_master_account_id=master_account.id,
+            template_account_id=None,
+            currency=company.currency or "USD",
+            is_active=True,
+            is_locked=False,
+            json_data={
+                "category": master_account.category,
+                "fs_mapping": master_account.fs_mapping,
+                "cash_flow_classification": master_account.cash_flow_classification,
+                "source": "master_catalog",
+            }
+        )
+
+        self.db.add(company_account)
+        self.db.commit()
+        self.db.refresh(company_account)
+
+        return company_account
+
     # ========================================================================
     # ACCOUNT UPDATES (Phase 3B: Strict locked account enforcement)
     # ========================================================================
@@ -638,7 +711,7 @@ class CompanyChartService:
 
     def initialize_from_master_chart(self, company_id: UUID) -> Dict[str, Any]:
         """
-        Initialize company chart from master chart.
+        Initialize company chart from required kernel accounts.
 
         CANONICAL COMPLIANCE:
         - Sets mapped_master_account_id (UUID FK), NOT master_account_code
@@ -664,8 +737,10 @@ class CompanyChartService:
                 f"Use reset_to_master_chart() to replace existing accounts."
             )
 
-        # Get all master accounts ordered by level (parents before children)
-        master_accounts = self.db.query(MasterAccount).order_by(
+        # Get required kernel accounts ordered by level (parents before children)
+        master_accounts = self.db.query(MasterAccount).filter(
+            MasterAccount.code.in_(L0_KERNEL_CODES)
+        ).order_by(
             MasterAccount.level,
             MasterAccount.code
         ).all()
@@ -724,9 +799,9 @@ class CompanyChartService:
         self.db.commit()
 
         return {
-            "message": "Company chart initialized from master chart",
+            "message": "Company chart initialized from kernel accounts",
             "accounts_created": created_count,
-            "source": "master_chart",
+            "source": "kernel",
             "method": "uuid_hierarchy"
         }
 
@@ -751,6 +826,7 @@ class CompanyChartService:
             "REVENUE": AccountType.REVENUE,
             "EXPENSE": AccountType.EXPENSE,
             "COGS": AccountType.EXPENSE,  # Map COGS to Expense
+            "COST OF GOODS SOLD": AccountType.EXPENSE,
             "OTHER": None,  # Nullable allowed
         }
         return category_mapping.get(category.upper())

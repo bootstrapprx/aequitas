@@ -171,6 +171,17 @@ class CompanyAccountUpdate(BaseModel):
 
 
 # ==============================================================================
+# MASTER CHART ADDITIONS
+# ==============================================================================
+
+class CompanyAccountFromMasterRequest(BaseModel):
+    """
+    Request schema for adding a single account from the master chart catalog.
+    """
+    master_account_id: uuid.UUID
+
+
+# ==============================================================================
 # LOCKING SCHEMAS
 # ==============================================================================
 
@@ -325,6 +336,7 @@ __all__ = [
     "CompanyAccountBase",
     "CompanyAccountCreate",
     "CompanyAccountUpdate",
+    "CompanyAccountFromMasterRequest",
     "CompanyAccountLockRequest",
     "CompanyAccountUnlockRequest",
     "CompanyAccountSchema",

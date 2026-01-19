@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
+from sqlalchemy import and_
 from typing import List, Optional, Dict
 from uuid import UUID
 from datetime import date
@@ -10,7 +10,7 @@ from app.db.models.journal_entry_line import JournalEntryLine
 from app.db.models.account_balance import AccountBalance
 from app.db.models.fiscal_period import FiscalPeriod
 from app.db.models.company_account import CompanyAccount
-from app.db.models.master_account import MasterAccount
+from app.db.models.enums import AccountType, NormalBalance
 from app.schemas.ledger import (
     AccountLedger,
     LedgerEntryResponse,
@@ -25,6 +25,24 @@ class LedgerService:
 
     def __init__(self, db: Session):
         self.db = db
+
+    def _resolve_normal_balance(self, account: CompanyAccount) -> str:
+        if account.normal_balance:
+            if isinstance(account.normal_balance, NormalBalance):
+                return account.normal_balance.value
+            return str(account.normal_balance)
+        return NormalBalance.DEBIT.value
+
+    def _resolve_category(self, account: CompanyAccount) -> str:
+        if account.json_data and isinstance(account.json_data, dict):
+            category = account.json_data.get("category")
+            if category:
+                return str(category)
+        if account.account_type:
+            if isinstance(account.account_type, AccountType):
+                return account.account_type.value
+            return str(account.account_type)
+        return "Other"
 
     def post_journal_entry(self, journal_entry: JournalEntry) -> Dict[UUID, AccountBalance]:
         """
@@ -52,18 +70,11 @@ class LedgerService:
                 fiscal_period_id=journal_entry.fiscal_period_id
             )
 
-            # Get account's normal balance from master account
+            # Get account's normal balance from company account
             company_account = self.db.query(CompanyAccount).filter(
                 CompanyAccount.id == line.company_account_id
             ).first()
-
-            master_account = None
-            if company_account and company_account.master_account_code:
-                master_account = self.db.query(MasterAccount).filter(
-                    MasterAccount.code == company_account.master_account_code
-                ).first()
-
-            normal_balance = master_account.normal_balance if master_account else "Debit"
+            normal_balance = self._resolve_normal_balance(company_account) if company_account else NormalBalance.DEBIT.value
 
             # Update balance
             account_balance.update_balance(
@@ -107,14 +118,8 @@ class LedgerService:
         if not company_account:
             raise ValueError("Company account not found")
 
-        # Get master account for normal balance
-        master_account = None
-        if company_account.master_account_code:
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-
-        normal_balance = master_account.normal_balance if master_account else "Debit"
+        # Get normal balance from company account
+        normal_balance = self._resolve_normal_balance(company_account)
 
         # Build query for journal entry lines
         query = self.db.query(
@@ -246,13 +251,6 @@ class LedgerService:
         total_credits = Decimal("0.00")
 
         for company_account in company_accounts:
-            # Get master account for metadata
-            master_account = None
-            if company_account.master_account_code:
-                master_account = self.db.query(MasterAccount).filter(
-                    MasterAccount.code == company_account.master_account_code
-                ).first()
-
             # Calculate account balance
             balance = self._calculate_account_balance(
                 company_account_id=company_account.id,
@@ -260,8 +258,8 @@ class LedgerService:
                 end_date=period_end
             )
 
-            normal_balance = master_account.normal_balance if master_account else "Debit"
-            category = master_account.category if master_account else "Other"
+            normal_balance = self._resolve_normal_balance(company_account)
+            category = self._resolve_category(company_account)
             account_type = "Header" if company_account.type == "H" else "Detail"
 
             # Determine debit or credit balance
@@ -412,14 +410,7 @@ class LedgerService:
             CompanyAccount.id == company_account_id
         ).first()
 
-        if company_account and company_account.master_account_code:
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-
-            normal_balance = master_account.normal_balance if master_account else "Debit"
-        else:
-            normal_balance = "Debit"
+        normal_balance = self._resolve_normal_balance(company_account) if company_account else NormalBalance.DEBIT.value
 
         # Calculate balance based on normal balance
         if normal_balance == "Debit":

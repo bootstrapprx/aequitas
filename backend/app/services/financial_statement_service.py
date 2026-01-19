@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID
 from datetime import date
 from decimal import Decimal
@@ -10,7 +10,7 @@ from app.db.models.company_account import CompanyAccount
 from app.db.models.master_account import MasterAccount
 from app.db.models.journal_entry import JournalEntry, EntryStatus
 from app.db.models.journal_entry_line import JournalEntryLine
-from app.db.models.fiscal_period import FiscalPeriod
+from app.db.models.enums import AccountType, NormalBalance
 from app.schemas.financial_statements import (
     BalanceSheetResponse,
     BalanceSheetSection,
@@ -29,6 +29,98 @@ class FinancialStatementService:
 
     def __init__(self, db: Session):
         self.db = db
+
+    def _lookup_master_account(self, account: CompanyAccount) -> Optional[MasterAccount]:
+        if not account.mapped_master_account_id:
+            return None
+        return self.db.query(MasterAccount).filter(
+            MasterAccount.id == account.mapped_master_account_id
+        ).first()
+
+    def _resolve_normal_balance(self, account: CompanyAccount) -> str:
+        if account.normal_balance:
+            if isinstance(account.normal_balance, NormalBalance):
+                return account.normal_balance.value
+            return str(account.normal_balance)
+        return NormalBalance.DEBIT.value
+
+    def _resolve_category(self, account: CompanyAccount) -> Optional[str]:
+        if account.json_data and isinstance(account.json_data, dict):
+            category = account.json_data.get("category")
+            if category:
+                return str(category)
+        master_account = self._lookup_master_account(account)
+        if master_account and master_account.category:
+            return master_account.category
+        if account.account_type:
+            if isinstance(account.account_type, AccountType):
+                return account.account_type.value
+            return str(account.account_type)
+        return None
+
+    def _resolve_fs_mapping(self, account: CompanyAccount) -> Optional[str]:
+        if account.json_data and isinstance(account.json_data, dict):
+            fs_mapping = account.json_data.get("fs_mapping")
+            if fs_mapping:
+                return str(fs_mapping)
+        master_account = self._lookup_master_account(account)
+        if master_account and master_account.fs_mapping:
+            return master_account.fs_mapping
+        account_type = account.account_type
+        if isinstance(account_type, AccountType):
+            account_type = account_type.value
+        if account_type in ("Asset", "Liability", "Equity"):
+            return "Balance Sheet"
+        if account_type in ("Revenue", "Expense"):
+            return "Income Statement"
+        return None
+
+    def _resolve_cash_flow_classification(self, account: CompanyAccount) -> Optional[str]:
+        if account.json_data and isinstance(account.json_data, dict):
+            classification = account.json_data.get("cash_flow_classification")
+            if classification:
+                return str(classification)
+        master_account = self._lookup_master_account(account)
+        if master_account and master_account.cash_flow_classification:
+            return master_account.cash_flow_classification
+        return None
+
+    def _build_level_map(self, accounts: List[CompanyAccount]) -> Dict[UUID, int]:
+        parent_map = {acc.id: acc.parent_id for acc in accounts}
+        level_cache: Dict[UUID, int] = {}
+
+        def compute_level(account_id: UUID, seen: set) -> int:
+            if account_id in level_cache:
+                return level_cache[account_id]
+            if account_id in seen:
+                return 1
+            seen.add(account_id)
+            parent_id = parent_map.get(account_id)
+            if not parent_id or parent_id not in parent_map:
+                level = 1
+            else:
+                level = compute_level(parent_id, seen) + 1
+            seen.remove(account_id)
+            level_cache[account_id] = level
+            return level
+
+        for account in accounts:
+            compute_level(account.id, set())
+
+        return level_cache
+
+    def _is_cash_account(self, account: CompanyAccount) -> bool:
+        haystack = " ".join(
+            filter(
+                None,
+                [
+                    account.code,
+                    account.name or "",
+                    account.description,
+                ],
+            )
+        ).lower()
+        return "cash" in haystack or "bank" in haystack
 
     def generate_balance_sheet(
         self,
@@ -62,16 +154,14 @@ class FinancialStatementService:
         assets = []
         liabilities = []
         equity_accounts = []
+        level_map = self._build_level_map(company_accounts)
 
         for company_account in company_accounts:
-            if not company_account.master_account_code:
+            fs_mapping = self._resolve_fs_mapping(company_account)
+            if fs_mapping != "Balance Sheet":
                 continue
-
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-
-            if not master_account or master_account.fs_mapping != "Balance Sheet":
+            category = self._resolve_category(company_account)
+            if category not in ["Asset", "Liability", "Equity"]:
                 continue
 
             balance = self._calculate_balance(
@@ -87,15 +177,15 @@ class FinancialStatementService:
                 code=company_account.code,
                 description=company_account.description,
                 amount=abs(balance),
-                level=master_account.level,
+                level=level_map.get(company_account.id, 1),
                 is_header=(company_account.type == "H")
             )
 
-            if master_account.category == "Asset":
+            if category == "Asset":
                 assets.append(bs_account)
-            elif master_account.category == "Liability":
+            elif category == "Liability":
                 liabilities.append(bs_account)
-            elif master_account.category == "Equity":
+            elif category == "Equity":
                 equity_accounts.append(bs_account)
 
         # Calculate totals
@@ -173,16 +263,11 @@ class FinancialStatementService:
         cogs_accounts = []
         expense_accounts = []
         other_accounts = []
+        level_map = self._build_level_map(company_accounts)
 
         for company_account in company_accounts:
-            if not company_account.master_account_code:
-                continue
-
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-
-            if not master_account or master_account.fs_mapping != "Income Statement":
+            fs_mapping = self._resolve_fs_mapping(company_account)
+            if fs_mapping != "Income Statement":
                 continue
 
             balance = self._calculate_balance_for_period(
@@ -199,17 +284,19 @@ class FinancialStatementService:
                 code=company_account.code,
                 description=company_account.description,
                 amount=abs(balance),
-                level=master_account.level,
+                level=level_map.get(company_account.id, 1),
                 is_header=(company_account.type == "H")
             )
 
-            if master_account.category == "Revenue":
+            category = self._resolve_category(company_account)
+
+            if category == "Revenue":
                 revenue_accounts.append(is_account)
-            elif master_account.category == "Cost of Goods Sold":
+            elif category == "Cost of Goods Sold":
                 cogs_accounts.append(is_account)
-            elif master_account.category == "Expense":
+            elif category == "Expense":
                 expense_accounts.append(is_account)
-            elif master_account.category == "Other":
+            else:
                 other_accounts.append(is_account)
 
         # Calculate totals
@@ -303,16 +390,11 @@ class FinancialStatementService:
         operating_accounts = []
         investing_accounts = []
         financing_accounts = []
+        level_map = self._build_level_map(company_accounts)
 
         for company_account in company_accounts:
-            if not company_account.master_account_code:
-                continue
-
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-
-            if not master_account or not master_account.cash_flow_classification:
+            classification = self._resolve_cash_flow_classification(company_account)
+            if not classification:
                 continue
 
             balance = self._calculate_balance_for_period(
@@ -329,15 +411,15 @@ class FinancialStatementService:
                 code=company_account.code,
                 description=company_account.description,
                 amount=abs(balance),
-                level=master_account.level,
+                level=level_map.get(company_account.id, 1),
                 is_header=(company_account.type == "H")
             )
 
-            if "Operating" in master_account.cash_flow_classification:
+            if "Operating" in classification:
                 operating_accounts.append(cf_account)
-            elif "Investing" in master_account.cash_flow_classification:
+            elif "Investing" in classification:
                 investing_accounts.append(cf_account)
-            elif "Financing" in master_account.cash_flow_classification:
+            elif "Financing" in classification:
                 financing_accounts.append(cf_account)
 
         # Calculate totals
@@ -415,13 +497,7 @@ class FinancialStatementService:
             CompanyAccount.id == company_account_id
         ).first()
 
-        normal_balance = "Debit"
-        if company_account and company_account.master_account_code:
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-            if master_account:
-                normal_balance = master_account.normal_balance
+        normal_balance = self._resolve_normal_balance(company_account) if company_account else NormalBalance.DEBIT.value
 
         # Calculate balance based on normal balance
         if normal_balance == "Debit":
@@ -466,13 +542,7 @@ class FinancialStatementService:
             CompanyAccount.id == company_account_id
         ).first()
 
-        normal_balance = "Debit"
-        if company_account and company_account.master_account_code:
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == company_account.master_account_code
-            ).first()
-            if master_account:
-                normal_balance = master_account.normal_balance
+        normal_balance = self._resolve_normal_balance(company_account) if company_account else NormalBalance.DEBIT.value
 
         # Calculate balance based on normal balance
         if normal_balance == "Debit":
@@ -502,14 +572,7 @@ class FinancialStatementService:
         total_cash = Decimal("0.00")
 
         for account in company_accounts:
-            if not account.master_account_code:
-                continue
-
-            master_account = self.db.query(MasterAccount).filter(
-                MasterAccount.code == account.master_account_code
-            ).first()
-
-            if master_account and "Cash" in (master_account.category or ""):
+            if self._is_cash_account(account):
                 balance = self._calculate_balance(account.id, as_of_date)
                 total_cash += balance
 

@@ -42,6 +42,7 @@ import { api } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNavigate } from 'react-router-dom';
+import { useDashboardContext } from '@/hooks/useDashboardContext';
 
 // Interfaces matching backend schema
 interface CompanyChartStatus {
@@ -75,6 +76,9 @@ const CompanyDashboard = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompanyId || '');
   const [showPostActivationPanel, setShowPostActivationPanel] = useState(false);
 
+  // CANONICAL: Use dashboard context for ALL authoritative state
+  const { data: dashboardContext, isLoading: isContextLoading } = useDashboardContext();
+
   // Fetch companies
   const { data: companies, isLoading: isCompaniesLoading } = useGetCompanies();
 
@@ -98,8 +102,11 @@ const CompanyDashboard = () => {
   };
 
   const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
-  const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading);
-  const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
+  const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading) || isContextLoading;
+
+  // BACKEND AUTHORITY: Use dashboard context flags, NOT inference
+  const accountingActive = dashboardContext?.accounting_active || false;
+  const protectedStructure = dashboardContext?.protected_structure || false;
 
   const dismissalKey = useMemo(() => {
     if (!selectedCompanyId) return null;
@@ -108,13 +115,13 @@ const CompanyDashboard = () => {
   }, [selectedCompanyId, user?.email, user?.id, user?.user_uid]);
 
   useEffect(() => {
-    if (isActiveCompany && dismissalKey) {
+    if (accountingActive && dismissalKey) {
       const stored = localStorage.getItem(dismissalKey);
       setShowPostActivationPanel(stored !== 'dismissed');
     } else {
       setShowPostActivationPanel(false);
     }
-  }, [dismissalKey, isActiveCompany]);
+  }, [dismissalKey, accountingActive]);
 
   const acknowledgePanel = () => {
     if (dismissalKey) {
@@ -125,7 +132,7 @@ const CompanyDashboard = () => {
 
   // Derived metrics from real data
   const chartStatus = stats?.chart_status;
-  const totalAccounts = chartStatus?.account_count || 0;
+  const totalAccounts = dashboardContext?.total_accounts || chartStatus?.account_count || 0;
   const mappedPercentage = chartStatus?.mapping_coverage || 0;
   const activeUsers = stats?.active_users_count || 0;
   const pendingReviews = stats?.pending_reviews_count || 0;
@@ -193,23 +200,26 @@ const CompanyDashboard = () => {
 
       {/* Main Content */}
       <main className="p-8 space-y-8">
-        {isActiveCompany && (
+        {/* BACKEND-DRIVEN BADGES - No inference allowed */}
+        {accountingActive && (
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline" className="flex items-center gap-2 border-green-600 text-green-700 bg-green-50">
               <ShieldCheck className="h-4 w-4" />
               Accounting Active
             </Badge>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground border border-dashed border-border px-3 py-1.5 rounded-lg cursor-default">
-                  <Info className="h-4 w-4" />
-                  Protected structure
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                This structure is protected after activation.
-              </TooltipContent>
-            </Tooltip>
+            {protectedStructure && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground border border-dashed border-border px-3 py-1.5 rounded-lg cursor-default">
+                    <Info className="h-4 w-4" />
+                    Protected structure
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Chart is kernel-bound (v{dashboardContext?.kernel_version}, {dashboardContext?.kernel_layer}). Structure is locked.
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )}
 
@@ -252,7 +262,7 @@ const CompanyDashboard = () => {
           </Card>
         </motion.div>
 
-        {isActiveCompany && showPostActivationPanel && (
+        {accountingActive && showPostActivationPanel && (
           <Card className="border border-border bg-muted/40">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>

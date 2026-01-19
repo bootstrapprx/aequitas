@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/lib/api';
-import { Search, Plus, RefreshCw, FileText, Lock, Info } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { api, ApiError } from '@/lib/api';
+import { Search, Plus, RefreshCw, Lock, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCompany } from '@/contexts/CompanyContext';
-import type { Company } from '@/types/company';
-
-interface CompanyAccount {
-  id: string;
-  code: string;
-  description: string;
-  type: string;
-  parent_code: string | null;
-  name: string | null;
-  currency: string;
-  is_active: boolean;
-  master_account_code: string | null;
-}
+import { useToast } from '@/hooks/use-toast';
+import type { CompanyAccount } from '@/types/company_account';
+import type { MasterAccount } from '@/types/masterchart';
 
 interface CompanyChartStats {
   total_accounts: number;
@@ -35,6 +35,11 @@ interface CompanyChartStats {
 
 export default function CompanyChartPage() {
   const [search, setSearch] = useState('');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [selectedMasterId, setSelectedMasterId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { selectedCompanyId, selectedCompany } = useCompany();
   const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
 
@@ -46,9 +51,8 @@ export default function CompanyChartPage() {
   } = useQuery({
     queryKey: ['company-chart', selectedCompanyId],
     queryFn: async () => {
-      if (!selectedCompanyId) return [];
-      const response = await api.get(`/companies/${selectedCompanyId}/chart`);
-      return (response as any).data as CompanyAccount[];
+      if (!selectedCompanyId) return [] as CompanyAccount[];
+      return api.get<CompanyAccount[]>(`/companies/${selectedCompanyId}/chart`);
     },
     enabled: !!selectedCompanyId,
   });
@@ -58,13 +62,54 @@ export default function CompanyChartPage() {
     queryKey: ['company-chart-stats', selectedCompanyId],
     queryFn: async () => {
       if (!selectedCompanyId) return null;
-      const response = await api.get(`/companies/${selectedCompanyId}/chart/stats`);
-      return (response as any).data as CompanyChartStats;
+      return api.get<CompanyChartStats>(`/companies/${selectedCompanyId}/chart/stats`);
     },
     enabled: !!selectedCompanyId,
   });
 
-  const filteredAccounts = React.useMemo(() => {
+  // Fetch master chart catalog for add-account flow
+  const { data: catalogAccounts = [], isLoading: catalogLoading } = useQuery({
+    queryKey: ['master-catalog', catalogSearch, isAddOpen],
+    queryFn: async () => {
+      const params = catalogSearch ? { search: catalogSearch } : undefined;
+      return api.get<MasterAccount[]>('/masterchart', { params });
+    },
+    enabled: isAddOpen,
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (masterAccountId: string) => {
+      if (!selectedCompanyId) throw new Error('Company not selected');
+      return api.post(`/companies/${selectedCompanyId}/chart/add-from-master`, {
+        master_account_id: masterAccountId,
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Account added',
+        description: 'The account was added to your chart of accounts.',
+      });
+      setIsAddOpen(false);
+      setCatalogSearch('');
+      setSelectedMasterId(null);
+      queryClient.invalidateQueries({ queryKey: ['company-chart', selectedCompanyId] });
+      queryClient.invalidateQueries({ queryKey: ['company-chart-stats', selectedCompanyId] });
+    },
+    onError: (error) => {
+      const message = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to add account.';
+      toast({
+        title: 'Add account failed',
+        description: message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const filteredAccounts = useMemo(() => {
     if (!accounts) return [];
     if (!search) return accounts;
 
@@ -72,23 +117,22 @@ export default function CompanyChartPage() {
     return accounts.filter(
       (acc) =>
         acc.code.toLowerCase().includes(searchLower) ||
-        acc.description.toLowerCase().includes(searchLower)
+        acc.description.toLowerCase().includes(searchLower) ||
+        (acc.name || '').toLowerCase().includes(searchLower)
     );
   }, [accounts, search]);
 
-  const handleReset = async () => {
-    if (!selectedCompanyId) return;
-    if (!confirm('Are you sure you want to reset the chart of accounts to the master chart? This will deactivate all existing accounts and create new ones.')) {
-      return;
-    }
+  const accountById = useMemo(() => {
+    const map = new Map<string, CompanyAccount>();
+    (accounts || []).forEach((acc) => map.set(acc.id, acc));
+    return map;
+  }, [accounts]);
 
-    try {
-      await api.post(`/companies/${selectedCompanyId}/chart/reset`, {});
-      refetchAccounts();
-    } catch (error) {
-      console.error('Failed to reset chart:', error);
-    }
-  };
+  const existingCodes = useMemo(() => new Set((accounts || []).map((acc) => acc.code)), [accounts]);
+  const hasAccounts = (accounts || []).length > 0;
+
+  const selectedMaster = catalogAccounts.find((acc) => acc.id === selectedMasterId) || null;
+  const displayCatalog = catalogAccounts.slice(0, 50);
 
   if (!selectedCompanyId) {
     return (
@@ -111,6 +155,14 @@ export default function CompanyChartPage() {
           Manage your company's chart of accounts
         </p>
       </div>
+
+      {hasAccounts && (
+        <Alert className="bg-emerald-50 border-emerald-200">
+          <AlertDescription className="text-emerald-900">
+            Your chart of accounts is ready. You can add more accounts if needed.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {isActiveCompany && (
         <Alert className="bg-muted/40 border-border">
@@ -136,8 +188,6 @@ export default function CompanyChartPage() {
         </Alert>
       )}
 
-
-
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -161,7 +211,7 @@ export default function CompanyChartPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>Mapped to Master</CardDescription>
+              <CardDescription>Mapped to Catalog</CardDescription>
               <CardTitle className="text-3xl">{stats.mapped_accounts}</CardTitle>
             </CardHeader>
           </Card>
@@ -188,10 +238,90 @@ export default function CompanyChartPage() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm" onClick={handleReset}>
-                <FileText className="h-4 w-4 mr-2" />
-                Reset to Master
-              </Button>
+              <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Add an Account</DialogTitle>
+                    <DialogDescription>
+                      Select one account from the catalog to add to your company chart.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Search the catalog by code or name..."
+                      value={catalogSearch}
+                      onChange={(e) => setCatalogSearch(e.target.value)}
+                    />
+
+                    {catalogLoading ? (
+                      <div className="space-y-2">
+                        {[...Array(6)].map((_, i) => (
+                          <Skeleton key={i} className="h-10 w-full" />
+                        ))}
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-64 rounded-md border">
+                        <div className="p-2 space-y-2">
+                          {displayCatalog.length === 0 ? (
+                            <div className="text-sm text-muted-foreground p-4 text-center">
+                              Catalog is empty. Import accounts to add more options.
+                            </div>
+                          ) : (
+                            displayCatalog.map((account) => {
+                              const alreadyAdded = existingCodes.has(account.code);
+                              const isSelected = selectedMasterId === account.id;
+                              return (
+                                <button
+                                  key={account.id}
+                                  type="button"
+                                  disabled={alreadyAdded}
+                                  onClick={() => setSelectedMasterId(account.id)}
+                                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
+                                    alreadyAdded
+                                      ? 'cursor-not-allowed opacity-60'
+                                      : 'hover:bg-muted/50'
+                                  } ${isSelected ? 'border-primary bg-muted' : 'border-border'}`}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-mono text-xs text-muted-foreground">{account.code}</div>
+                                      <div className="text-sm font-medium">
+                                        {account.description}
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {alreadyAdded ? 'Already in chart' : account.category}
+                                    </div>
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsAddOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={() => selectedMasterId && addMutation.mutate(selectedMasterId)}
+                      disabled={!selectedMaster || addMutation.isPending}
+                    >
+                      {addMutation.isPending ? 'Adding...' : 'Add Account'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </CardHeader>
@@ -222,35 +352,38 @@ export default function CompanyChartPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredAccounts.map((account) => (
-                      <tr
-                        key={account.id}
-                        className="border-t hover:bg-muted/50 transition-colors"
-                      >
-                        <td className="p-3 font-mono text-sm">{account.code}</td>
-                        <td className="p-3">{account.description}</td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2 py-1 rounded text-xs font-semibold ${account.type === 'H'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                              }`}
-                          >
-                            {account.type === 'H' ? 'Header' : 'Detail'}
-                          </span>
-                        </td>
-                        <td className="p-3 font-mono text-sm text-muted-foreground">
-                          {account.parent_code || '-'}
-                        </td>
-                        <td className="p-3 text-sm">
-                          {account.master_account_code ? (
-                            <span className="text-green-600">✓ {account.master_account_code}</span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                    filteredAccounts.map((account) => {
+                      const parent = account.parent_id ? accountById.get(account.parent_id) : null;
+                      return (
+                        <tr
+                          key={account.id}
+                          className="border-t hover:bg-muted/50 transition-colors"
+                        >
+                          <td className="p-3 font-mono text-sm">{account.code}</td>
+                          <td className="p-3">{account.description}</td>
+                          <td className="p-3">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${account.type === 'H'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-green-100 text-green-800'
+                                }`}
+                            >
+                              {account.type === 'H' ? 'Header' : 'Detail'}
+                            </span>
+                          </td>
+                          <td className="p-3 font-mono text-sm text-muted-foreground">
+                            {parent?.code || '-'}
+                          </td>
+                          <td className="p-3 text-sm">
+                            {account.mapped_master_account_id ? (
+                              <span className="text-green-600">✓</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
