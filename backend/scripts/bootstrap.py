@@ -4,7 +4,7 @@ Production-grade bootstrap script for the Aequitas backend.
 This script ensures that the application starts in a guaranteed valid state by:
 1. Waiting for the database to be reachable.
 2. Applying all Alembic migrations.
-3. Seeding essential, idempotent data (Master Chart, default fiscal rules).
+3. Seeding essential, idempotent data (Master Chart, chart templates, default fiscal rules).
 
 This script is designed to be run inside the Docker container on every startup.
 If any step fails, it will exit with a non-zero status code, preventing
@@ -33,6 +33,7 @@ try:
     from app.db.session import SessionLocal, engine
     from app.db.models.master_account import MasterAccount
     from app.db.models.tax_ruleset import TaxRuleset
+    from app.db.models.chart_template import ChartTemplateAccount
     from app.core.config import settings
 except ImportError as e:
     logger.error(f"Failed to import necessary modules: {e}", exc_info=True)
@@ -142,6 +143,36 @@ def seed_default_fiscal_ruleset(db: Session):
         db.rollback()
         return False
 
+def seed_chart_templates(db: Session):
+    """
+    Idempotently seeds kernel chart templates for onboarding.
+
+    Seeds templates only when no template accounts exist.
+    """
+    logger.info("Checking chart template seed status...")
+    try:
+        existing_account_count = db.query(ChartTemplateAccount).count()
+        if existing_account_count > 0:
+            logger.info(
+                "Chart templates already present (%s template accounts). Skipping seed.",
+                existing_account_count,
+            )
+            return True
+
+        from app.data.seed_chart_templates import seed_templates
+
+        counts = seed_templates(db)
+        db.commit()
+        if counts:
+            logger.info("Kernel chart templates seeded: %s", ", ".join(counts.keys()))
+        else:
+            logger.info("Kernel chart templates seeded with no accounts.")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Failed to seed chart templates: {e}", exc_info=True)
+        return False
+
 def main():
     """
     Main bootstrap execution pipeline.
@@ -164,7 +195,15 @@ def main():
             logger.error(">>> DEBUG: seed_master_chart FAILED! Exiting with code 1")
             exit(1)
         logger.info(">>> DEBUG: seed_master_chart completed successfully")
-        
+
+        logger.info(">>> DEBUG: About to call seed_chart_templates...")
+        result = seed_chart_templates(db_session)
+        logger.info(f">>> DEBUG: seed_chart_templates returned: {result}")
+        if not result:
+            logger.error(">>> DEBUG: seed_chart_templates FAILED! Exiting with code 1")
+            exit(1)
+        logger.info(">>> DEBUG: seed_chart_templates completed successfully")
+
         logger.info(">>> DEBUG: About to call seed_default_fiscal_ruleset...")
         result = seed_default_fiscal_ruleset(db_session)
         logger.info(f">>> DEBUG: seed_default_fiscal_ruleset returned: {result}")
