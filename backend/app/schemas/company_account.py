@@ -181,6 +181,13 @@ class CompanyAccountFromMasterRequest(BaseModel):
     master_account_id: uuid.UUID
 
 
+class CompanyAccountFromCatalogRequest(BaseModel):
+    """
+    Request schema for adding a single account from the template catalog.
+    """
+    catalog_account_id: str
+
+
 # ==============================================================================
 # LOCKING SCHEMAS
 # ==============================================================================
@@ -337,6 +344,7 @@ __all__ = [
     "CompanyAccountCreate",
     "CompanyAccountUpdate",
     "CompanyAccountFromMasterRequest",
+    "CompanyAccountFromCatalogRequest",
     "CompanyAccountLockRequest",
     "CompanyAccountUnlockRequest",
     "CompanyAccountSchema",

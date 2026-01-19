@@ -13,6 +13,7 @@ from app.api.v1 import (
     companies,
     companies_su,
     companychart,
+    catalog,
     elevation,
     fiscal,
     groups,
@@ -150,6 +151,7 @@ app.include_router(companies_su.router, prefix="/api/v1/admin/companies", tags=[
 
 app.include_router(dexter_router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(masterchart.router, prefix="/api/v1/masterchart", tags=["Master Chart"])
+app.include_router(catalog.router, prefix="/api/v1/catalog", tags=["Template Catalog"])
 app.include_router(companychart.router, prefix="/api/v1", tags=["Chart of Accounts"])
 app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(snapshots.router, prefix="/api/v1", tags=["Snapshots"])

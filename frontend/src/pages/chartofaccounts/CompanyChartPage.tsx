@@ -37,7 +37,7 @@ export default function CompanyChartPage() {
   const [search, setSearch] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [catalogSearch, setCatalogSearch] = useState('');
-  const [selectedMasterId, setSelectedMasterId] = useState<string | null>(null);
+  const [selectedCatalogId, setSelectedCatalogId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { selectedCompanyId, selectedCompany } = useCompany();
@@ -67,21 +67,21 @@ export default function CompanyChartPage() {
     enabled: !!selectedCompanyId,
   });
 
-  // Fetch master chart catalog for add-account flow
+  // Fetch template catalog for add-account flow
   const { data: catalogAccounts = [], isLoading: catalogLoading } = useQuery({
-    queryKey: ['master-catalog', catalogSearch, isAddOpen],
+    queryKey: ['template-catalog', catalogSearch, isAddOpen],
     queryFn: async () => {
       const params = catalogSearch ? { search: catalogSearch } : undefined;
-      return api.get<MasterAccount[]>('/masterchart', { params });
+      return api.get<MasterAccount[]>('/catalog/accounts', { params });
     },
     enabled: isAddOpen,
   });
 
   const addMutation = useMutation({
-    mutationFn: async (masterAccountId: string) => {
+    mutationFn: async (catalogAccountId: string) => {
       if (!selectedCompanyId) throw new Error('Company not selected');
-      return api.post(`/companies/${selectedCompanyId}/chart/add-from-master`, {
-        master_account_id: masterAccountId,
+      return api.post(`/companies/${selectedCompanyId}/chart/add-from-catalog`, {
+        catalog_account_id: catalogAccountId,
       });
     },
     onSuccess: () => {
@@ -91,7 +91,7 @@ export default function CompanyChartPage() {
       });
       setIsAddOpen(false);
       setCatalogSearch('');
-      setSelectedMasterId(null);
+      setSelectedCatalogId(null);
       queryClient.invalidateQueries({ queryKey: ['company-chart', selectedCompanyId] });
       queryClient.invalidateQueries({ queryKey: ['company-chart-stats', selectedCompanyId] });
     },
@@ -131,7 +131,7 @@ export default function CompanyChartPage() {
   const existingCodes = useMemo(() => new Set((accounts || []).map((acc) => acc.code)), [accounts]);
   const hasAccounts = (accounts || []).length > 0;
 
-  const selectedMaster = catalogAccounts.find((acc) => acc.id === selectedMasterId) || null;
+  const selectedCatalog = catalogAccounts.find((acc) => acc.id === selectedCatalogId) || null;
   const displayCatalog = catalogAccounts.slice(0, 50);
 
   if (!selectedCompanyId) {
@@ -271,18 +271,18 @@ export default function CompanyChartPage() {
                         <div className="p-2 space-y-2">
                           {displayCatalog.length === 0 ? (
                             <div className="text-sm text-muted-foreground p-4 text-center">
-                              Catalog is empty. Import accounts to add more options.
+                              Catalog is empty. Please contact support to load additional accounts.
                             </div>
                           ) : (
                             displayCatalog.map((account) => {
                               const alreadyAdded = existingCodes.has(account.code);
-                              const isSelected = selectedMasterId === account.id;
+                              const isSelected = selectedCatalogId === account.id;
                               return (
                                 <button
                                   key={account.id}
                                   type="button"
                                   disabled={alreadyAdded}
-                                  onClick={() => setSelectedMasterId(account.id)}
+                                  onClick={() => setSelectedCatalogId(account.id)}
                                   className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
                                     alreadyAdded
                                       ? 'cursor-not-allowed opacity-60'
@@ -314,8 +314,8 @@ export default function CompanyChartPage() {
                       Cancel
                     </Button>
                     <Button
-                      onClick={() => selectedMasterId && addMutation.mutate(selectedMasterId)}
-                      disabled={!selectedMaster || addMutation.isPending}
+                      onClick={() => selectedCatalogId && addMutation.mutate(selectedCatalogId)}
+                      disabled={!selectedCatalog || addMutation.isPending}
                     >
                       {addMutation.isPending ? 'Adding...' : 'Add Account'}
                     </Button>

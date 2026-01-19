@@ -18,6 +18,7 @@ from app.schemas.company_account import (
     CompanyAccountCreate,
     CompanyAccountUpdate,
     CompanyAccountFromMasterRequest,
+    CompanyAccountFromCatalogRequest,
     CompanyAccountLockRequest,
     CompanyAccountUnlockRequest
 )
@@ -168,6 +169,36 @@ def add_company_account_from_master(
     service = CompanyChartService(db)
     try:
         account = service.add_account_from_master(company_id, request.master_account_id)
+        return account
+    except (ValueError, ValidationError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post(
+    "/companies/{company_id}/chart/add-from-catalog",
+    response_model=CompanyAccountSchema,
+    status_code=201,
+    dependencies=[Depends(rate_limit_write())]
+)
+def add_company_account_from_catalog(
+    company_id: UUID,
+    request: CompanyAccountFromCatalogRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Add a single account from the template catalog to a company.
+    """
+    require_company_access(
+        db,
+        current_user,
+        company_id,
+        require_admin=True,
+        allow_superuser=True,
+    )
+    service = CompanyChartService(db)
+    try:
+        account = service.add_account_from_catalog(company_id, request.catalog_account_id)
         return account
     except (ValueError, ValidationError) as e:
         raise HTTPException(status_code=400, detail=str(e))

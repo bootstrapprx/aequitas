@@ -1,7 +1,7 @@
 // frontend/src/components/masterchart/dashboard/views/TreeView.tsx
 import React, { useState } from 'react';
 import { MasterAccountNode } from '@/types/masterchart';
-import { ChevronDown, ChevronRight, Folder, FileText, Plus, Edit, Trash2, Info } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FileText, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -60,17 +60,6 @@ const TreeNode: React.FC<{
 
                 {/* Actions */}
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    {isHeader && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                            <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                    )}
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                        <Edit className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0">
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
                     <Button
                         size="sm"
                         variant="ghost"

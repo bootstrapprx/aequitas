@@ -2,11 +2,16 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
-import { Network, FileInput, FileOutput, Plus } from 'lucide-react';
-import { useManualMode } from '@/contexts/ManualModeContext';
-import { useMasterChartTree, useMasterChartStats } from '@/hooks/api/useMasterChart';
+import { ArrowUpRight, Plus } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTemplateCatalogTree, useTemplateCatalogStats } from '@/hooks/api/useTemplateCatalog';
 import { ViewMode, FilterState, MasterAccount } from '@/types/masterchart';
+import type { CompanyAccount } from '@/types/company_account';
+import { useCompany } from '@/contexts/CompanyContext';
+import { useToast } from '@/hooks/use-toast';
+import { api, ApiError } from '@/lib/api';
 
 // Import components
 import KPIMetrics from '@/components/masterchart/dashboard/KPIMetrics';
@@ -19,9 +24,11 @@ import CardsView from '@/components/masterchart/dashboard/views/CardsView';
 import AccountDetailsPanel from '@/components/masterchart/dashboard/AccountDetailsPanel';
 
 const MasterChartDashboard = () => {
-    const { isManualMode } = useManualMode();
-    const { data: tree, isLoading: isLoadingTree } = useMasterChartTree();
-    const { data: stats, isLoading: isLoadingStats } = useMasterChartStats();
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const { selectedCompanyId, selectedCompany } = useCompany();
+    const { data: tree, isLoading: isLoadingTree } = useTemplateCatalogTree();
+    const { data: stats, isLoading: isLoadingStats } = useTemplateCatalogStats();
 
     // State
     const [activeView, setActiveView] = useState<ViewMode>('tree');
@@ -32,6 +39,50 @@ const MasterChartDashboard = () => {
         type: 'all',
         normalBalance: 'all',
         tags: [],
+    });
+
+    const { data: companyAccounts = [] } = useQuery({
+        queryKey: ['company-chart', selectedCompanyId],
+        queryFn: async () => {
+            if (!selectedCompanyId) return [] as CompanyAccount[];
+            return api.get<CompanyAccount[]>(`/companies/${selectedCompanyId}/chart`);
+        },
+        enabled: !!selectedCompanyId,
+    });
+
+    const existingCodes = useMemo(
+        () => new Set(companyAccounts.map((account) => account.code)),
+        [companyAccounts]
+    );
+
+    const addMutation = useMutation({
+        mutationFn: async (account: MasterAccount) => {
+            if (!selectedCompanyId) {
+                throw new Error('Select a company before adding accounts.');
+            }
+            return api.post(`/companies/${selectedCompanyId}/chart/add-from-catalog`, {
+                catalog_account_id: account.id,
+            });
+        },
+        onSuccess: () => {
+            toast({
+                title: 'Account added',
+                description: 'The account was added to your company chart.',
+            });
+            queryClient.invalidateQueries({ queryKey: ['company-chart', selectedCompanyId] });
+        },
+        onError: (error) => {
+            const message = error instanceof ApiError
+                ? error.getUserMessage()
+                : error instanceof Error
+                    ? error.message
+                    : 'Failed to add account.';
+            toast({
+                title: 'Add account failed',
+                description: message,
+                variant: 'destructive',
+            });
+        },
     });
 
     // Flatten tree for list/cards view
@@ -72,18 +123,29 @@ const MasterChartDashboard = () => {
                 return false;
             }
 
+            // Normal balance filter
+            if (filters.normalBalance !== 'all' && account.normal_balance !== filters.normalBalance) {
+                return false;
+            }
+
             return true;
         });
     }, [flatAccounts, filters]);
 
     // Get unique categories
     const categories = useMemo(() => {
-        return Array.from(new Set(flatAccounts.map((acc) => acc.category)));
+        return Array.from(
+            new Set(flatAccounts.map((acc) => acc.category).filter((category) => category))
+        );
     }, [flatAccounts]);
 
     // Calculate additional stats
     const categoriesCount = categories.length;
-    const uniqueTagsCount = 0; // TODO: Calculate from extended data when available
+    const uniqueTagsCount = new Set(
+        flatAccounts.flatMap((account) => account.tags || [])
+    ).size;
+
+    const selectedIsAdded = selectedAccount ? existingCodes.has(selectedAccount.code) : false;
 
     return (
         <div className="space-y-8 p-8 md:p-10">
@@ -95,43 +157,34 @@ const MasterChartDashboard = () => {
             >
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-semibold">Master Chart Dashboard</h1>
+                        <h1 className="text-3xl font-semibold">Template Account Catalog</h1>
                         <p className="text-lg text-muted-foreground mt-1">
-                            Complete overview and management of your chart of accounts
+                            Browse the optional account catalog and add entries to your company chart.
                         </p>
+                        {selectedCompany && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                                Adding to: <span className="font-medium">{selectedCompany.name}</span>
+                            </p>
+                        )}
                     </div>
                     <div className="flex gap-2">
-                        <Button asChild>
-                            <Link to="/masterchart/interactive">
-                                <Network className="h-4 w-4 mr-2" />
-                                Interactive Editor
-                            </Link>
-                        </Button>
                         <Button asChild variant="outline">
-                            <Link to="/masterchart/tree">
-                                <Network className="h-4 w-4 mr-2" />
-                                View Tree
+                            <Link to="/chartofaccounts">
+                                <ArrowUpRight className="h-4 w-4 mr-2" />
+                                View My Chart
                             </Link>
                         </Button>
-                        {!isManualMode && (
-                            <>
-                                <Button asChild variant="outline">
-                                    <Link to="/masterchart/import">
-                                        <FileInput className="h-4 w-4 mr-2" />
-                                        Import
-                                    </Link>
-                                </Button>
-                                <Button asChild variant="outline">
-                                    <Link to="/masterchart/export">
-                                        <FileOutput className="h-4 w-4 mr-2" />
-                                        Export
-                                    </Link>
-                                </Button>
-                            </>
-                        )}
                     </div>
                 </div>
             </motion.div>
+
+            {!selectedCompanyId && (
+                <Alert className="bg-muted/40 border-border">
+                    <AlertDescription>
+                        Select a company to add catalog accounts to a chart of accounts.
+                    </AlertDescription>
+                </Alert>
+            )}
 
             {/* KPI Metrics */}
             <KPIMetrics
@@ -163,9 +216,14 @@ const MasterChartDashboard = () => {
             {/* View Selector */}
             <div className="flex items-center justify-between">
                 <ViewSelector activeView={activeView} onViewChange={setActiveView} />
-                <Button variant="outline" size="sm">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedCompanyId || !selectedAccount || selectedIsAdded || addMutation.isPending}
+                    onClick={() => selectedAccount && addMutation.mutate(selectedAccount)}
+                >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Account
+                    {selectedIsAdded ? 'Already in Chart' : 'Add Selected'}
                 </Button>
             </div>
 
@@ -198,6 +256,10 @@ const MasterChartDashboard = () => {
                 account={selectedAccount}
                 isOpen={!!selectedAccount}
                 onClose={() => setSelectedAccount(null)}
+                onAddAccount={(account) => addMutation.mutate(account)}
+                isAdded={selectedIsAdded}
+                isAdding={addMutation.isPending}
+                companyName={selectedCompany?.name || null}
             />
         </div>
     );

@@ -29,6 +29,7 @@ from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount, Co
 from app.db.models.company_account import CompanyAccount
 from app.db.models.company_module import CompanyModule
 from app.db.models.fiscal_period import FiscalPeriod
+from app.db.models.user import User
 from app.db.models.enums import OnboardingStatus, PeriodStatus, AccountType, NormalBalance, KernelLayer
 from app.core.kernel import KERNEL_VERSION, L0_KERNEL_CODES, map_category_to_account_type, map_normal_balance
 from app.schemas.onboarding import (
@@ -1232,7 +1233,8 @@ def setup_fiscal_periods(
 def activate_accounting(
     db: Session,
     company_id: UUID,
-    data: ActivationRequest
+    data: ActivationRequest,
+    current_user: Optional[User] = None
 ) -> ActivationResponse:
     """
     Step 8: Activate accounting (POINT OF NO RETURN).
@@ -1341,9 +1343,10 @@ def activate_accounting(
 
         # CRITICAL: Set current_company_id on user for post-activation routing
         # Canon II: Backend creates truth - UI will route based on this
-        user = db.query(User).filter(User.id == data.confirmed_by).first()
-        if user:
-            user.current_company_id = company_id
+        if current_user:
+            user = db.query(User).filter(User.id == current_user.id).first()
+            if user:
+                user.current_company_id = company_id
 
         # Release session lock
         company.onboarding_session_lock = None
@@ -1359,7 +1362,7 @@ def activate_accounting(
             action="COMPANY_INITIALIZED",
             entity_type="company",
             entity_id=str(company.id),
-            user_id=None,  # TODO: Pass current user ID when available
+            user_id=str(current_user.id) if current_user else None,
             payload={
                 "company_name": company.name,
                 "ucid": company.ucid,

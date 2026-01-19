@@ -610,7 +610,7 @@ def activate_accounting(
             require_admin=True,
             allow_superuser=True,
         )
-        return onboarding_service.activate_accounting(db, company_id, activation)
+        return onboarding_service.activate_accounting(db, company_id, activation, current_user)
     except ValidationError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

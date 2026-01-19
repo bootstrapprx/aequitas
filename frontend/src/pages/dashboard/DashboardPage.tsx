@@ -64,7 +64,7 @@ const DashboardPage = () => {
       icon: Clock,
     },
     {
-      title: 'Master Ledger',
+      title: 'Template Catalog',
       value: 345,
       description: 'Standardized accounts',
       icon: TrendingUp,
@@ -83,7 +83,7 @@ const DashboardPage = () => {
     {
       id: '2',
       user: 'Chief Scribe',
-      action: 'Master ledger updated with 345 entries',
+      action: 'Template catalog updated with 345 entries',
       timestamp: '1 minute ago',
       type: 'info',
     },
@@ -226,7 +226,7 @@ const DashboardPage = () => {
             <Link to="/chartforge/masterchart">
               <Button variant="outline" className="gap-2 border-gold/30 hover:border-gold hover:bg-gold/5 text-foreground">
                 <TrendingUp className="h-4 w-4" />
-                View Master Ledger
+                View Template Catalog
               </Button>
             </Link>
           </CardContent>
@@ -329,7 +329,7 @@ const DashboardPage = () => {
                   III
                 </div>
                 <Link to="/chartforge/mapping" className="font-bold text-foreground group-hover:text-gold transition-colors font-heading">Map Accounts</Link>
-                <span className="text-xs text-muted-foreground">Align with Master Ledger</span>
+                <span className="text-xs text-muted-foreground">Align with Template Catalog</span>
               </div>
 
               <div className="flex flex-col items-center text-center space-y-2 p-4 rounded-lg hover:bg-muted transition-colors opacity-60">

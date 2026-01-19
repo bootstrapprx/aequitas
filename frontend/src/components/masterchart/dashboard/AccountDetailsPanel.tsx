@@ -11,26 +11,55 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface AccountDetailsPanelProps {
     account: MasterAccount | null;
     isOpen: boolean;
     onClose: () => void;
+    onAddAccount?: (account: MasterAccount) => void;
+    isAdded?: boolean;
+    isAdding?: boolean;
+    companyName?: string | null;
 }
 
 const AccountDetailsPanel: React.FC<AccountDetailsPanelProps> = ({
     account,
     isOpen,
     onClose,
+    onAddAccount,
+    isAdded = false,
+    isAdding = false,
+    companyName = null,
 }) => {
     if (!account) return null;
+
+    const canAdd = !!onAddAccount && !isAdded && !isAdding && !!companyName;
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
             <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
                 <SheetHeader>
-                    <SheetTitle className="font-mono text-2xl">{account.code}</SheetTitle>
-                    <SheetDescription>{account.description}</SheetDescription>
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <SheetTitle className="font-mono text-2xl">{account.code}</SheetTitle>
+                            <SheetDescription>{account.description}</SheetDescription>
+                        </div>
+                        {onAddAccount && (
+                            <div className="flex flex-col items-end gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={() => onAddAccount(account)}
+                                    disabled={!canAdd}
+                                >
+                                    {isAdded ? 'Already in Chart' : isAdding ? 'Adding...' : 'Add to Chart'}
+                                </Button>
+                                <span className="text-xs text-muted-foreground">
+                                    {companyName ? `Adds to ${companyName}` : 'Select a company to add this account.'}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                 </SheetHeader>
 
                 <Tabs defaultValue="overview" className="mt-6">
@@ -70,6 +99,20 @@ const AccountDetailsPanel: React.FC<AccountDetailsPanelProps> = ({
                                     <div>
                                         <p className="text-sm text-muted-foreground">Notes</p>
                                         <p className="text-sm mt-2">{account.notes}</p>
+                                    </div>
+                                )}
+
+                                {account.normal_balance && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Normal Balance</p>
+                                        <p className="font-semibold mt-1">{account.normal_balance}</p>
+                                    </div>
+                                )}
+
+                                {account.fs_mapping && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Statement Mapping</p>
+                                        <p className="font-semibold mt-1">{account.fs_mapping}</p>
                                     </div>
                                 )}
 

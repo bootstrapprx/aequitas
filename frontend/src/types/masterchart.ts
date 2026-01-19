@@ -12,6 +12,11 @@ export interface MasterAccount {
   notes?: string | null;
   start_date?: string | null; // ISO date string
   end_date?: string | null; // ISO date string
+  long_description?: string | null;
+  normal_balance?: 'Debit' | 'Credit' | null;
+  fs_mapping?: string | null;
+  cash_flow_classification?: string | null;
+  tags?: string[];
 }
 
 export type MasterAccountCreate = Omit<MasterAccount, 'id' | 'level'>;

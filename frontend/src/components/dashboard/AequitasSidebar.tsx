@@ -135,7 +135,7 @@ const AequitasSidebar = () => {
       title: "ARCHIVES",
       icon: Archive,
       links: [
-        { label: "Master Reference", path: "/chartofaccounts/master", icon: Archive },
+        { label: "Template Catalog", path: "/chartofaccounts/master", icon: Archive },
         { label: "Audit Log", path: "/admin/audit", icon: Scroll },
       ],
     },

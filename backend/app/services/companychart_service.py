@@ -24,6 +24,7 @@ from app.core.validators.master_chart_validator import MasterChartValidator
 from app.core.normalizers.master_chart_normalizer import MasterChartNormalizer
 from app.core.exceptions import ValidationError, ErrorCode
 from app.core.kernel import L0_KERNEL_CODES, map_normal_balance
+from app.services.template_catalog_service import TemplateCatalogService
 from app.services.validators.template_account_validator import TemplateAccountValidator
 from app.services.audit_service import AuditService
 
@@ -455,6 +456,85 @@ class CompanyChartService:
                 "fs_mapping": master_account.fs_mapping,
                 "cash_flow_classification": master_account.cash_flow_classification,
                 "source": "master_catalog",
+            }
+        )
+
+        self.db.add(company_account)
+        self.db.commit()
+        self.db.refresh(company_account)
+
+        return company_account
+
+    def add_account_from_catalog(
+        self,
+        company_id: UUID,
+        catalog_account_id: str
+    ) -> CompanyAccount:
+        """
+        Add a single company account from the template catalog.
+
+        This is an explicit, one-account action and never bulk-imports.
+        """
+        company = self.db.query(Company).filter(Company.id == company_id).first()
+        if not company:
+            raise ValidationError("Company not found.")
+
+        catalog_service = TemplateCatalogService()
+        catalog_account_id = catalog_account_id.strip()
+        catalog_account = catalog_service.get_account_by_id(catalog_account_id)
+        if not catalog_account:
+            raise ValidationError("Catalog account not found.")
+
+        existing = self.db.query(CompanyAccount).filter(
+            CompanyAccount.company_id == company_id,
+            CompanyAccount.code == catalog_account["code"]
+        ).first()
+        if existing:
+            raise ValidationError(
+                f"Account with code '{catalog_account['code']}' already exists for this company."
+            )
+
+        parent_id = None
+        parent_code = catalog_account.get("parent_code")
+        if parent_code:
+            parent_company = self.db.query(CompanyAccount).filter(
+                CompanyAccount.company_id == company_id,
+                CompanyAccount.code == parent_code
+            ).first()
+            if parent_company:
+                parent_id = parent_company.id
+
+        account_type = self._category_to_account_type(catalog_account.get("category", ""))
+
+        if catalog_account.get("normal_balance"):
+            normal_balance = map_normal_balance(catalog_account.get("normal_balance"))
+        elif account_type in {AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE}:
+            normal_balance = NormalBalance.CREDIT
+        else:
+            normal_balance = NormalBalance.DEBIT
+
+        name = catalog_account.get("description") or catalog_account["code"]
+        description = catalog_account.get("description") or name
+
+        company_account = CompanyAccount(
+            company_id=company_id,
+            code=catalog_account["code"],
+            name=name,
+            description=description,
+            type=catalog_account.get("type") or "D",
+            account_type=account_type,
+            normal_balance=normal_balance,
+            parent_id=parent_id,
+            mapped_master_account_id=None,
+            template_account_id=None,
+            currency=company.currency or "USD",
+            is_active=True,
+            is_locked=False,
+            json_data={
+                "category": catalog_account.get("category"),
+                "fs_mapping": catalog_account.get("fs_mapping"),
+                "cash_flow_classification": catalog_account.get("cash_flow_classification"),
+                "source": "template_catalog",
             }
         )
 
