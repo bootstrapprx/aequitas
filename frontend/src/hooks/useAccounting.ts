@@ -4,6 +4,8 @@ import type {
   JournalEntry,
   JournalEntryFilters,
   FiscalPeriod,
+  PeriodType,
+  PeriodStatus,
   TrialBalance,
   BalanceSheet,
   IncomeStatement,
@@ -116,8 +118,8 @@ export const useDeleteJournalEntry = () => {
 // ===== Fiscal Period Hooks =====
 
 export const useFiscalPeriods = (companyId?: string, filters?: {
-  period_type?: string;
-  status?: string;
+  period_type?: PeriodType;
+  status?: PeriodStatus;
   year?: number;
 }) => {
   return useQuery({
@@ -135,7 +137,7 @@ export const useCreateFiscalPeriod = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (period: Partial<FiscalPeriod>) => {
-      return await api.post('/accounting/fiscal-periods', { body: period });
+      return await api.post('/accounting/fiscal-periods', period);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-periods'] });
@@ -148,7 +150,7 @@ export const useCloseFiscalPeriod = () => {
   return useMutation({
     mutationFn: async ({ periodId, userId }: { periodId: string; userId: string }) => {
       return await api.post(`/accounting/fiscal-periods/${periodId}/close`, {
-        body: { closed_by: userId },
+        closed_by: userId,
       });
     },
     onSuccess: () => {
@@ -161,7 +163,7 @@ export const useCreateMonthlyPeriods = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ companyId, year }: { companyId: string; year: number }) => {
-      return await api.post(`/accounting/fiscal-periods/create-monthly/${companyId}/${year}`);
+      return await api.post(`/accounting/fiscal-periods/create-monthly/${companyId}/${year}`, {});
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fiscal-periods'] });
@@ -274,7 +276,7 @@ export const useCompanyAccounts = (companyId?: string) => {
     queryKey: ['company-accounts', companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      return await api.get<CompanyAccount[]>(`/companychart/${companyId}`);
+      return await api.get<CompanyAccount[]>(`/companies/${companyId}/chart`);
     },
     enabled: !!companyId,
   });

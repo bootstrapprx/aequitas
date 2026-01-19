@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Building2, Mail, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface Invitation {
   id: string;
@@ -46,6 +47,7 @@ const PostAuthSetupPage = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { refreshCompanies, setSelectedCompanyId } = useCompany();
 
   useEffect(() => {
     checkInvitations();
@@ -81,6 +83,8 @@ const PostAuthSetupPage = () => {
         description: 'You have been added to the company.',
         className: 'bg-background border-gold text-gold font-heading',
       });
+
+      await refreshCompanies();
 
       // Redirect to dashboard
       navigate('/dashboard');
@@ -151,6 +155,9 @@ const PostAuthSetupPage = () => {
         description: `${companyName} has been registered in the Athenaeum.`,
         className: 'bg-background border-gold text-gold font-heading',
       });
+
+      await refreshCompanies();
+      setSelectedCompanyId(response.id);
 
       // Redirect to onboarding wizard
       navigate(`/onboarding/${response.id}`);

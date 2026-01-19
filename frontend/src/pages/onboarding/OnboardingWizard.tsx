@@ -213,8 +213,8 @@ const OnboardingWizard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading onboarding wizard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading onboarding wizard...</p>
         </div>
       </div>
     );
@@ -297,9 +297,9 @@ const OnboardingWizard: React.FC = () => {
                       >
                         <div className={`
                     flex items-center justify-center w-10 h-10 rounded-full mb-2 transition-all
-                    ${isComplete ? 'bg-emerald-600 text-white' : ''}
-                    ${isCurrent && !isComplete ? 'bg-amber-500 text-white ring-4 ring-amber-200 dark:ring-amber-900' : ''}
-                    ${!isComplete && !isCurrent ? 'bg-gray-200 text-gray-400 dark:bg-slate-800 dark:text-gray-500' : ''}
+                    ${isComplete ? 'bg-success text-success-foreground' : ''}
+                    ${isCurrent && !isComplete ? 'bg-warning text-warning-foreground ring-4 ring-warning/20' : ''}
+                    ${!isComplete && !isCurrent ? 'bg-muted text-muted-foreground' : ''}
                   `}>
                           {isComplete ? (
                             <CheckCircle2 className="h-5 w-5" />
@@ -307,7 +307,7 @@ const OnboardingWizard: React.FC = () => {
                             <Circle className="h-5 w-5" />
                           )}
                         </div>
-                        <span className={`text-[10px] text-center ${isCurrent ? 'font-semibold text-emerald-900 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                        <span className={`text-xs text-center ${isCurrent ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
                           {title}
                         </span>
                       </div>
@@ -387,9 +387,9 @@ const OnboardingWizard: React.FC = () => {
 
               {/* Save & Exit */}
               {currentStep < 6 && (
-                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-center text-sm text-muted-foreground">
                   <p>Your progress is automatically saved. You can exit and resume anytime.</p>
-                  <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="mt-2 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300">
+                  <Button variant="ghost" onClick={() => { logout(); navigate('/login'); }} className="mt-2 text-primary hover:text-primary/80">
                     Save & Logout
                   </Button>
                 </div>

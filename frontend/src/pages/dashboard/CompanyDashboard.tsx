@@ -15,7 +15,20 @@ import {
   X,
   Info,
 } from 'lucide-react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from 'recharts';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +49,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useGetCompanies } from '@/integrations/queries/useCompanies';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatDistanceToNow } from 'date-fns';
@@ -69,25 +81,28 @@ interface CompanyDashboardStats {
   account_distribution: Record<string, number>;
 }
 
+const CHART_COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+];
 
 const CompanyDashboard = () => {
-  const { user, currentCompanyId, switchCompany } = useAuth();
+  const { user, switchCompany } = useAuth();
+  const {
+    selectedCompanyId,
+    selectedCompany,
+    companies,
+    isLoadingCompanies,
+    setSelectedCompanyId,
+  } = useCompany();
   const navigate = useNavigate();
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompanyId || '');
   const [showPostActivationPanel, setShowPostActivationPanel] = useState(false);
 
   // CANONICAL: Use dashboard context for ALL authoritative state
   const { data: dashboardContext, isLoading: isContextLoading } = useDashboardContext();
-
-  // Fetch companies
-  const { data: companies, isLoading: isCompaniesLoading } = useGetCompanies();
-
-  // Sync selected company from auth context
-  useEffect(() => {
-    if (currentCompanyId) {
-      setSelectedCompanyId(currentCompanyId);
-    }
-  }, [currentCompanyId]);
 
   // Fetch Dashboard Stats (Canonical Fix: One aggregate endpoint)
   const { data: stats, isLoading: isStatsLoading } = useQuery({
@@ -101,8 +116,7 @@ const CompanyDashboard = () => {
     switchCompany(companyId);
   };
 
-  const selectedCompany = companies?.find((c) => c.id === selectedCompanyId);
-  const isLoading = isCompaniesLoading || (!!selectedCompanyId && isStatsLoading) || isContextLoading;
+  const isLoading = isLoadingCompanies || (!!selectedCompanyId && isStatsLoading) || isContextLoading;
 
   // BACKEND AUTHORITY: Use dashboard context flags, NOT inference
   const accountingActive = dashboardContext?.accounting_active || false;
@@ -139,6 +153,24 @@ const CompanyDashboard = () => {
   const activities = stats?.recent_activity || [];
   const distribution = stats?.account_distribution || {};
 
+  const distributionSeries = useMemo(() => {
+    return Object.entries(distribution)
+      .map(([name, value]) => ({ name, value }))
+      .filter((entry) => entry.value > 0);
+  }, [distribution]);
+
+  const mappedCount = chartStatus?.company_chart_initialized
+    ? Math.round((totalAccounts * mappedPercentage) / 100)
+    : 0;
+  const unmappedCount = Math.max(totalAccounts - mappedCount, 0);
+
+  const mappingSeries = useMemo(() => ([
+    { name: 'Mapped', value: mappedCount },
+    { name: 'Unmapped', value: unmappedCount },
+  ]), [mappedCount, unmappedCount]);
+
+  const onboardingLabel = accountingActive ? 'Active' : 'Setup in progress';
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -153,9 +185,9 @@ const CompanyDashboard = () => {
               </div>
               <div className="h-8 w-px bg-border"></div>
               <div className="min-w-[250px]">
-                <Select value={selectedCompanyId} onValueChange={handleCompanyChange} disabled={isCompaniesLoading}>
+                <Select value={selectedCompanyId || undefined} onValueChange={handleCompanyChange} disabled={isLoadingCompanies}>
                   <SelectTrigger className="border-0 text-lg font-semibold text-foreground hover:bg-muted/50">
-                    <SelectValue placeholder={isCompaniesLoading ? "Loading..." : "Select company..."} />
+                    <SelectValue placeholder={isLoadingCompanies ? "Loading..." : "Select company..."} />
                   </SelectTrigger>
                   <SelectContent>
                     {companies?.map((company) => (
@@ -262,6 +294,99 @@ const CompanyDashboard = () => {
           </Card>
         </motion.div>
 
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="border-0 shadow-md bg-card text-card-foreground lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-foreground">Company Snapshot</CardTitle>
+              <CardDescription className="text-muted-foreground">Current operating context</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Company</p>
+                  <p className="text-lg font-semibold text-foreground">
+                    {selectedCompany?.name || 'Select a company'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCompany?.ucid || 'UCID pending'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Accounting Status</p>
+                  <p className="text-sm font-medium text-foreground">{onboardingLabel}</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Kernel Binding</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {dashboardContext?.kernel_version
+                      ? `v${dashboardContext.kernel_version} · ${dashboardContext.kernel_layer}`
+                      : 'Not bound'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Open Periods</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {dashboardContext?.open_periods ?? 0} open period{(dashboardContext?.open_periods || 0) === 1 ? '' : 's'}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-md bg-card text-card-foreground">
+            <CardHeader>
+              <CardTitle className="text-foreground">Pointers</CardTitle>
+              <CardDescription className="text-muted-foreground">Suggested next steps</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!selectedCompanyId ? (
+                <p className="text-sm text-muted-foreground">
+                  Select a company to unlock recommended actions.
+                </p>
+              ) : (
+                <>
+                  {!accountingActive && (
+                    <Button
+                      variant="secondary"
+                      className="w-full justify-between"
+                      onClick={() => navigate(`/onboarding/${selectedCompanyId}`)}
+                    >
+                      Continue onboarding
+                      <TrendingUp className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => navigate('/accountancy/journal')}
+                  >
+                    Create a journal entry
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => navigate('/chartofaccounts')}
+                  >
+                    Review chart of accounts
+                    <ShieldCheck className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => navigate('/accountancy/fiscal-periods')}
+                  >
+                    Manage fiscal periods
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {accountingActive && showPostActivationPanel && (
           <Card className="border border-border bg-muted/40">
             <CardHeader className="flex flex-row items-start justify-between gap-4">
@@ -356,7 +481,7 @@ const CompanyDashboard = () => {
             </motion.div>
 
             {/* Dashboard Content */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
               {/* Account Distribution (Real Data) */}
               <motion.div
@@ -366,40 +491,71 @@ const CompanyDashboard = () => {
               >
                 <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground h-full">
                   <CardHeader>
-                    <CardTitle className="text-foreground">Account Distribution</CardTitle>
-                    <CardDescription className="text-muted-foreground">By category</CardDescription>
+                    <CardTitle className="text-foreground">Account Mix</CardTitle>
+                    <CardDescription className="text-muted-foreground">Distribution by category</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {Object.entries(distribution).map(([type, count]) => {
-                        const percentage = totalAccounts > 0 ? Math.round((count / totalAccounts) * 100) : 0;
-                        let colorClass = "bg-primary";
-                        if (type === "Asset") colorClass = "bg-emerald-500";
-                        if (type === "Liability") colorClass = "bg-red-500";
-                        if (type === "Equity") colorClass = "bg-blue-500";
-                        if (type === "Revenue") colorClass = "bg-green-500";
-                        if (type === "Expense") colorClass = "bg-amber-500";
+                    {distributionSeries.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">No account data available yet.</div>
+                    ) : (
+                      <div className="h-56">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={distributionSeries}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={50}
+                              outerRadius={80}
+                              paddingAngle={3}
+                            >
+                              {distributionSeries.map((entry, index) => (
+                                <Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value: number) => [`${value}`, 'Accounts']}
+                              contentStyle={{
+                                backgroundColor: 'hsl(var(--popover))',
+                                borderColor: 'hsl(var(--border))',
+                                color: 'hsl(var(--popover-foreground))',
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-                        return (
-                          <div key={type} className="space-y-1">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="font-medium">{type}</span>
-                              <div className="flex gap-2 text-muted-foreground">
-                                <span>{count}</span>
-                                <span>({percentage}%)</span>
-                              </div>
-                            </div>
-                            <div className="h-2 w-full bg-secondary/30 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${percentage}%` }}
-                                className={`h-full ${colorClass}`}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+              >
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow bg-card text-card-foreground h-full">
+                  <CardHeader>
+                    <CardTitle className="text-foreground">Mapping Coverage</CardTitle>
+                    <CardDescription className="text-muted-foreground">Mapped vs. unmapped accounts</CardDescription>
+                  </CardHeader>
+                  <CardContent className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={mappingSeries} layout="vertical" margin={{ left: 16, right: 16 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis type="number" hide />
+                        <YAxis type="category" dataKey="name" tick={{ fill: 'hsl(var(--foreground))' }} />
+                        <RechartsTooltip
+                          formatter={(value: number) => [`${value}`, 'Accounts']}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--popover))',
+                            borderColor: 'hsl(var(--border))',
+                            color: 'hsl(var(--popover-foreground))',
+                          }}
+                        />
+                        <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[0, 6, 6, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
               </motion.div>

@@ -47,8 +47,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import type { FiscalPeriod } from '@/types/accounting';
 
-type PeriodType = 'month' | 'quarter' | 'year';
-type PeriodStatus = 'open' | 'closed' | 'locked';
+type PeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
+type PeriodStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
 
 const FiscalPeriodsPage = () => {
   const { user } = useAuth();
@@ -59,7 +59,7 @@ const FiscalPeriodsPage = () => {
 
   // Form states
   const [periodNumber, setPeriodNumber] = useState('');
-  const [periodType, setPeriodType] = useState<PeriodType>('month');
+  const [periodType, setPeriodType] = useState<PeriodType>('MONTH');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [bulkYear, setBulkYear] = useState(new Date().getFullYear());
@@ -92,7 +92,7 @@ const FiscalPeriodsPage = () => {
         period_type: periodType,
         start_date: startDate,
         end_date: endDate,
-        status: 'open',
+        status: 'OPEN',
       });
       toast.success('Fiscal period created successfully');
       setCreateDialogOpen(false);
@@ -133,18 +133,18 @@ const FiscalPeriodsPage = () => {
 
   const resetForm = () => {
     setPeriodNumber('');
-    setPeriodType('month');
+    setPeriodType('MONTH');
     setStartDate('');
     setEndDate('');
   };
 
   const getStatusBadge = (status: PeriodStatus) => {
     switch (status) {
-      case 'open':
+      case 'OPEN':
         return <WaxSealBadge type="unlocked" size="sm" />;
-      case 'closed':
+      case 'CLOSED':
         return <WaxSealBadge type="pending" size="sm" />;
-      case 'locked':
+      case 'LOCKED':
         return <WaxSealBadge type="locked" size="sm" />;
       default:
         return <WaxSealBadge type="pending" size="sm" />;
@@ -152,7 +152,7 @@ const FiscalPeriodsPage = () => {
   };
 
   const getTypeDisplay = (type: PeriodType) => {
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return type.charAt(0) + type.slice(1).toLowerCase();
   };
   const isActiveCompany = selectedCompany?.onboarding_status === 'ACTIVE';
 
@@ -297,7 +297,7 @@ const FiscalPeriodsPage = () => {
                       <TableCell>{new Date(period.end_date).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(period.status)}</TableCell>
                       <TableCell className="text-right">
-                        {period.status === 'open' && (
+                        {period.status === 'OPEN' && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -344,9 +344,9 @@ const FiscalPeriodsPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="quarter">Quarter</SelectItem>
-                  <SelectItem value="year">Year</SelectItem>
+                  <SelectItem value="MONTH">Month</SelectItem>
+                  <SelectItem value="QUARTER">Quarter</SelectItem>
+                  <SelectItem value="YEAR">Year</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -29,7 +29,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   // Fetch companies when authenticated
   const fetchCompanies = async () => {
-    if (!isAuthenticated || !companyIds || companyIds.length === 0) {
+    if (!isAuthenticated) {
       setCompanies([]);
       setIsInitialized(true);
       return;
@@ -37,20 +37,24 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     setIsLoadingCompanies(true);
     try {
-      // Fetch all companies the user has access to
-      const companiesData = await Promise.all(
-        companyIds.map(async (id) => {
-          try {
-            return await api.get<Company>(`/companies/${id}`);
-          } catch (error) {
-            console.error(`Failed to fetch company ${id}:`, error);
-            return null;
-          }
-        })
-      );
+      let companiesData: Company[] = [];
+      if (companyIds && companyIds.length > 0) {
+        const results = await Promise.all(
+          companyIds.map(async (id) => {
+            try {
+              return await api.get<Company>(`/companies/${id}`);
+            } catch (error) {
+              console.error(`Failed to fetch company ${id}:`, error);
+              return null;
+            }
+          })
+        );
+        companiesData = results.filter((c): c is Company => c !== null);
+      } else {
+        companiesData = await api.get<Company[]>('/companies');
+      }
 
-      const validCompanies = companiesData.filter((c): c is Company => c !== null);
-      setCompanies(validCompanies);
+      setCompanies(companiesData);
     } catch (error) {
       console.error('Failed to fetch companies:', error);
       setCompanies([]);
@@ -75,23 +79,26 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
 
     // Try to restore from localStorage first
     const storedCompanyId = localStorage.getItem(SELECTED_COMPANY_KEY);
+    const availableCompanyIds = (companyIds && companyIds.length > 0)
+      ? companyIds
+      : companies.map((company) => company.id);
 
     // Determine which company to select
     let companyToSelect: string | null = null;
 
-    if (storedCompanyId && companyIds?.includes(storedCompanyId)) {
+    if (storedCompanyId && availableCompanyIds.includes(storedCompanyId)) {
       // Use stored company if user still has access to it
       companyToSelect = storedCompanyId;
-    } else if (currentCompanyId && companyIds?.includes(currentCompanyId)) {
+    } else if (currentCompanyId && availableCompanyIds.includes(currentCompanyId)) {
       // Fall back to auth context's current company
       companyToSelect = currentCompanyId;
-    } else if (companyIds && companyIds.length > 0) {
+    } else if (availableCompanyIds.length > 0) {
       // Fall back to first available company
-      companyToSelect = companyIds[0];
+      companyToSelect = availableCompanyIds[0];
     }
 
     setSelectedCompanyIdState(companyToSelect);
-  }, [isAuthenticated, currentCompanyId, companyIds?.join(',')]);
+  }, [isAuthenticated, currentCompanyId, companyIds?.join(','), companies]);
 
   // Update selected company object when selectedCompanyId or companies change
   useEffect(() => {
@@ -106,9 +113,12 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
   // Handle company selection changes
   const setSelectedCompanyId = (companyId: string | null) => {
     // Validate that user has access to this company
-    if (companyId && (!companyIds || !companyIds.includes(companyId))) {
-      console.error('User does not have access to company:', companyId);
-      return;
+    if (companyId) {
+      const hasAccess = (companyIds && companyIds.includes(companyId)) || companies.some((c) => c.id === companyId);
+      if (!hasAccess) {
+        console.error('User does not have access to company:', companyId);
+        return;
+      }
     }
 
     setSelectedCompanyIdState(companyId);

@@ -181,6 +181,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser: (user: User) => {
       setUser(user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+
+      const nextCompanyIds = user.company_ids || [];
+      if (nextCompanyIds.length > 0) {
+        setCompanyIds(nextCompanyIds);
+        localStorage.setItem(COMPANY_IDS_KEY, JSON.stringify(nextCompanyIds));
+      }
+
+      const preferredCompany =
+        (user.preferred_company_id && nextCompanyIds.includes(user.preferred_company_id))
+          ? user.preferred_company_id
+          : (currentCompanyId && nextCompanyIds.includes(currentCompanyId))
+            ? currentCompanyId
+            : nextCompanyIds[0] || null;
+
+      if (preferredCompany) {
+        setCurrentCompanyId(preferredCompany);
+        localStorage.setItem(CURRENT_COMPANY_KEY, preferredCompany);
+      } else if (nextCompanyIds.length === 0) {
+        setCurrentCompanyId(null);
+        localStorage.removeItem(CURRENT_COMPANY_KEY);
+      }
     }
   };
 
@@ -194,4 +215,3 @@ export const useAuth = () => {
   }
   return context;
 };
-

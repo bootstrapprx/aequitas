@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -283,11 +284,10 @@ export default function CompanyChartPage() {
                                   type="button"
                                   disabled={alreadyAdded}
                                   onClick={() => setSelectedCatalogId(account.id)}
-                                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
-                                    alreadyAdded
-                                      ? 'cursor-not-allowed opacity-60'
-                                      : 'hover:bg-muted/50'
-                                  } ${isSelected ? 'border-primary bg-muted' : 'border-border'}`}
+                                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${alreadyAdded
+                                    ? 'cursor-not-allowed opacity-60'
+                                    : 'hover:bg-muted/50'
+                                    } ${isSelected ? 'border-primary bg-muted' : 'border-border'}`}
                                 >
                                   <div className="flex items-center justify-between">
                                     <div>
@@ -362,21 +362,16 @@ export default function CompanyChartPage() {
                           <td className="p-3 font-mono text-sm">{account.code}</td>
                           <td className="p-3">{account.description}</td>
                           <td className="p-3">
-                            <span
-                              className={`px-2 py-1 rounded text-xs font-semibold ${account.type === 'H'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-green-100 text-green-800'
-                                }`}
-                            >
+                            <Badge variant={account.type === 'H' ? 'info' : 'success'}>
                               {account.type === 'H' ? 'Header' : 'Detail'}
-                            </span>
+                            </Badge>
                           </td>
                           <td className="p-3 font-mono text-sm text-muted-foreground">
                             {parent?.code || '-'}
                           </td>
                           <td className="p-3 text-sm">
                             {account.mapped_master_account_id ? (
-                              <span className="text-green-600">✓</span>
+                              <span className="text-success">✓</span>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
@@ -391,6 +386,6 @@ export default function CompanyChartPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

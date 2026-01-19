@@ -11,13 +11,16 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-glow hover:shadow-lg",
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        success: "bg-success text-success-foreground hover:bg-success/90",
+        warning: "bg-warning text-warning-foreground hover:bg-warning/90",
+        info: "bg-info text-info-foreground hover:bg-info/90",
         outline: "border border-border bg-transparent hover:bg-secondary hover:text-secondary-foreground",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         // Athenaeum styled buttons
-        gold: "bg-gradient-to-br from-[hsl(38,72%,52%)] to-[hsl(35,80%,40%)] text-[hsl(30,15%,8%)] font-semibold hover:opacity-90 shadow-gold hover:shadow-lg border border-[hsl(38,72%,52%,0.3)]",
-        emerald: "bg-gradient-to-br from-[hsl(158,45%,32%)] to-[hsl(160,40%,45%)] text-[hsl(40,25%,98%)] font-semibold hover:opacity-90 shadow-glow hover:shadow-lg",
+        gold: "bg-gradient-gold text-foreground font-semibold hover:opacity-90 shadow-gold hover:shadow-lg border border-gold/30",
+        emerald: "bg-gradient-emerald text-primary-foreground font-semibold hover:opacity-90 shadow-glow hover:shadow-lg",
         stone: "bg-gradient-stone text-foreground border border-border hover:border-gold/30 hover:shadow-gold transition-all",
       },
       size: {

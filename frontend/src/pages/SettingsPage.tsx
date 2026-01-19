@@ -319,9 +319,9 @@ export default function SettingsPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="border-yellow-600">
+                        <Card className="border-warning">
                             <CardHeader>
-                                <CardTitle className="text-yellow-600">Company Onboarding</CardTitle>
+                                <CardTitle className="text-warning">Company Onboarding</CardTitle>
                                 <CardDescription>
                                     Re-run the onboarding wizard to start fresh. This will delete all chart of accounts data.
                                 </CardDescription>
@@ -340,7 +340,7 @@ export default function SettingsPage() {
                                     <AlertDialogTrigger asChild>
                                         <Button
                                             variant="outline"
-                                            className="border-yellow-600 text-yellow-600 hover:bg-yellow-50"
+                                            className="border-warning text-warning hover:bg-warning/10"
                                             disabled={!selectedCompanyId}
                                         >
                                             Re-run Onboarding (Deletes all chart data)
@@ -368,7 +368,7 @@ export default function SettingsPage() {
                                         <AlertDialogFooter>
                                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                                             <AlertDialogAction
-                                                className="bg-yellow-600 text-white hover:bg-yellow-700"
+                                                className="bg-warning text-warning-foreground hover:bg-warning/90"
                                                 onClick={handleResetOnboarding}
                                                 disabled={isResettingOnboarding}
                                             >

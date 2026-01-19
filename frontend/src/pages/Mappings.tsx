@@ -33,7 +33,7 @@ const MappingsPage: React.FC = () => {
   // This is a placeholder for fetching the company-specific chart
   const { data: companyChartAccounts } = useManualCRUD<CompanyAccount>({
     queryKey: companyChartKeys.list(selectedCompanyId!),
-    endpoint: `/companychart/${selectedCompanyId}`,
+    endpoint: `/companies/${selectedCompanyId}/chart`,
     initialData: [],
   });
 

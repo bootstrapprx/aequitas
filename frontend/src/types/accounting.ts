@@ -1,6 +1,6 @@
 // Fiscal Period Types
-export type PeriodStatus = 'open' | 'closed' | 'locked';
-export type PeriodType = 'month' | 'quarter' | 'year';
+export type PeriodStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
+export type PeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
 
 export interface FiscalPeriod {
   id: string;

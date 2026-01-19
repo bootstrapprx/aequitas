@@ -53,8 +53,8 @@ export function useDashboardContext() {
     return useQuery<UserContext>({
         queryKey: ['dashboard-context'],
         queryFn: async () => {
-            const response = await api.get('/me/context');
-            return (response as any).data as UserContext;
+            const response = await api.get<UserContext>('/me/context');
+            return response as UserContext;
         },
         staleTime: 1000 * 60, // 1 minute
         refetchOnWindowFocus: true,

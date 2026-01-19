@@ -52,15 +52,15 @@ const DexterInsightCard: React.FC<{
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'recurring_pattern':
-        return <TrendingUp className="h-4 w-4 text-blue-500" />;
+        return <TrendingUp className="h-4 w-4 text-info" />;
       case 'anomaly':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+        return <AlertTriangle className="h-4 w-4 text-warning" />;
       case 'missing_entry':
-        return <Calendar className="h-4 w-4 text-purple-500" />;
+        return <Calendar className="h-4 w-4 text-accent" />;
       case 'account_usage':
-        return <Info className="h-4 w-4 text-green-500" />;
+        return <Info className="h-4 w-4 text-success" />;
       default:
-        return <Lightbulb className="h-4 w-4 text-gray-500" />;
+        return <Lightbulb className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -80,7 +80,7 @@ const DexterInsightCard: React.FC<{
   };
 
   return (
-    <Card className="relative border-l-4 border-l-blue-500/20">
+    <Card className="relative border-l-4 border-l-info/20">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">

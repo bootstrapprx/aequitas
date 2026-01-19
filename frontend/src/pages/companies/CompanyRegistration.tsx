@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useCompany } from "@/contexts/CompanyContext";
 
 // Schema for validation
 const formSchema = z.object({
@@ -35,6 +36,7 @@ const CompanyRegistration = () => {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(false);
     const [ucid, setUcid] = useState<string | null>(null);
+    const { refreshCompanies, setSelectedCompanyId } = useCompany();
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -91,6 +93,10 @@ const CompanyRegistration = () => {
                 title: "Company Registered!",
                 description: `Successfully created company with UCID: ${data.ucid}`,
             });
+            await refreshCompanies();
+            if (data.id) {
+                setSelectedCompanyId(data.id);
+            }
             form.reset();
         } catch (error) {
             toast({
