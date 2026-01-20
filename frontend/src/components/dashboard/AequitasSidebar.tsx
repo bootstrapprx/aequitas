@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PaletteSelector } from "@/components/PaletteSelector";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -254,7 +255,10 @@ const AequitasSidebar = () => {
         {isOpen && (
           <div className="flex items-center justify-between">
             <span className="text-xs font-heading text-sidebar-foreground/40 uppercase tracking-widest">Theme</span>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              <PaletteSelector />
+              <ThemeToggle />
+            </div>
           </div>
         )}
 

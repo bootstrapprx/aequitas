@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
@@ -32,6 +32,7 @@ import { SessionLogger } from "./components/SessionLogger";
 // Dashboard
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import CompanyDashboard from "./pages/dashboard/CompanyDashboard";
+import FinancialDashboard from "./pages/dashboard/FinancialDashboard";
 
 // Registration Module
 import Companies from "./pages/Companies";
@@ -193,8 +194,9 @@ const App = () => (
                       }
                     >
                       {/* Main Dashboard */}
-                      <Route path="dashboard" element={<CompanyDashboard />} />
-                      <Route path="dashboard/overview" element={<CompanyDashboard />} />
+                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      <Route path="dashboard" element={<FinancialDashboard />} />
+                      <Route path="dashboard/company-overview" element={<CompanyDashboard />} />
                       <Route path="dashboard/old" element={<DashboardPage />} />
 
                       {/* Registration Module */}
