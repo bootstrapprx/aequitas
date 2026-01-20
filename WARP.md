@@ -111,7 +111,7 @@ make reinstall-deps            # Clean and reinstall all
 
 ### Constitutional Foundation
 
-Aequitas is governed by canonical documents in `governance/CONSTITUTION/`:
+Aequitas is governed by canonical documents in `governance/canon/`:
 - **CANON_I**: Accounting Truth & Structure (double-entry, GAAP, immutability)
 - **CANON_II**: Authority & Power (permissions, ownership, multi-tenancy)
 - **CANON_III**: Evolution & State (state machines, audit trails, versioning)
@@ -352,9 +352,9 @@ try {
 - `backend/app/db/session.py` - Database session management
 
 **Canonical Documents:**
-- `governance/CONSTITUTION/README.md` - Start here for constitutional overview
-- `governance/CONSTITUTION/CANON_I_ACCOUNTING_TRUTH.md` - Accounting principles
-- `governance/CONSTITUTION/kernels/kernel_2025.2.md` - Current frozen kernel
+- `governance/canon/README.md` - Start here for constitutional overview
+- `governance/canon/CANON_I_ACCOUNTING_TRUTH.md` - Accounting principles
+- `governance/canon/kernels/kernel_2025.2.md` - Current frozen kernel
 
 **Frontend Integration:**
 - `frontend/src/lib/api.ts` - API client
@@ -445,5 +445,5 @@ aequitas logs export -o file.txt # Export logs
 - **Master Chart Guide**: `MASTER_CHART.md`
 - **Technical Report**: `docs/technical_report.md`
 - **Governance**: `governance/README.md`, `governance/aequitas_roadmap.md`
-- **Constitution**: `governance/CONSTITUTION/README.md`
+- **Constitution**: `governance/canon/README.md`
 - **GitHub Copilot Instructions**: `.github/copilot-instructions.md`

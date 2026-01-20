@@ -1724,8 +1724,8 @@ fn determine_file_type(
     let path_str = path.to_string_lossy();
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
-    // Check if in CONSTITUTION folder (read-only)
-    if path_str.contains("CONSTITUTION") {
+    // Check if in canon folder (read-only)
+    if path_str.contains("canon") {
         return (GovernanceFileType::Constitution, false);
     }
 
@@ -1890,7 +1890,7 @@ pub fn safe_write_file(
 
     // Verify file is writable (not in read-only folders)
     let path_str = target_path.to_string_lossy();
-    if path_str.contains("CONSTITUTION")
+    if path_str.contains("canon")
         || path_str.contains("00_MASTER")
         || path_str.contains("90_ARCHIVE")
     {

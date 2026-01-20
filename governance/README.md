@@ -16,7 +16,7 @@ The Governance Vault is an Obsidian-based knowledge management system that:
 
 ```
 governance/
-├── CONSTITUTION/         # Canon I-IV, Kernel, protocols (versioned)
+├── canon/                # Canon I-IV, Kernel, protocols (versioned)
 ├── 00_MASTER/            # Dashboards, manuals, calendars, routines
 ├── 01_DAILY/             # Daily execution diary (YYYY-MM-DD.md)
 ├── 02_PHASES/            # Lifecycle phases (P0–P8)
@@ -45,7 +45,7 @@ governance/
 - **Active goals**: See 03_GOALS_EPICS/
 
 ### For AI Agents
-- **Constitutional boundaries**: Read CONSTITUTION/ first
+- **Constitutional boundaries**: Read canon/ first
 - **Current state**: Read [[Aequitas Roadmap Master]]
 - **Recent decisions**: Check 04_DECISIONS/ (sorted by date)
 - **Known gaps**: Check 05_AUDITS/
@@ -70,7 +70,7 @@ governance/
 
 ## Constitution
 
-The **CONSTITUTION/** folder contains the canonical constitutional documents:
+The **canon/** folder contains the canonical constitutional documents:
 
 - **Canon I-IV**: Non-negotiable accounting and architectural laws
 - **Kernel**: Versioned implementation specifications (e.g., kernel_2025.2.md)
@@ -82,7 +82,7 @@ The **CONSTITUTION/** folder contains the canonical constitutional documents:
 - Separates constitutional truth from application code
 - Security-by-separation, not obscurity
 
-See [[CONSTITUTION/README]] for details.
+See [[canon/README]] for details.
 
 ## Phase System
 

@@ -192,7 +192,7 @@ impl GovernanceScanner {
     // NOTE: scan_markdown() removed - DB is source of truth for entities
 
     fn scan_canon(&self) -> Result<Vec<CanonDoc>> {
-        let canon_root = self.root.join("CONSTITUTION");
+        let canon_root = self.root.join("canon");
         if !canon_root.exists() {
             return Ok(Vec::new());
         }

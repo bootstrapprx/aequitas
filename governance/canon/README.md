@@ -14,7 +14,7 @@ The Constitution is versioned with Governance by design. This enables:
 ## Structure
 
 ```
-CONSTITUTION/
+canon/
 ├── CANON_I_ACCOUNTING_TRUTH.md          # Double-entry bookkeeping, GAAP
 ├── CANON_II_AUTHORITY_AND_POWER.md      # Permissions, roles, data ownership
 ├── CANON_III_EVOLUTION_AND_STATE.md     # Immutability, audit trails

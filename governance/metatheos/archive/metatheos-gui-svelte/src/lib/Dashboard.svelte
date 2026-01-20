@@ -847,7 +847,7 @@
         </div>
         {#if data.canon_docs.length === 0}
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            No canon documents found under CONSTITUTION/.
+            No canon documents found under canon/.
           </p>
         {:else}
           <ul class="space-y-2">
