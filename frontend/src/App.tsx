@@ -33,6 +33,7 @@ import { SessionLogger } from "./components/SessionLogger";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import CompanyDashboard from "./pages/dashboard/CompanyDashboard";
 import FinancialDashboard from "./pages/dashboard/FinancialDashboard";
+import Dashboard from "./pages/dashboard/Dashboard";
 
 // Registration Module
 import Companies from "./pages/Companies";
@@ -197,6 +198,7 @@ const App = () => (
                       <Route index element={<Navigate to="/dashboard" replace />} />
                       <Route path="dashboard" element={<CompanyDashboard />} />
                       <Route path="dashboard/company-overview" element={<CompanyDashboard />} />
+                      <Route path="dashboard/intelligence" element={<Dashboard />} />
                       <Route path="dashboard/financial" element={<FinancialDashboard />} />
                       <Route path="dashboard/old" element={<DashboardPage />} />
 

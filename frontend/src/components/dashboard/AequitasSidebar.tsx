@@ -94,6 +94,7 @@ const AequitasSidebar = () => {
       icon: Landmark,
       links: [
         { label: "Overview", path: "/dashboard", icon: LayoutDashboard },
+        { label: "Dashboard", path: "/dashboard/intelligence", icon: LayoutDashboard },
       ],
     },
     agora: {
