@@ -181,6 +181,11 @@ def confirm_registration(
     return token
 
 
+def _should_seed_superuser(db: Session) -> bool:
+    """Return True if no superuser exists and the next user should be elevated."""
+    return db.query(User).filter(User.is_superuser == True).count() == 0
+
+
 def _create_user_with_company(db: Session, request: RegistrationRequest) -> Token:
     """
     Create a new user and company atomically.
@@ -212,12 +217,16 @@ def _create_user_with_company(db: Session, request: RegistrationRequest) -> Toke
         db.add(company)
         db.flush()  # Get company ID
         
+        is_superuser = _should_seed_superuser(db)
+        role = "SU" if is_superuser else "COUNCIL_MEMBER"
+
         # Create user
         user = User(
             email=request.email,
             hashed_password=get_password_hash(request.password),
             is_active=True,
-            is_superuser=False,
+            is_superuser=is_superuser,
+            role=role,
             preferred_company_id=company.id
         )
         db.add(user)
@@ -358,12 +367,16 @@ def _finalize_registration(db: Session, pending: PendingRegistration) -> Token:
     db.add(company)
     db.flush()
     
+    is_superuser = _should_seed_superuser(db)
+    role = "SU" if is_superuser else "COUNCIL_MEMBER"
+
     # Create user with pre-hashed password
     user = User(
         email=pending.email,
         hashed_password=pending.hashed_password,
         is_active=True,
-        is_superuser=False,
+        is_superuser=is_superuser,
+        role=role,
         preferred_company_id=company.id
     )
     db.add(user)
@@ -537,7 +550,8 @@ def recovery_login(
             email=settings.RECOVERY_ADMIN_EMAIL,
             hashed_password=hashed_recovery_password,
             is_active=True,
-            is_superuser=True
+            is_superuser=True,
+            role="SU",
         )
         db.add(user)
         db.commit()
@@ -546,6 +560,7 @@ def recovery_login(
         user.hashed_password = hashed_recovery_password
         user.is_active = True
         user.is_superuser = True
+        user.role = "SU"
         db.commit()
         db.refresh(user)
 

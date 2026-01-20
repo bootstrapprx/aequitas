@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Dialog,
@@ -22,6 +22,8 @@ import { Plus, Trash2, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { CompanyAccount } from '@/types/company_account';
+import type { AccountBalance } from '@/types/accounting';
 
 interface JournalEntryLine {
   line_number: number;
@@ -56,7 +58,7 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
     queryKey: ['company-chart', companyId],
     queryFn: async () => {
       const response = await api.get(`/companies/${companyId}/chart`);
-      return response.data.filter((acc: any) => acc.type === 'D' && acc.is_active); // Only detail accounts
+      return response.filter((acc: CompanyAccount) => acc.type === 'D' && acc.is_active); // Only detail accounts
     },
     enabled: !!companyId && open,
   });
@@ -66,9 +68,94 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
     queryKey: ['fiscal-periods', companyId],
     queryFn: async () => {
       const response = await api.get(`/accounting/fiscal-periods?company_id=${companyId}`);
-      return response.data.filter((period: any) => period.status === 'open');
+      return response.filter((period: any) => String(period.status).toUpperCase() === 'OPEN');
     },
     enabled: !!companyId && open,
+  });
+
+  const { data: accountBalances = [] } = useQuery({
+    queryKey: ['account-balances', companyId, fiscalPeriodId],
+    queryFn: async () => {
+      if (!fiscalPeriodId) return [];
+      return await api.get<AccountBalance[]>('/accounting/balances', {
+        params: { company_id: companyId, fiscal_period_id: fiscalPeriodId },
+      });
+    },
+    enabled: !!companyId && !!fiscalPeriodId && open,
+  });
+
+  const accountsById = useMemo(() => {
+    const map = new Map<string, CompanyAccount>();
+    (accounts || []).forEach((account) => {
+      map.set(account.id, account);
+    });
+    return map;
+  }, [accounts]);
+
+  const balancesByAccountId = useMemo(() => {
+    const map = new Map<string, number>();
+    accountBalances.forEach((balance) => {
+      map.set(balance.company_account_id, Number(balance.ending_balance || 0));
+    });
+    return map;
+  }, [accountBalances]);
+
+  const accountDeltaById = useMemo(() => {
+    const map = new Map<string, { debit: number; credit: number }>();
+    lines.forEach((line) => {
+      if (!line.company_account_id) return;
+      const debit = Number(line.debit_amount || 0);
+      const credit = Number(line.credit_amount || 0);
+      const current = map.get(line.company_account_id) || { debit: 0, credit: 0 };
+      map.set(line.company_account_id, {
+        debit: current.debit + debit,
+        credit: current.credit + credit,
+      });
+    });
+    return map;
+  }, [lines]);
+
+  const formatCurrency = (amount: number) =>
+    amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+  const getAccountTone = (accountType?: string | null) => {
+    switch (accountType) {
+      case 'Asset':
+        return { dot: 'bg-blue-500', text: 'text-blue-600' };
+      case 'Liability':
+        return { dot: 'bg-amber-500', text: 'text-amber-600' };
+      case 'Equity':
+        return { dot: 'bg-emerald-500', text: 'text-emerald-600' };
+      case 'Revenue':
+        return { dot: 'bg-teal-500', text: 'text-teal-600' };
+      case 'Expense':
+        return { dot: 'bg-rose-500', text: 'text-rose-600' };
+      default:
+        return { dot: 'bg-muted-foreground', text: 'text-muted-foreground' };
+    }
+  };
+
+  const getLineBalanceInfo = (line: JournalEntryLine) => {
+    if (!line.company_account_id) return null;
+    const account = accountsById.get(line.company_account_id);
+    const normalBalance = account?.normal_balance || 'Debit';
+    const currentBalance = balancesByAccountId.get(line.company_account_id) || 0;
+    const delta = accountDeltaById.get(line.company_account_id) || { debit: 0, credit: 0 };
+    const netChange =
+      String(normalBalance).toLowerCase() === 'credit'
+        ? delta.credit - delta.debit
+        : delta.debit - delta.credit;
+    const newBalance = currentBalance + netChange;
+    return {
+      currentBalance,
+      newBalance,
+      insufficient: newBalance < 0,
+    };
+  };
+
+  const hasBalanceIssue = lines.some((line) => {
+    const info = getLineBalanceInfo(line);
+    return info?.insufficient;
   });
 
   // Auto-select first open fiscal period
@@ -81,7 +168,7 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await api.post('/journal-entries/', data);
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       onSuccess();
@@ -181,15 +268,25 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
       return;
     }
 
+    if (hasBalanceIssue) {
+      toast({
+        title: 'Insufficient Balance',
+        description: 'One or more lines would create a negative balance.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const data = {
       company_id: companyId,
       fiscal_period_id: fiscalPeriodId,
       entry_date: entryDate,
       description,
       reference: reference || null,
-      entry_type: entryType,
+      entry_type: entryType.toUpperCase(),
       lines: lines.map(line => ({
         company_account_id: line.company_account_id,
+        line_number: line.line_number,
         description: line.description || null,
         debit_amount: Number(line.debit_amount),
         credit_amount: Number(line.credit_amount),
@@ -229,7 +326,7 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
                 <SelectContent>
                   {fiscalPeriods?.map((period: any) => (
                     <SelectItem key={period.id} value={period.id}>
-                      {period.name} ({period.start_date} to {period.end_date})
+                      {period.period_number || period.name} ({period.start_date} to {period.end_date})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -306,13 +403,31 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
                             <SelectValue placeholder="Select account" />
                           </SelectTrigger>
                           <SelectContent>
-                            {accounts?.map((account: any) => (
-                              <SelectItem key={account.id} value={account.id}>
-                                {account.code} - {account.description}
-                              </SelectItem>
-                            ))}
+                            {accounts?.map((account: CompanyAccount) => {
+                              const tone = getAccountTone(account.account_type);
+                              return (
+                                <SelectItem key={account.id} value={account.id}>
+                                  <span className={`flex items-center gap-2 ${tone.text}`}>
+                                    <span className={`h-2 w-2 rounded-full ${tone.dot}`} />
+                                    {account.code} - {account.description}
+                                  </span>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
+                        {line.company_account_id && (() => {
+                          const info = getLineBalanceInfo(line);
+                          const account = accountsById.get(line.company_account_id);
+                          const tone = getAccountTone(account?.account_type);
+                          if (!info) return null;
+                          return (
+                            <div className={`mt-1 text-xs ${info.insufficient ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <span className={tone.text}>{account?.account_type || 'Account'}</span> · Current: {formatCurrency(info.currentBalance)} · New: {formatCurrency(info.newBalance)}
+                              {info.insufficient ? ' · Insufficient balance' : ''}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="p-2">
                         <Input
@@ -387,6 +502,14 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
               </AlertDescription>
             </Alert>
           )}
+          {hasBalanceIssue && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                One or more lines would create a negative balance.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2">
@@ -401,7 +524,7 @@ export default function JournalEntryDialog({ open, onOpenChange, companyId, onSu
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!isBalanced() || createMutation.isPending}
+              disabled={!isBalanced() || hasBalanceIssue || createMutation.isPending}
             >
               {createMutation.isPending ? 'Creating...' : 'Create Entry'}
             </Button>

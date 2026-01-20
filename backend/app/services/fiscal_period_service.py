@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
+from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime
@@ -17,6 +18,18 @@ class FiscalPeriodService:
     def __init__(self, db: Session):
         self.db = db
 
+    def _find_overlapping_period(
+        self,
+        company_id: UUID,
+        start_date: date,
+        end_date: date
+    ) -> Optional[FiscalPeriod]:
+        return self.db.query(FiscalPeriod).filter(
+            FiscalPeriod.company_id == company_id,
+            FiscalPeriod.start_date <= end_date,
+            FiscalPeriod.end_date >= start_date
+        ).first()
+
     def create_fiscal_period(self, period_data: FiscalPeriodCreate) -> FiscalPeriod:
         """
         Create a new fiscal period.
@@ -30,23 +43,12 @@ class FiscalPeriodService:
         Raises:
             ValueError: If validation fails
         """
-        # Check for overlapping periods
-        overlapping = self.db.query(FiscalPeriod).filter(
-            and_(
-                FiscalPeriod.company_id == period_data.company_id,
-                FiscalPeriod.period_type == PeriodType(period_data.period_type),
-                or_(
-                    and_(
-                        FiscalPeriod.start_date <= period_data.start_date,
-                        FiscalPeriod.end_date >= period_data.start_date
-                    ),
-                    and_(
-                        FiscalPeriod.start_date <= period_data.end_date,
-                        FiscalPeriod.end_date >= period_data.end_date
-                    )
-                )
-            )
-        ).first()
+        # Check for overlapping periods (across all period types)
+        overlapping = self._find_overlapping_period(
+            period_data.company_id,
+            period_data.start_date,
+            period_data.end_date
+        )
 
         if overlapping:
             raise ValueError(
@@ -64,8 +66,12 @@ class FiscalPeriodService:
         )
 
         self.db.add(fiscal_period)
-        self.db.commit()
-        self.db.refresh(fiscal_period)
+        try:
+            self.db.commit()
+            self.db.refresh(fiscal_period)
+        except IntegrityError as e:
+            self.db.rollback()
+            raise ValueError("Fiscal period overlaps with an existing period") from e
 
         return fiscal_period
 
@@ -276,38 +282,54 @@ class FiscalPeriodService:
         Returns:
             List of created fiscal periods
         """
-        periods = []
+        periods: List[FiscalPeriod] = []
+        year_start = date(year, 1, 1)
+        year_end = date(year, 12, 31)
+        existing_periods = self.db.query(FiscalPeriod).filter(
+            FiscalPeriod.company_id == company_id,
+            FiscalPeriod.start_date <= year_end,
+            FiscalPeriod.end_date >= year_start
+        ).all()
 
+        skipped_months = 0
         for month in range(1, 13):
             start_date = date(year, month, 1)
             end_date = start_date + relativedelta(months=1, days=-1)
 
             period_number = f"{year}-{month:02d}"
 
-            # Check if period already exists
-            existing = self.db.query(FiscalPeriod).filter(
-                and_(
-                    FiscalPeriod.company_id == company_id,
-                    FiscalPeriod.period_number == period_number
-                )
-            ).first()
+            overlapping = next(
+                (period for period in existing_periods
+                 if period.start_date <= end_date and period.end_date >= start_date),
+                None
+            )
 
-            if not existing:
-                period = FiscalPeriod(
-                    company_id=company_id,
-                    period_type=PeriodType.MONTH,
-                    period_number=period_number,
-                    start_date=start_date,
-                    end_date=end_date,
-                    status=PeriodStatus.OPEN
-                )
-                self.db.add(period)
-                periods.append(period)
+            if overlapping:
+                skipped_months += 1
+                continue
+
+            period = FiscalPeriod(
+                company_id=company_id,
+                period_type=PeriodType.MONTH,
+                period_number=period_number,
+                start_date=start_date,
+                end_date=end_date,
+                status=PeriodStatus.OPEN
+            )
+            self.db.add(period)
+            periods.append(period)
+
+        if skipped_months == 12 and existing_periods:
+            raise ValueError(f"Fiscal periods already exist for {year}")
 
         if periods:
-            self.db.commit()
-            for period in periods:
-                self.db.refresh(period)
+            try:
+                self.db.commit()
+                for period in periods:
+                    self.db.refresh(period)
+            except IntegrityError as e:
+                self.db.rollback()
+                raise ValueError("Fiscal periods overlap with existing periods") from e
 
         return periods
 

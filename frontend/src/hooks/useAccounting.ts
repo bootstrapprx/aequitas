@@ -3,6 +3,8 @@ import { api } from '@/lib/api';
 import type {
   JournalEntry,
   JournalEntryFilters,
+  EntryStatus,
+  EntryType,
   FiscalPeriod,
   PeriodType,
   PeriodStatus,
@@ -21,9 +23,20 @@ export const useJournalEntries = (companyId: string, filters?: JournalEntryFilte
   return useQuery({
     queryKey: ['journal-entries', companyId, filters],
     queryFn: async () => {
-      const params: Record<string, any> = { company_id: companyId, ...filters };
-      const response = await api.get('/journal-entries', { params });
-      return response;
+      const params: Record<string, any> = {
+        company_id: companyId,
+        ...filters,
+        status: filters?.status ? String(filters.status).toUpperCase() : undefined,
+      };
+      const response = await api.get('/journal-entries/', { params });
+      return {
+        ...response,
+        entries: response.entries?.map((entry: JournalEntry) => ({
+          ...entry,
+          status: entry.status ? (String(entry.status).toLowerCase() as EntryStatus) : entry.status,
+          entry_type: entry.entry_type ? (String(entry.entry_type).toLowerCase() as EntryType) : entry.entry_type,
+        })),
+      };
     },
     enabled: !!companyId,
   });
@@ -34,7 +47,12 @@ export const useJournalEntry = (entryId?: string) => {
     queryKey: ['journal-entry', entryId],
     queryFn: async () => {
       if (!entryId) return null;
-      return await api.get(`/journal-entries/${entryId}`);
+      const response = await api.get<JournalEntry>(`/journal-entries/${entryId}`);
+      return {
+        ...response,
+        status: response.status ? (String(response.status).toLowerCase() as EntryStatus) : response.status,
+        entry_type: response.entry_type ? (String(response.entry_type).toLowerCase() as EntryType) : response.entry_type,
+      };
     },
     enabled: !!entryId,
   });
@@ -44,7 +62,10 @@ export const useCreateJournalEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (entry: JournalEntry) => {
-      return await api.post('/journal-entries', { body: entry });
+      return await api.post('/journal-entries/', {
+        ...entry,
+        entry_type: entry.entry_type ? String(entry.entry_type).toUpperCase() : entry.entry_type,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
@@ -56,7 +77,7 @@ export const useUpdateJournalEntry = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ entryId, data }: { entryId: string; data: Partial<JournalEntry> }) => {
-      return await api.put(`/journal-entries/${entryId}`, { body: data });
+      return await api.put(`/journal-entries/${entryId}`, data);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['journal-entries'] });
@@ -70,7 +91,7 @@ export const usePostJournalEntry = () => {
   return useMutation({
     mutationFn: async ({ entryId, userId }: { entryId: string; userId: string }) => {
       return await api.post(`/journal-entries/${entryId}/post`, {
-        body: { posted_by: userId },
+        posted_by: userId,
       });
     },
     onSuccess: () => {
@@ -94,7 +115,8 @@ export const useVoidJournalEntry = () => {
       reason: string;
     }) => {
       return await api.post(`/journal-entries/${entryId}/void`, {
-        body: { voided_by: userId, void_reason: reason },
+        voided_by: userId,
+        void_reason: reason,
       });
     },
     onSuccess: () => {

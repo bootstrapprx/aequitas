@@ -86,7 +86,7 @@ class CouncilService:
                 hashed_password=get_password_hash(password),
                 is_active=True,
                 is_superuser=True,
-                role="COUNCIL_MEMBER",
+                role="SU",
                 force_password_reset=True,
                 password_reset_required_at=datetime.utcnow(),
                 created_by=creator_id,
@@ -200,7 +200,7 @@ class CouncilService:
         try:
             # Revoke privileges
             member.is_superuser = False
-            member.role = "USER"  # Demote to standard user
+            member.role = "COUNCIL_MEMBER"
 
             # Audit the revocation
             self.audit_service.log_user_demote(

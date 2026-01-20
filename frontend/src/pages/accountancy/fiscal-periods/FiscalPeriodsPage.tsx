@@ -46,6 +46,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import type { FiscalPeriod } from '@/types/accounting';
+import { ApiError } from '@/lib/api';
 
 type PeriodType = 'MONTH' | 'QUARTER' | 'YEAR';
 type PeriodStatus = 'OPEN' | 'CLOSED' | 'LOCKED';
@@ -98,7 +99,12 @@ const FiscalPeriodsPage = () => {
       setCreateDialogOpen(false);
       resetForm();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to create fiscal period');
+      const message = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to create fiscal period';
+      toast.error(message);
     }
   };
 
@@ -113,7 +119,12 @@ const FiscalPeriodsPage = () => {
       toast.success(`Created 12 monthly periods for ${bulkYear}`);
       setBulkCreateDialogOpen(false);
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to create monthly periods');
+      const message = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to create monthly periods';
+      toast.error(message);
     }
   };
 
@@ -127,7 +138,12 @@ const FiscalPeriodsPage = () => {
       });
       toast.success(`Period ${period.period_number} closed successfully`);
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to close fiscal period');
+      const message = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to close fiscal period';
+      toast.error(message);
     }
   };
 

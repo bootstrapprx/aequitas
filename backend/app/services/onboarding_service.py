@@ -20,6 +20,7 @@ CRITICAL RULES:
 """
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID, uuid4
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
@@ -29,9 +30,16 @@ from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount, Co
 from app.db.models.company_account import CompanyAccount
 from app.db.models.company_module import CompanyModule
 from app.db.models.fiscal_period import FiscalPeriod
+from app.db.models.master_account import MasterAccount
 from app.db.models.user import User
 from app.db.models.enums import OnboardingStatus, PeriodStatus, AccountType, NormalBalance, KernelLayer
-from app.core.kernel import KERNEL_VERSION, L0_KERNEL_CODES, map_category_to_account_type, map_normal_balance
+from app.core.kernel import (
+    KERNEL_VERSION,
+    L0_KERNEL_CODES,
+    get_kernel_codes,
+    map_category_to_account_type,
+    map_normal_balance,
+)
 from app.schemas.onboarding import (
     OnboardingStatusResponse,
     CompanyDetailsRequest,
@@ -543,32 +551,40 @@ def select_template(
             "Please choose a different template or contact support."
         )
 
-    # Ensure template has accounts
     template_account_count = db.query(ChartTemplateAccount).filter(
         ChartTemplateAccount.template_id == template.id
     ).count()
-    if template_account_count == 0:
-        raise ValidationError(
-            "The selected template has no accounts defined. "
-            "Please choose a different template or contact support."
-        )
+    has_template_accounts = template_account_count > 0
 
-    # Validate template includes all L0 kernel codes
-    template_codes = {
-        row.code for row in db.query(ChartTemplateAccount.code).filter(
-            ChartTemplateAccount.template_id == template.id
-        ).all()
-    }
-    missing_l0 = L0_KERNEL_CODES - template_codes
-    if missing_l0:
-        raise ValidationError(
-            f"Template missing mandatory L0 kernel accounts: {sorted(missing_l0)}"
-        )
+    if has_template_accounts:
+        # Validate template includes all L0 kernel codes
+        template_codes = {
+            row.code for row in db.query(ChartTemplateAccount.code).filter(
+                ChartTemplateAccount.template_id == template.id
+            ).all()
+        }
+        missing_l0 = L0_KERNEL_CODES - template_codes
+        if missing_l0:
+            raise ValidationError(
+                f"Template missing mandatory L0 kernel accounts: {sorted(missing_l0)}"
+            )
 
-    if not template.version or not template.version.startswith(KERNEL_VERSION):
-        raise ValidationError(
-            f"Template version {template.version} is not compatible with kernel {KERNEL_VERSION}."
-        )
+        if not template.version or not template.version.startswith(KERNEL_VERSION):
+            raise ValidationError(
+                f"Template version {template.version} is not compatible with kernel {KERNEL_VERSION}."
+            )
+    else:
+        master_codes = {
+            row.code for row in db.query(MasterAccount.code).filter(
+                MasterAccount.code.in_(L0_KERNEL_CODES)
+            ).all()
+        }
+        missing_l0 = L0_KERNEL_CODES - master_codes
+        if missing_l0:
+            raise ValidationError(
+                "Kernel master chart is missing required L0 accounts: "
+                f"{sorted(missing_l0)}"
+            )
 
     if template.name == "US GAAP Standard":
         kernel_layer = KernelLayer.L1
@@ -632,6 +648,91 @@ def select_template(
 # Step 3b: Chart Materialization (Internal / Automatic)
 # ============================================================================
 
+def _materialize_kernel_chart(
+    db: Session,
+    company: Company,
+) -> ChartMaterializationResponse:
+    kernel_codes = get_kernel_codes(company.kernel_layer)
+    if not kernel_codes:
+        raise ValidationError("Kernel codes could not be resolved for this company.")
+
+    master_accounts = db.query(MasterAccount).filter(
+        MasterAccount.code.in_(kernel_codes)
+    ).all()
+    master_by_code = {account.code: account for account in master_accounts}
+    missing_master = sorted(kernel_codes - set(master_by_code.keys()))
+    if missing_master:
+        raise ValidationError(
+            "Kernel master chart is missing required accounts: "
+            f"{missing_master}. Please reseed the kernel master chart."
+        )
+
+    existing_accounts = db.query(CompanyAccount).filter(
+        CompanyAccount.company_id == company.id,
+        CompanyAccount.code.in_(kernel_codes)
+    ).all()
+    existing_by_code = {account.code: account for account in existing_accounts}
+
+    created_accounts: List[CompanyAccount] = []
+    for code in sorted(kernel_codes):
+        if code in existing_by_code:
+            continue
+        master = master_by_code[code]
+        account_type = map_category_to_account_type(master.category)
+        normal_balance = map_normal_balance(master.normal_balance)
+
+        company_account = CompanyAccount(
+            id=uuid4(),
+            company_id=company.id,
+            code=master.code,
+            name=master.description,
+            description=master.description,
+            type=master.type,
+            account_type=account_type,
+            normal_balance=normal_balance,
+            parent_id=None,
+            mapped_master_account_id=master.id,
+            is_active=True,
+            is_locked=False,
+            currency=company.currency or "USD",
+            template_account_id=None,
+            json_data={
+                "category": master.category,
+                "fs_mapping": master.fs_mapping,
+                "cash_flow_classification": master.cash_flow_classification,
+                "source": "kernel_materialization",
+            },
+            created_at=datetime.utcnow(),
+        )
+        db.add(company_account)
+        db.flush()
+        created_accounts.append(company_account)
+        existing_by_code[code] = company_account
+
+    for account in created_accounts:
+        master = master_by_code.get(account.code)
+        if not master or not master.parent_code:
+            continue
+        parent = existing_by_code.get(master.parent_code)
+        if parent and parent.id != account.id:
+            account.parent_id = parent.id
+
+    if company.onboarding_status == OnboardingStatus.TEMPLATE_SELECTED:
+        company.onboarding_status = OnboardingStatus.CHART_READY
+    company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACCOUNT_REVIEW)
+
+    db.commit()
+
+    return ChartMaterializationResponse(
+        success=True,
+        message="Kernel chart materialized successfully.",
+        accounts_created=len(created_accounts),
+        mandatory_accounts=len(kernel_codes),
+        optional_accounts=0,
+        current_step=company.onboarding_current_step,
+        next_step=STEP_ACCOUNT_REVIEW
+    )
+
 def materialize_chart(
     db: Session,
     company_id: UUID,
@@ -686,10 +787,7 @@ def materialize_chart(
     ).order_by(ChartTemplateAccount.sort_order).all()
 
     if not template_accounts:
-        raise ValidationError(
-            "The selected template has no accounts defined. "
-            "Please contact support to resolve this issue."
-        )
+        return _materialize_kernel_chart(db, company)
 
     try:
         # Get active modules for the company - used to filter optional accounts
@@ -1015,14 +1113,13 @@ def customize_accounts(
             if not account:
                 raise ValidationError(f"Account {customization.account_id} not found.")
 
-            # Check if account is mandatory (via template)
-            if account.template_account_id:
+            # Check if account is mandatory (kernel or template)
+            is_mandatory = account.code in L0_KERNEL_CODES
+            if not is_mandatory and account.template_account_id:
                 template_account = db.query(ChartTemplateAccount).filter(
                     ChartTemplateAccount.id == account.template_account_id
                 ).first()
                 is_mandatory = template_account.is_mandatory if template_account else False
-            else:
-                is_mandatory = False
 
             if customization.action == "rename":
                 if not customization.new_name:
@@ -1336,6 +1433,89 @@ def activate_accounting(
         )
 
     try:
+        joint_stock_amount = data.joint_stock_amount
+        if joint_stock_amount is not None and joint_stock_amount > 0:
+            if not current_user:
+                raise ValidationError("User context is required to record joint-stock balance.")
+
+            from sqlalchemy import or_
+            from app.db.models.journal_entry import JournalEntry
+            from app.schemas.journal_entry import JournalEntryCreate, JournalEntryLineCreate
+            from app.services.journal_entry_service import JournalEntryService
+            from app.services.ledger_service import LedgerService
+
+            # Idempotency guard: skip if opening entry already exists
+            existing_entry = db.query(JournalEntry).filter(
+                JournalEntry.company_id == company_id,
+                JournalEntry.reference == "AUTO-JOINT-STOCK"
+            ).first()
+
+            if not existing_entry:
+                open_period = db.query(FiscalPeriod).filter(
+                    FiscalPeriod.company_id == company_id,
+                    FiscalPeriod.status == PeriodStatus.OPEN
+                ).order_by(FiscalPeriod.start_date).first()
+
+                if not open_period:
+                    raise ValidationError("No open fiscal period available for joint-stock entry.")
+
+                def _find_account(account_type: AccountType, keywords: List[str]) -> Optional[CompanyAccount]:
+                    base_query = db.query(CompanyAccount).filter(
+                        CompanyAccount.company_id == company_id,
+                        CompanyAccount.is_active == True,
+                        CompanyAccount.type == "D",
+                        CompanyAccount.account_type == account_type
+                    )
+                    if keywords:
+                        conditions = []
+                        for keyword in keywords:
+                            conditions.append(CompanyAccount.description.ilike(f"%{keyword}%"))
+                            conditions.append(CompanyAccount.name.ilike(f"%{keyword}%"))
+                        matched = base_query.filter(or_(*conditions)).order_by(CompanyAccount.code).first()
+                        if matched:
+                            return matched
+                    return base_query.order_by(CompanyAccount.code).first()
+
+                cash_account = _find_account(AccountType.ASSET, ["cash", "bank"])
+                equity_account = _find_account(AccountType.EQUITY, ["stock", "capital", "equity"])
+
+                if not cash_account:
+                    raise ValidationError("No asset account found to record joint-stock contribution.")
+                if not equity_account:
+                    raise ValidationError("No equity account found to record joint-stock contribution.")
+
+                amount = Decimal(str(joint_stock_amount))
+                entry_service = JournalEntryService(db)
+                entry_data = JournalEntryCreate(
+                    company_id=company_id,
+                    fiscal_period_id=open_period.id,
+                    entry_date=open_period.start_date,
+                    description="Opening balance - Joint-stock",
+                    reference="AUTO-JOINT-STOCK",
+                    entry_type="OPENING",
+                    lines=[
+                        JournalEntryLineCreate(
+                            company_account_id=cash_account.id,
+                            line_number=1,
+                            description="Initial capital contribution",
+                            debit_amount=amount,
+                            credit_amount=Decimal("0.00")
+                        ),
+                        JournalEntryLineCreate(
+                            company_account_id=equity_account.id,
+                            line_number=2,
+                            description="Joint-stock",
+                            debit_amount=Decimal("0.00"),
+                            credit_amount=amount
+                        )
+                    ]
+                )
+
+                opening_entry = entry_service.create_journal_entry(entry_data, current_user.id)
+                posted_entry = entry_service.post_journal_entry(opening_entry.id, current_user.id)
+                ledger_service = LedgerService(db)
+                ledger_service.post_journal_entry(posted_entry)
+
         # Final state transition
         company.onboarding_status = OnboardingStatus.ACTIVE
         company.onboarding_current_step = max(company.onboarding_current_step, STEP_ACTIVATION)

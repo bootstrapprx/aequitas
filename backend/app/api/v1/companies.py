@@ -283,14 +283,14 @@ def restore_company(
         raise HTTPException(status_code=404, detail="Company not found")
     return company
 
-@router.get("/{company_id}/users", response_model=List[UserResponse])
-def get_company_users(
+@router.get("/{company_id}/users-basic", response_model=List[UserResponse])
+def get_company_users_basic(
     company_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get all users assigned to a specific company.
+    Get all users assigned to a specific company (basic profile view).
 
     Args:
         company_id: UUID of the company

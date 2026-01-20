@@ -121,9 +121,9 @@ def test_can_view_company_superuser(permission_service, superuser, test_company)
     assert permission_service.can_view_company(superuser.id, test_company.id) is True
 
 
-def test_can_view_company_council_member(permission_service, council_member, test_company):
-    """Council member can view any company"""
-    assert permission_service.can_view_company(council_member.id, test_company.id) is True
+def test_can_view_company_council_member_requires_membership(permission_service, council_member, test_company):
+    """Council member without membership cannot view company"""
+    assert permission_service.can_view_company(council_member.id, test_company.id) is False
 
 
 def test_can_view_company_authorized_user(permission_service, regular_user, test_company, db):
@@ -184,9 +184,9 @@ def test_can_manage_company_superuser(permission_service, superuser, test_compan
     assert permission_service.can_manage_company(superuser.id, test_company.id) is True
 
 
-def test_can_manage_company_council_member(permission_service, council_member, test_company):
-    """Council member can manage any company"""
-    assert permission_service.can_manage_company(council_member.id, test_company.id) is True
+def test_can_manage_company_council_member_requires_admin(permission_service, council_member, test_company):
+    """Council member without admin membership cannot manage company"""
+    assert permission_service.can_manage_company(council_member.id, test_company.id) is False
 
 
 def test_can_manage_company_company_admin(permission_service, admin_user, test_company, db):

@@ -295,6 +295,7 @@ class UsersManagementService:
                 hashed_password=get_password_hash(password),
                 is_active=request.is_active,
                 is_superuser=False,  # Only superusers can create other superusers
+                role="COUNCIL_MEMBER",
                 preferred_company_id=request.company_ids[0] if request.company_ids else None
             )
 

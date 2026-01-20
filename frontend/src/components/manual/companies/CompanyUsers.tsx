@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { User } from '@/types/user';
+import { UserListItem } from '@/types/user';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Users, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -16,8 +16,7 @@ const CompanyUsers: React.FC<CompanyUsersProps> = ({ companyId }) => {
   const { data: users, isLoading, isError } = useQuery({
     queryKey: ['company-users', companyId],
     queryFn: async () => {
-      const response = await api.get<User[]>(`/companies/${companyId}/users`);
-      return response.data;
+      return api.get<UserListItem[]>(`/companies/${companyId}/users`);
     },
     enabled: isExpanded, // Only fetch when expanded
   });
@@ -67,7 +66,7 @@ const CompanyUsers: React.FC<CompanyUsersProps> = ({ companyId }) => {
                     <span className="font-medium">{user.email}</span>
                     {user.is_superuser && (
                       <Badge variant="secondary" className="ml-2 text-xs">
-                        Superuser
+                        Scribe
                       </Badge>
                     )}
                   </div>

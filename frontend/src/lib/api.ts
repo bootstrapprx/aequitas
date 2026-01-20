@@ -99,9 +99,15 @@ async function baseRequest<T>(
   if (params) {
     const queryParams = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) {
+        continue;
+      }
       queryParams.append(key, String(value));
     }
-    url += `?${queryParams.toString()}`;
+    const queryString = queryParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
   }
 
   const config: RequestInit = {

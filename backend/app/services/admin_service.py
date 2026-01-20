@@ -50,6 +50,7 @@ class AdminService:
             return user
 
         user.is_superuser = True
+        user.role = "SU"
         self.db.commit()
         self.db.refresh(user)
 
@@ -82,6 +83,7 @@ class AdminService:
             return user
 
         user.is_superuser = False
+        user.role = "COUNCIL_MEMBER"
         self.db.commit()
         self.db.refresh(user)
 

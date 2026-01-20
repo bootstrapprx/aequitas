@@ -51,7 +51,8 @@ class UserService:
         hashed_password = get_password_hash(user_data.password)
         db_user = User(
             email=user_data.email,
-            hashed_password=hashed_password
+            hashed_password=hashed_password,
+            role="COUNCIL_MEMBER"
         )
 
         try:
@@ -176,4 +177,3 @@ class UserService:
             self.db.rollback()
             logger.error(f"Error deleting user: {e}")
             raise ValueError(f"Failed to delete user: {e}")
-

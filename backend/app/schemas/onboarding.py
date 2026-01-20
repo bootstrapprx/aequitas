@@ -8,6 +8,7 @@ These schemas enforce the wizard state machine and validation rules.
 """
 from typing import Optional, List
 from datetime import datetime
+from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
 
@@ -333,6 +334,10 @@ class ActivationRequest(BaseModel):
         ...,
         description="User must type confirmation phrase"
     )
+    joint_stock_amount: Optional[Decimal] = Field(
+        None,
+        description="Initial joint-stock (share capital) balance to record"
+    )
 
     @field_validator('confirmed')
     @classmethod
@@ -349,6 +354,14 @@ class ActivationRequest(BaseModel):
         expected = "I understand that accounting will be activated"
         if v.strip().lower() != expected.lower():
             raise ValueError(f'Please type exactly: "{expected}"')
+        return v
+
+    @field_validator('joint_stock_amount')
+    @classmethod
+    def validate_joint_stock_amount(cls, v):
+        """Ensure joint-stock amount is not negative."""
+        if v is not None and v < 0:
+            raise ValueError('Joint-stock amount cannot be negative')
         return v
 
 

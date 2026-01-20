@@ -195,8 +195,9 @@ const App = () => (
                     >
                       {/* Main Dashboard */}
                       <Route index element={<Navigate to="/dashboard" replace />} />
-                      <Route path="dashboard" element={<FinancialDashboard />} />
+                      <Route path="dashboard" element={<CompanyDashboard />} />
                       <Route path="dashboard/company-overview" element={<CompanyDashboard />} />
+                      <Route path="dashboard/financial" element={<FinancialDashboard />} />
                       <Route path="dashboard/old" element={<DashboardPage />} />
 
                       {/* Registration Module */}

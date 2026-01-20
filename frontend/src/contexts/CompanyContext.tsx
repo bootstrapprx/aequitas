@@ -31,10 +31,14 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
   const fetchCompanies = async () => {
     if (!isAuthenticated) {
       setCompanies([]);
-      setIsInitialized(true);
+      setSelectedCompanyIdState(null);
+      setSelectedCompany(null);
+      setIsLoadingCompanies(false);
+      setIsInitialized(false);
       return;
     }
 
+    setIsInitialized(false);
     setIsLoadingCompanies(true);
     try {
       let companiesData: Company[] = [];

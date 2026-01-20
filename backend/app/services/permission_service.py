@@ -184,7 +184,6 @@ class PermissionService:
 
         Logic:
             - Superusers can view all companies
-            - Council members can view all companies
             - Users with UserCompany relationship where can_view=True can view
             - All other users cannot view (deny by default)
         """
@@ -196,10 +195,6 @@ class PermissionService:
 
             # Superusers have access to all companies
             if user.is_superuser:
-                return True
-
-            # Council members have access to all companies
-            if user.role == "COUNCIL_MEMBER":
                 return True
 
             # Check UserCompany relationship for view permission
@@ -232,7 +227,6 @@ class PermissionService:
 
         Logic:
             - Superusers can manage all companies
-            - Council members can manage all companies
             - Users with UserCompany relationship where is_admin=True can manage
             - All other users cannot manage (deny by default)
         """
@@ -244,10 +238,6 @@ class PermissionService:
 
             # Superusers have admin access to all companies
             if user.is_superuser:
-                return True
-
-            # Council members have admin access to all companies
-            if user.role == "COUNCIL_MEMBER":
                 return True
 
             # Check UserCompany relationship for admin permission
@@ -266,4 +256,3 @@ class PermissionService:
             # Log error but don't raise - return False for security
             logger.error(f"Error checking manage permission for user {user_id} on company {company_id}: {e}")
             return False
-

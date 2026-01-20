@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_
 
 from app.core.exceptions import ValidationError, ErrorCode
+from app.core.kernel import L0_KERNEL_CODES
 
 
 class TemplateAccountValidator:
@@ -202,7 +203,13 @@ class TemplateAccountValidator:
             CompanyAccount.id == account_id
         ).first()
 
-        if not account or not account.template_account_id:
+        if not account:
+            return False
+
+        if account.code in L0_KERNEL_CODES:
+            return True
+
+        if not account.template_account_id:
             return False
 
         # Check if template account is mandatory

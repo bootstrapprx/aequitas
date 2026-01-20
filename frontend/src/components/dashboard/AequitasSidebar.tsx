@@ -283,7 +283,7 @@ const AequitasSidebar = () => {
                     {user?.email?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-sidebar-foreground/50 truncate max-w-[120px]">
-                    {user?.is_superuser ? 'Council Member' : 'Scribe'}
+                    {user?.is_superuser ? 'Scribe' : 'Council Member'}
                   </p>
                 </div>
               )}

@@ -28,7 +28,7 @@ def list_available_templates(db: Session = Depends(get_db)):
                 jurisdiction=template.jurisdiction,
                 version=template.version,
                 description=template.description,
-                is_active=template.is_active and account_count > 0,
+                is_active=template.is_active,
                 account_count=account_count
             )
         )

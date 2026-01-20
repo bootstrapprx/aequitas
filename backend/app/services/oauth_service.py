@@ -4,7 +4,7 @@ OAuth Service for handling external identity provider authentication.
 Supports Google OAuth with architecture for Microsoft/Apple expansion.
 
 SECURITY:
-- Never grants superuser via OAuth
+- Grants superuser ONLY when no superuser exists (first onboarding account)
 - Requires email_verified=true from provider
 - CSRF protection via signed state tokens
 - Short-lived link tokens for account collision resolution
@@ -43,6 +43,10 @@ class OAuthService:
 
     def __init__(self, db: Session):
         self.db = db
+
+    def _should_seed_superuser(self) -> bool:
+        """Return True if no superuser exists and the next user should be elevated."""
+        return self.db.query(User).filter(User.is_superuser == True).count() == 0
 
     # ==================== Google OAuth ====================
 
@@ -187,11 +191,14 @@ class OAuthService:
             }
 
         # 7. Create new user (OAuth-only, no password)
+        is_superuser = self._should_seed_superuser()
+        role = "SU" if is_superuser else "COUNCIL_MEMBER"
         new_user = User(
             email=claims.email,
             hashed_password=None,  # OAuth-only user
             is_active=True,
-            is_superuser=False,  # NEVER grant superuser via OAuth
+            is_superuser=is_superuser,
+            role=role,
         )
         self.db.add(new_user)
         self.db.flush()  # Get user ID
@@ -471,11 +478,14 @@ class OAuthService:
             }
 
         # 6. Create new user (OAuth-only, no password)
+        is_superuser = self._should_seed_superuser()
+        role = "SU" if is_superuser else "COUNCIL_MEMBER"
         new_user = User(
             email=email,
             hashed_password=None,  # OAuth-only user
             is_active=True,
-            is_superuser=False,  # NEVER grant superuser via OAuth
+            is_superuser=is_superuser,
+            role=role,
         )
         self.db.add(new_user)
         self.db.flush()  # Get user ID
@@ -668,11 +678,14 @@ class OAuthService:
             }
 
         # 6. Create new user (OAuth-only, no password)
+        is_superuser = self._should_seed_superuser()
+        role = "SU" if is_superuser else "COUNCIL_MEMBER"
         new_user = User(
             email=email,
             hashed_password=None,  # OAuth-only user
             is_active=True,
-            is_superuser=False,  # NEVER grant superuser via OAuth
+            is_superuser=is_superuser,
+            role=role,
         )
         self.db.add(new_user)
         self.db.flush()  # Get user ID

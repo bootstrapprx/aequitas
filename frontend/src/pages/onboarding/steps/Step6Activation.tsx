@@ -19,7 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { useCompany } from '@/contexts/CompanyContext';
 
 interface Step6ActivationProps {
   companyId: string;
@@ -39,26 +40,38 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
   const queryClient = useQueryClient();
   const [confirmed, setConfirmed] = useState(false);
   const [acknowledgment, setAcknowledgment] = useState('');
+  const [jointStockAmount, setJointStockAmount] = useState('');
   const [apiError, setApiError] = useState<string | null>(null);
+  const { refreshCompanies, setSelectedCompanyId } = useCompany();
 
   const isAcknowledgmentValid = acknowledgment.trim().toLowerCase() === ACKNOWLEDGMENT_TEXT.toLowerCase();
 
   // Mutation to activate
   const activateMutation = useMutation({
     mutationFn: async () => {
-      const response = await api.post(`/onboarding/${companyId}/activate`, {
+      const payload: Record<string, any> = {
         confirmed: true,
-        acknowledgment_text: acknowledgment
-      });
-      return response.data;
+        acknowledgment_text: acknowledgment,
+      };
+      if (jointStockAmount.trim() !== '') {
+        payload.joint_stock_amount = Number(jointStockAmount);
+      }
+      const response = await api.post(`/onboarding/${companyId}/activate`, payload);
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setApiError(null);
       queryClient.invalidateQueries({ queryKey: ['onboarding-status', companyId] });
+      await refreshCompanies();
+      setSelectedCompanyId(companyId);
       onNext();
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail || 'Failed to activate accounting.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to activate accounting.';
       setApiError(errorMessage);
     }
   });
@@ -165,6 +178,33 @@ const Step6Activation: React.FC<Step6ActivationProps> = ({
               </div>
               <WaxSealBadge type="approved" size="sm" />
             </div>
+          </div>
+        </AtheneumCardContent>
+      </AtheneumCard>
+
+      {/* Initial Capital */}
+      <AtheneumCard>
+        <AtheneumCardHeader embossed>
+          Joint-Stock (Initial Capital)
+        </AtheneumCardHeader>
+        <AtheneumCardContent>
+          <div className="space-y-2">
+            <Label htmlFor="joint-stock-amount">
+              Joint-Stock Value (Share Capital)
+            </Label>
+            <Input
+              id="joint-stock-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              value={jointStockAmount}
+              onChange={(e) => setJointStockAmount(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              If provided, Aequitas will record an opening entry in the first open period.
+            </p>
           </div>
         </AtheneumCardContent>
       </AtheneumCard>

@@ -6,8 +6,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTemplateCatalogTree, useTemplateCatalogStats } from '@/hooks/api/useTemplateCatalog';
-import { ViewMode, FilterState, MasterAccount } from '@/types/masterchart';
+import {
+    useTemplateCatalogTree,
+    useTemplateCatalogStats,
+    useTemplateCatalogAccounts,
+} from '@/hooks/api/useTemplateCatalog';
+import { ViewMode, FilterState, MasterAccount, MasterAccountNode } from '@/types/masterchart';
 import type { CompanyAccount } from '@/types/company_account';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,12 +27,57 @@ import ListView from '@/components/masterchart/dashboard/views/ListView';
 import CardsView from '@/components/masterchart/dashboard/views/CardsView';
 import AccountDetailsPanel from '@/components/masterchart/dashboard/AccountDetailsPanel';
 
+const buildCatalogTree = (accounts: MasterAccount[]): MasterAccountNode[] => {
+    const nodes = new Map<string, MasterAccountNode>();
+    const codeToHeaderId = new Map<string, string>();
+    const codeToFirstId = new Map<string, string>();
+
+    accounts.forEach((account) => {
+        const node: MasterAccountNode = { ...account, children: [] };
+        nodes.set(account.id, node);
+        if (!codeToFirstId.has(account.code)) {
+            codeToFirstId.set(account.code, account.id);
+        }
+        if (account.type === 'H') {
+            codeToHeaderId.set(account.code, account.id);
+        }
+    });
+
+    const roots: MasterAccountNode[] = [];
+    nodes.forEach((node) => {
+        const parentCode = node.parent_code;
+        const parentId = parentCode
+            ? codeToHeaderId.get(parentCode) || codeToFirstId.get(parentCode)
+            : undefined;
+        if (parentId && nodes.has(parentId) && parentId !== node.id) {
+            nodes.get(parentId)!.children.push(node);
+        } else {
+            roots.push(node);
+        }
+    });
+
+    const sortNodes = (node: MasterAccountNode) => {
+        node.children.sort((a, b) => a.code.localeCompare(b.code));
+        node.children.forEach(sortNodes);
+    };
+
+    roots.sort((a, b) => a.code.localeCompare(b.code));
+    roots.forEach(sortNodes);
+
+    return roots;
+};
+
 const MasterChartDashboard = () => {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const { selectedCompanyId, selectedCompany } = useCompany();
-    const { data: tree, isLoading: isLoadingTree } = useTemplateCatalogTree();
+    const { data: tree, isLoading: isLoadingTree, error: treeError } = useTemplateCatalogTree();
     const { data: stats, isLoading: isLoadingStats } = useTemplateCatalogStats();
+    const {
+        data: catalogAccounts = [],
+        isLoading: isLoadingCatalogAccounts,
+        error: catalogAccountsError,
+    } = useTemplateCatalogAccounts();
 
     // State
     const [activeView, setActiveView] = useState<ViewMode>('tree');
@@ -86,8 +135,21 @@ const MasterChartDashboard = () => {
     });
 
     // Flatten tree for list/cards view
+    const effectiveTree = useMemo(() => {
+        if (tree && tree.length > 0) {
+            return tree;
+        }
+        if (catalogAccounts.length > 0) {
+            return buildCatalogTree(catalogAccounts);
+        }
+        return [];
+    }, [tree, catalogAccounts]);
+
     const flatAccounts = useMemo(() => {
-        if (!tree) return [];
+        if (effectiveTree.length === 0 && catalogAccounts.length > 0) {
+            return catalogAccounts;
+        }
+        if (effectiveTree.length === 0) return [];
         const flatten = (nodes: any[]): MasterAccount[] => {
             return nodes.reduce((acc, node) => {
                 const { children, ...account } = node;
@@ -98,8 +160,8 @@ const MasterChartDashboard = () => {
                 return acc;
             }, [] as MasterAccount[]);
         };
-        return flatten(tree);
-    }, [tree]);
+        return flatten(effectiveTree);
+    }, [effectiveTree, catalogAccounts]);
 
     // Apply filters
     const filteredAccounts = useMemo(() => {
@@ -146,6 +208,11 @@ const MasterChartDashboard = () => {
     ).size;
 
     const selectedIsAdded = selectedAccount ? existingCodes.has(selectedAccount.code) : false;
+    const isLoadingCatalog = isLoadingTree || isLoadingCatalogAccounts;
+    const catalogError = treeError || catalogAccountsError;
+    const catalogErrorMessage = catalogError instanceof ApiError
+        ? catalogError.getUserMessage()
+        : 'Failed to load the template account catalog.';
 
     return (
         <div className="space-y-8 p-8 md:p-10">
@@ -185,6 +252,11 @@ const MasterChartDashboard = () => {
                     </AlertDescription>
                 </Alert>
             )}
+            {catalogError && (
+                <Alert variant="destructive">
+                    <AlertDescription>{catalogErrorMessage}</AlertDescription>
+                </Alert>
+            )}
 
             {/* KPI Metrics */}
             <KPIMetrics
@@ -195,7 +267,7 @@ const MasterChartDashboard = () => {
             />
 
             {/* Analytics & Insights */}
-            {!isLoadingTree && tree && stats && (
+            {!isLoadingCatalog && effectiveTree.length > 0 && stats && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -228,7 +300,7 @@ const MasterChartDashboard = () => {
             </div>
 
             {/* Views */}
-            {isLoadingTree ? (
+            {isLoadingCatalog ? (
                 <div className="h-96 flex items-center justify-center">
                     <div className="text-muted-foreground">Loading accounts...</div>
                 </div>
@@ -239,8 +311,8 @@ const MasterChartDashboard = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3 }}
                 >
-                    {activeView === 'tree' && tree && (
-                        <TreeView tree={tree} onSelectAccount={setSelectedAccount} />
+                    {activeView === 'tree' && effectiveTree.length > 0 && (
+                        <TreeView tree={effectiveTree} onSelectAccount={setSelectedAccount} />
                     )}
                     {activeView === 'list' && (
                         <ListView accounts={filteredAccounts} onSelectAccount={setSelectedAccount} />

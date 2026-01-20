@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   Users,
@@ -18,6 +19,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompany } from '@/contexts/CompanyContext';
+import { api } from '@/lib/api';
 import {
   useAllUsersQuery,
   useCompanyUsersQuery,
@@ -33,6 +36,7 @@ import {
   UserCreateRequest,
   UserUpdateRequest,
   CompanyRoleAssignment,
+  UserCompany,
 } from '@/types/user';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,15 +91,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-// Placeholder for companies - replace with actual query
-const useCompaniesQuery = () => {
-  // TODO: Import actual companies query hook
-  return { data: [], isLoading: false };
+const useUserPermissions = (userId?: string) => {
+  return useQuery<UserCompany[]>({
+    queryKey: ['user-permissions', userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      return api.get<UserCompany[]>(`/permissions/user/${userId}`);
+    },
+    enabled: !!userId,
+  });
 };
 
 const UsersListPage = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
+  const { companies, selectedCompanyId } = useCompany();
   const { toast } = useToast();
 
   // State
@@ -124,10 +134,22 @@ const UsersListPage = () => {
 
   // Permission check
   const isSuperuser = currentUser?.is_superuser || false;
-  const isCompanyAdmin = false; // TODO: Check if user is admin of any company
+  const { data: userPermissions = [], isLoading: isPermissionsLoading } = useUserPermissions(currentUser?.id);
+  const isCompanyAdmin = userPermissions.some((perm) => perm.is_admin);
+  const isSelectedCompanyAdmin = selectedCompanyId
+    ? userPermissions.some((perm) => perm.company_id === selectedCompanyId && perm.is_admin)
+    : isCompanyAdmin;
+  const manageableCompanies = isSuperuser
+    ? companies
+    : companies.filter((company) =>
+        userPermissions.some((perm) => perm.company_id === company.id && perm.is_admin)
+      );
 
   useEffect(() => {
-    if (!isSuperuser && !isCompanyAdmin) {
+    if (isPermissionsLoading) {
+      return;
+    }
+    if (!isSuperuser && !isSelectedCompanyAdmin) {
       toast({
         title: 'Access Denied',
         description: 'You must be a superuser or company admin to access this page.',
@@ -135,16 +157,26 @@ const UsersListPage = () => {
       });
       navigate('/dashboard');
     }
-  }, [isSuperuser, isCompanyAdmin, navigate, toast]);
+  }, [isSuperuser, isSelectedCompanyAdmin, isPermissionsLoading, navigate, toast]);
 
   // Queries
-  const { data: users, isLoading } = useAllUsersQuery({
+  const { data: allUsers, isLoading: isAllUsersLoading } = useAllUsersQuery({
     search: searchQuery || undefined,
     company_id: filterCompanyId || undefined,
     is_active: filterStatus === 'all' ? undefined : filterStatus === 'active',
-  });
+  }, isSuperuser);
 
-  const { data: companies } = useCompaniesQuery();
+  const { data: companyUsers, isLoading: isCompanyUsersLoading } = useCompanyUsersQuery(
+    selectedCompanyId || '',
+    {
+      search: searchQuery || undefined,
+      is_active: filterStatus === 'all' ? undefined : filterStatus === 'active',
+    },
+    !!selectedCompanyId && !isSuperuser
+  );
+
+  const users = isSuperuser ? allUsers : companyUsers;
+  const isLoading = isSuperuser ? isAllUsersLoading : isCompanyUsersLoading;
 
   // Mutations
   const createMutation = useCreateUserMutation();
@@ -336,7 +368,15 @@ const UsersListPage = () => {
     }));
   };
 
-  if (!isSuperuser && !isCompanyAdmin) {
+  if (!isSuperuser && isPermissionsLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Skeleton className="h-10 w-48" />
+      </div>
+    );
+  }
+
+  if (!isSuperuser && !isSelectedCompanyAdmin) {
     return null; // Will redirect via useEffect
   }
 
@@ -464,12 +504,12 @@ const UsersListPage = () => {
                         {user.is_superuser ? (
                           <Badge variant="destructive">
                             <Shield className="h-3 w-3 mr-1" />
-                            Superuser
+                            Scribe
                           </Badge>
                         ) : user.companies.some((c) => c.is_admin) ? (
                           <Badge variant="default">Admin</Badge>
                         ) : (
-                          <Badge variant="outline">User</Badge>
+                          <Badge variant="outline">Council Member</Badge>
                         )}
                       </TableCell>
                       <TableCell>
@@ -578,10 +618,10 @@ const UsersListPage = () => {
             <div>
               <Label>Companies (select at least one)</Label>
               <div className="mt-2 space-y-2 border rounded-md p-4 max-h-60 overflow-y-auto">
-                {companies?.length === 0 ? (
+                {manageableCompanies.length === 0 ? (
                   <p className="text-sm text-gray-500">No companies available</p>
                 ) : (
-                  companies?.map((company: any) => (
+                  manageableCompanies.map((company: any) => (
                     <div key={company.id} className="flex items-center space-x-2">
                       <Checkbox
                         id={company.id}
@@ -651,7 +691,7 @@ const UsersListPage = () => {
             <div>
               <Label>Companies</Label>
               <div className="mt-2 space-y-2 border rounded-md p-4 max-h-60 overflow-y-auto">
-                {companies?.map((company: any) => (
+                {manageableCompanies.map((company: any) => (
                   <div key={company.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={`edit-${company.id}`}

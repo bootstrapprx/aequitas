@@ -55,6 +55,7 @@ from app.core.errors import (
 from app.core.logging_config import configure_logging
 from app.core.middleware.request_ids import RequestIdMiddleware
 from app.core.request_context import ensure_request_ids
+from app.core.config import settings as app_settings
 
 # 1. Application Initialization Order: FastAPI app is created at the very top.
 app = FastAPI(
@@ -77,10 +78,13 @@ if os.getenv("BACKEND_CORS_ORIGINS"):
     origins_prod = [origin.strip() for origin in os.getenv("BACKEND_CORS_ORIGINS").split(",")]
     allow_origins.extend(origins_prod)
 
+# In development, allow any origin to avoid local CORS mismatches.
+allow_origin_regex = r".*" if app_settings.APP_ENV == "development" else r"http://localhost:\d+"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_origin_regex=r"http://localhost:\d+",
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

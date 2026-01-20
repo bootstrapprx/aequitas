@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,6 +32,8 @@ import {
 import { JournalEntryLineEditor } from './JournalEntryLineEditor';
 import type { JournalEntry, JournalEntryLine, FiscalPeriod } from '@/types/accounting';
 import { cn } from '@/lib/utils';
+import { useAccountBalances } from '@/hooks/useAccounting';
+import type { CompanyAccount } from '@/types/company_account';
 
 const journalEntrySchema = z.object({
   company_id: z.string().min(1, 'Company is required'),
@@ -48,7 +50,7 @@ type JournalEntryFormData = z.infer<typeof journalEntrySchema>;
 interface JournalEntryFormProps {
   companyId: string;
   fiscalPeriods: FiscalPeriod[];
-  accounts: Array<{ id: string; code: string; description: string }>;
+  accounts: CompanyAccount[];
   initialData?: Partial<JournalEntry>;
   onSubmit: (data: JournalEntry) => void;
   onCancel: () => void;
@@ -88,6 +90,54 @@ export function JournalEntryForm({
     form.setValue('lines', lines);
   }, [lines, form]);
 
+  const selectedPeriodId = form.watch('fiscal_period_id');
+  const { data: accountBalances = [] } = useAccountBalances(companyId, selectedPeriodId || undefined);
+
+  const detailAccounts = useMemo(
+    () => accounts.filter((account) => account.type === 'D' && account.is_active),
+    [accounts]
+  );
+
+  const balancesByAccountId = useMemo(() => {
+    const map: Record<string, number> = {};
+    accountBalances.forEach((balance) => {
+      map[balance.company_account_id] = Number(balance.ending_balance || 0);
+    });
+    return map;
+  }, [accountBalances]);
+
+  const hasBalanceIssue = useMemo(() => {
+    const accountsById = new Map(detailAccounts.map((account) => [account.id, account]));
+    const accountDeltaById = lines.reduce((map, line) => {
+      if (!line.company_account_id) return map;
+      const debit = parseFloat(String(line.debit_amount)) || 0;
+      const credit = parseFloat(String(line.credit_amount)) || 0;
+      const current = map.get(line.company_account_id) || { debit: 0, credit: 0 };
+      map.set(line.company_account_id, {
+        debit: current.debit + debit,
+        credit: current.credit + credit,
+      });
+      return map;
+    }, new Map<string, { debit: number; credit: number }>());
+
+    for (const line of lines) {
+      if (!line.company_account_id) continue;
+      const account = accountsById.get(line.company_account_id);
+      const normalBalance = account?.normal_balance || 'Debit';
+      const currentBalance = balancesByAccountId[line.company_account_id] || 0;
+      const delta = accountDeltaById.get(line.company_account_id) || { debit: 0, credit: 0 };
+      const netChange =
+        String(normalBalance).toLowerCase() === 'credit'
+          ? delta.credit - delta.debit
+          : delta.debit - delta.credit;
+      if (currentBalance + netChange < 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [balancesByAccountId, detailAccounts, lines]);
+
   const handleSubmit = (data: JournalEntryFormData) => {
     // Validate balance
     const totalDebit = lines.reduce((sum, line) => sum + (parseFloat(String(line.debit_amount)) || 0), 0);
@@ -114,6 +164,11 @@ export function JournalEntryForm({
 
     if (invalidAmounts.length > 0) {
       form.setError('lines', { message: 'Each line must have either a debit or credit amount (not both, not neither)' });
+      return;
+    }
+
+    if (hasBalanceIssue) {
+      form.setError('lines', { message: 'One or more lines would create a negative balance' });
       return;
     }
 
@@ -154,9 +209,9 @@ export function JournalEntryForm({
                       <SelectValue placeholder="Select period..." />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent>
-                    {fiscalPeriods
-                      .filter(p => p.status === 'open')
+                    <SelectContent>
+                      {fiscalPeriods
+                      .filter(p => String(p.status).toUpperCase() === 'OPEN')
                       .map((period) => (
                         <SelectItem key={period.id} value={period.id}>
                           {period.period_number} ({period.start_date} to {period.end_date})
@@ -271,12 +326,13 @@ export function JournalEntryForm({
 
         {/* Lines Editor */}
         <div>
-          <JournalEntryLineEditor
-            lines={lines}
-            accounts={accounts}
-            onChange={setLines}
-            disabled={isLoading}
-          />
+        <JournalEntryLineEditor
+          lines={lines}
+          accounts={detailAccounts}
+          accountBalances={balancesByAccountId}
+          onChange={setLines}
+          disabled={isLoading}
+        />
           {form.formState.errors.lines && (
             <p className="text-sm text-destructive mt-2">
               {form.formState.errors.lines.message}
@@ -289,7 +345,7 @@ export function JournalEntryForm({
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || hasBalanceIssue}>
             {isLoading ? 'Saving...' : initialData?.id ? 'Update Entry' : 'Create Entry'}
           </Button>
         </div>

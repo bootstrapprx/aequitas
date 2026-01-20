@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 interface Step2TemplateSelectionProps {
   companyId: string;
@@ -139,8 +139,12 @@ const Step2TemplateSelection: React.FC<Step2TemplateSelectionProps> = ({
       queryClient.invalidateQueries({ queryKey: ['onboarding-status', companyId] });
       onNext();
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail || 'Failed to select template. Please try again.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to select template. Please try again.';
       setApiError(errorMessage);
     }
   });

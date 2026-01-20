@@ -16,6 +16,8 @@ from app.db.models.user import User
 from app.db.models.company import Company
 from app.db.models.company_account import CompanyAccount
 from app.db.models.fiscal_period import FiscalPeriod, PeriodStatus
+from app.db.models.user_company import UserCompany
+from app.db.models.enums import OnboardingStatus
 from app.api.v1.auth import get_current_user
 from app.schemas.user_context import UserContextResponse
 
@@ -39,24 +41,25 @@ def get_user_context(
         UserContextResponse with all canonical state flags
     """
     # Get all companies the user has access to
-    companies = db.query(Company).filter(
-        Company.id.in_(
-            db.query(Company.id).filter(
-                Company.users.any(id=current_user.id)
-            )
-        )
-    ).all()
+    companies = (
+        db.query(Company)
+        .join(UserCompany, Company.id == UserCompany.company_id)
+        .filter(UserCompany.user_id == current_user.id)
+        .all()
+    )
     
     total_companies = len(companies)
     
     # Determine current company
-    # Priority: 1) current_company_id from user, 2) first company, 3) None
+    # Priority: 1) preferred_company_id, 2) first company, 3) None
     current_company = None
-    if current_user.current_company_id:
-        current_company = db.query(Company).filter(
-            Company.id == current_user.current_company_id
-        ).first()
-    elif total_companies > 0:
+    preferred_company_id = getattr(current_user, "preferred_company_id", None)
+    if preferred_company_id:
+        current_company = next(
+            (company for company in companies if company.id == preferred_company_id),
+            None
+        )
+    if not current_company and total_companies > 0:
         current_company = companies[0]
     
     # If no current company, return minimal context
@@ -64,7 +67,7 @@ def get_user_context(
         return UserContextResponse(
             user_id=current_user.id,
             email=current_user.email,
-            full_name=current_user.full_name,
+            full_name=getattr(current_user, "full_name", None),
             current_company_id=None,
             current_company_name=None,
             current_company_ucid=None,
@@ -81,7 +84,7 @@ def get_user_context(
     # CANONICAL STATE DERIVATION (Backend Authority Only)
     
     # Accounting Active = ACTIVE status
-    accounting_active = current_company.onboarding_status.value == 'ACTIVE'
+    accounting_active = current_company.onboarding_status == OnboardingStatus.ACTIVE
     
     # Protected Structure = has kernel binding + ACTIVE
     protected_structure = (
@@ -105,7 +108,7 @@ def get_user_context(
     return UserContextResponse(
         user_id=current_user.id,
         email=current_user.email,
-        full_name=current_user.full_name,
+        full_name=getattr(current_user, "full_name", None),
         current_company_id=current_company.id,
         current_company_name=current_company.name,
         current_company_ucid=current_company.ucid,

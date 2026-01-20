@@ -5,7 +5,7 @@ Canon I: Accounting truth is kernel-derived, not user-derived.
 """
 from typing import Dict, Set
 
-from app.db.models.enums import AccountType, NormalBalance
+from app.db.models.enums import AccountType, NormalBalance, KernelLayer
 
 
 KERNEL_VERSION = "2025.2"
@@ -17,6 +17,14 @@ L0_KERNEL_CODES: Set[str] = {
     "40000", "49000", "50000",
     "60000", "61000", "62000", "69000",
 }
+
+L1_ADDITIONAL_KERNEL_CODES: Set[str] = {
+    "11000", "13000", "16000", "24000", "25000",
+    "31000", "41000", "42000", "51000", "52000",
+    "63000", "64000", "65000", "66000", "67000",
+}
+
+L1_KERNEL_CODES: Set[str] = L0_KERNEL_CODES | L1_ADDITIONAL_KERNEL_CODES
 
 CATEGORY_ACCOUNT_TYPE_MAP: Dict[str, AccountType] = {
     "Asset": AccountType.ASSET,
@@ -44,3 +52,9 @@ def map_normal_balance(normal_balance: str | None) -> NormalBalance:
     if not normal_balance:
         return NormalBalance.DEBIT
     return NORMAL_BALANCE_MAP.get(normal_balance, NormalBalance.DEBIT)
+
+
+def get_kernel_codes(layer: KernelLayer | None) -> Set[str]:
+    if layer == KernelLayer.L1:
+        return L1_KERNEL_CODES
+    return L0_KERNEL_CODES

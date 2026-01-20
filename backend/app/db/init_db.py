@@ -54,6 +54,7 @@ def _seed_superuser(db: Session) -> None:
             hashed_password=get_password_hash(superuser_password),
             is_superuser=True,
             is_active=True,
+            role="SU",
         )
         db.add(user)
         db.commit()

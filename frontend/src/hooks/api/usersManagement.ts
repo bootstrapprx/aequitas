@@ -39,10 +39,11 @@ export const usersManagementKeys = {
 /**
  * Fetch all users (superuser only)
  */
-export const useAllUsersQuery = (filters?: UsersFilterParams) => {
+export const useAllUsersQuery = (filters?: UsersFilterParams, enabled: boolean = true) => {
   return useQuery<UserListItem[]>({
     queryKey: usersManagementKeys.list(filters),
     queryFn: () => getAllUsers(filters),
+    enabled,
   });
 };
 

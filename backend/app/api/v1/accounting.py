@@ -402,6 +402,9 @@ def create_monthly_periods(
     )
 
     service = FiscalPeriodService(db)
-    periods = service.create_monthly_periods(company_id, year)
+    try:
+        periods = service.create_monthly_periods(company_id, year)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     return [FiscalPeriodResponse(**p.__dict__) for p in periods]

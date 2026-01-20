@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 interface Step5FiscalPeriodsProps {
   companyId: string;
@@ -53,6 +53,13 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
   const [apiError, setApiError] = useState<string | null>(null);
   const [fiscalYearStart, setFiscalYearStart] = useState('01-01');
   const [periodCount, setPeriodCount] = useState(12);
+
+  const formatLocalDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FiscalPeriodForm>({
     defaultValues: {
@@ -80,8 +87,8 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
 
         periods.push({
           name: `Period ${i + 1} - ${startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`,
-          start_date: startDate.toISOString(),
-          end_date: endDate.toISOString(),
+          start_date: formatLocalDate(startDate),
+          end_date: formatLocalDate(endDate),
           period_type: periodType,
           is_open: i === 0 // First period is open
         });
@@ -98,8 +105,12 @@ const Step5FiscalPeriods: React.FC<Step5FiscalPeriodsProps> = ({
       queryClient.invalidateQueries({ queryKey: ['onboarding-status', companyId] });
       onNext();
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail || 'Failed to create fiscal periods.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to create fiscal periods.';
       setApiError(errorMessage);
     }
   });

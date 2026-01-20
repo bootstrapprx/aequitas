@@ -20,7 +20,7 @@ import { AtheneumCard, AtheneumCardHeader, AtheneumCardContent } from '@/compone
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 
 interface Step4AccountReviewProps {
   companyId: string;
@@ -63,8 +63,12 @@ const Step4AccountReview: React.FC<Step4AccountReviewProps> = ({
       queryClient.invalidateQueries({ queryKey: ['onboarding-status', companyId] });
       onNext();
     },
-    onError: (error: any) => {
-      const errorMessage = error.response?.data?.detail || 'Failed to finalize accounts.';
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof ApiError
+        ? error.getUserMessage()
+        : error instanceof Error
+          ? error.message
+          : 'Failed to finalize accounts.';
       setApiError(errorMessage);
     }
   });

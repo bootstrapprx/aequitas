@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -12,10 +11,12 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { JournalEntryLine } from '@/types/accounting';
+import type { CompanyAccount } from '@/types/company_account';
 
 interface JournalEntryLineEditorProps {
   lines: JournalEntryLine[];
-  accounts: Array<{ id: string; code: string; description: string }>;
+  accounts: CompanyAccount[];
+  accountBalances?: Record<string, number>;
   onChange: (lines: JournalEntryLine[]) => void;
   disabled?: boolean;
 }
@@ -23,6 +24,7 @@ interface JournalEntryLineEditorProps {
 export function JournalEntryLineEditor({
   lines,
   accounts,
+  accountBalances = {},
   onChange,
   disabled = false,
 }: JournalEntryLineEditorProps) {
@@ -75,6 +77,57 @@ export function JournalEntryLineEditor({
   const totalCredit = localLines.reduce((sum, line) => sum + (parseFloat(String(line.credit_amount)) || 0), 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
+  const accountsById = new Map(accounts.map((account) => [account.id, account]));
+  const accountDeltaById = localLines.reduce((map, line) => {
+    if (!line.company_account_id) return map;
+    const debit = parseFloat(String(line.debit_amount)) || 0;
+    const credit = parseFloat(String(line.credit_amount)) || 0;
+    const current = map.get(line.company_account_id) || { debit: 0, credit: 0 };
+    map.set(line.company_account_id, {
+      debit: current.debit + debit,
+      credit: current.credit + credit,
+    });
+    return map;
+  }, new Map<string, { debit: number; credit: number }>());
+
+  const formatCurrency = (amount: number) =>
+    amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+
+  const getAccountTone = (accountType?: string | null) => {
+    switch (accountType) {
+      case 'Asset':
+        return { dot: 'bg-blue-500', text: 'text-blue-600' };
+      case 'Liability':
+        return { dot: 'bg-amber-500', text: 'text-amber-600' };
+      case 'Equity':
+        return { dot: 'bg-emerald-500', text: 'text-emerald-600' };
+      case 'Revenue':
+        return { dot: 'bg-teal-500', text: 'text-teal-600' };
+      case 'Expense':
+        return { dot: 'bg-rose-500', text: 'text-rose-600' };
+      default:
+        return { dot: 'bg-muted-foreground', text: 'text-muted-foreground' };
+    }
+  };
+
+  const getLineBalanceInfo = (line: JournalEntryLine) => {
+    if (!line.company_account_id) return null;
+    const account = accountsById.get(line.company_account_id);
+    const normalBalance = account?.normal_balance || 'Debit';
+    const currentBalance = accountBalances[line.company_account_id] || 0;
+    const delta = accountDeltaById.get(line.company_account_id) || { debit: 0, credit: 0 };
+    const netChange =
+      String(normalBalance).toLowerCase() === 'credit'
+        ? delta.credit - delta.debit
+        : delta.debit - delta.credit;
+    const newBalance = currentBalance + netChange;
+    return {
+      currentBalance,
+      newBalance,
+      insufficient: newBalance < 0,
+    };
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -123,13 +176,31 @@ export function JournalEntryLineEditor({
                     <SelectValue placeholder="Select account..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.code} - {account.description}
-                      </SelectItem>
-                    ))}
+                    {accounts.map((account) => {
+                      const tone = getAccountTone(account.account_type);
+                      return (
+                        <SelectItem key={account.id} value={account.id}>
+                          <span className={`flex items-center gap-2 ${tone.text}`}>
+                            <span className={`h-2 w-2 rounded-full ${tone.dot}`} />
+                            {account.code} - {account.description}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                {line.company_account_id && (() => {
+                  const info = getLineBalanceInfo(line);
+                  const account = accountsById.get(line.company_account_id);
+                  const tone = getAccountTone(account?.account_type);
+                  if (!info) return null;
+                  return (
+                    <div className={`mt-1 text-xs ${info.insufficient ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      <span className={tone.text}>{account?.account_type || 'Account'}</span> · Current: {formatCurrency(info.currentBalance)} · New: {formatCurrency(info.newBalance)}
+                      {info.insufficient ? ' · Insufficient balance' : ''}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Description */}

@@ -11,6 +11,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCompany } from "@/contexts/CompanyContext";
+import { api, ApiError } from "@/lib/api";
+import type { Company } from "@/types/company";
 
 // Schema for validation
 const formSchema = z.object({
@@ -68,26 +70,7 @@ const CompanyRegistration = () => {
         );
 
         try {
-            const token = localStorage.getItem('aequitas_token');
-            const headers: Record<string, string> = {
-                'Content-Type': 'application/json',
-            };
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-
-            const response = await fetch('http://localhost:8000/api/v1/companies/', {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(sanitizedValues),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to register company');
-            }
-
-            const data = await response.json();
+            const data = await api.post<Company>('/companies', sanitizedValues);
             setUcid(data.ucid);
             toast({
                 title: "Company Registered!",
@@ -99,10 +82,15 @@ const CompanyRegistration = () => {
             }
             form.reset();
         } catch (error) {
+            const message = error instanceof ApiError
+                ? error.getUserMessage()
+                : error instanceof Error
+                    ? error.message
+                    : "An unknown error occurred";
             toast({
                 variant: "destructive",
                 title: "Registration Failed",
-                description: error instanceof Error ? error.message : "An unknown error occurred",
+                description: message,
             });
         } finally {
             setIsLoading(false);
