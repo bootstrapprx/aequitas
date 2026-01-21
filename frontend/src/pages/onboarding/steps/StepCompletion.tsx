@@ -23,6 +23,8 @@ interface StepCompletionProps {
 
 const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) => {
   const navigate = useNavigate();
+  const kernelVersion = status?.kernel_version ?? 'N/A';
+  const kernelLayer = status?.kernel_layer ?? 'N/A';
 
   return (
     <motion.div
@@ -92,8 +94,8 @@ const StepCompletion: React.FC<StepCompletionProps> = ({ companyId, status }) =>
               <AtheneumCardContent>
                 <div className="text-center py-4">
                   <WaxSealBadge type="approved" size="lg" />
-                  <p className="text-2xl font-bold text-purple-800 mt-2">Kernel 2025.2</p>
-                  <p className="text-sm text-gray-600">GAAP Standards</p>
+                  <p className="text-2xl font-bold text-purple-800 mt-2">Kernel {kernelVersion}</p>
+                  <p className="text-sm text-gray-600">Layer {kernelLayer}</p>
                 </div>
               </AtheneumCardContent>
             </AtheneumCard>

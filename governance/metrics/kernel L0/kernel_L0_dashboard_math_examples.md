@@ -1,407 +1,380 @@
-# Kernel L0 Dashboard — Math Examples (Tier 1 Core Metrics)
+Alright. If you want “better than hybrid,” the move is **dual-track** documentation:
+
+* **Track A — GAAP-style narrative** (semantic intent, definitions, inclusions/exclusions)
+* **Track B — formal mathematical notation** (symbols, sets, functions, domain rules)
+
+And we rewrite `metrics/kernel L0/kernel_L0_dashboard_math_examples.md` to be exactly that: **prose first, math second, then worked examples**.
+
+Below is a complete rewrite you can paste in as the new file.
+
+---
+
+## `metrics/kernel L0/kernel_L0_dashboard_math_examples.md`
+
+# Kernel L0 Dashboard — Mathematical Definitions & Worked Examples (Tier 1)
 
 **Version:** v1.0
-**Scope:** Tier 1 only (Core Metrics)
-**Inputs:** Kernel L0 account balances, period-aware
-**Outputs:** Metric values (+ optional delta vs prior period)
-
-This document contains **worked examples** and **auditable steps** for each Core Metric.
+**Scope:** Kernel L0 Dashboard, Tier 1 Core Metrics only
+**Objective:** Provide (i) GAAP-style narrative definitions and (ii) formal mathematical notation, with worked examples and auditable steps.
 
 ---
 
-## 0) Conventions
+## 0. Accounting Narrative: Basis and Constraints
 
-### 0.1 Signs
+### 0.1 Basis of Preparation
 
-* Assets typically have debit balances (positive in reports).
-* Liabilities and income typically have credit balances.
-* For dashboard math, we use **normalized “reporting polarity”**:
+The dashboard is prepared on an **accrual basis**. It presents computed metrics derived exclusively from Kernel L0 accounts and does not constitute financial statements.
 
-  * Asset balances are used as positive amounts.
-  * Liability balances are used as positive obligations.
-  * Revenue is positive.
-  * Expenses/COGS/Refunds are treated as positive reductions (subtractions).
+### 0.2 Scope Limitation
 
-If your ledger stores raw debits/credits, you must map them into **reporting polarity** before applying these examples.
+The dashboard:
 
-### 0.2 Period Awareness
+* uses **only Kernel L0 accounts**,
+* is **read-only** (no entries are created),
+* provides **no projections**, recommendations, or scoring,
+* is **period-aware** as defined in Section 1.
 
-Every metric is computed for:
+### 0.3 Presentation Polarity
 
-* **Current Period** (selected fiscal period)
-* optionally **Prior Period** (immediately preceding fiscal period)
+Balances and totals used in computations are in **reporting polarity**:
 
-Delta is:
+* Assets and expenses are treated as positive magnitudes.
+* Liabilities are treated as positive magnitudes of obligations.
+* Revenues are treated as positive magnitudes.
+* Refunds/allowances are treated as positive magnitudes reducing revenue.
 
-* Delta = Current − Prior
-
-### 0.3 Null Handling
-
-* “N/A” means mathematically undefined (e.g., division by zero), not missing data.
-* $0 is a valid computed result.
+If the ledger stores debits/credits with sign conventions, those must be transformed into reporting polarity *before* applying the definitions below.
 
 ---
 
-## 1) Total Cash
+## 1. Mathematical Preliminaries
 
-### Definition
+### 1.1 Sets of Accounts
 
-Immediate liquidity available to the company.
+Let the Kernel L0 account identifiers be elements of a finite set ( \mathcal{A} ).
 
-### Accounts
+Define the following subsets:
 
-* 10000 Operating Cash
-* 10100 Undeposited Funds
+* Cash set
+  [
+  \mathcal{A}_{cash} = {10000, 10100}
+  ]
 
-### Formula (conceptual)
+* Revenue set
+  [
+  \mathcal{A}_{rev} = {40000}
+  ]
 
-Total Cash = Cash + Undeposited Funds
+* Refund set
+  [
+  \mathcal{A}_{ref} = {49000}
+  ]
 
----
+* Operating cost sets
+  [
+  \mathcal{A}*{cogs} = {50000},\quad
+  \mathcal{A}*{opex} = {60000},\quad
+  \mathcal{A}*{pay} = {61000},\quad
+  \mathcal{A}*{dep} = {62000}
+  ]
 
-### Example A (Normal)
+* Current assets (Kernel approximation)
+  [
+  \mathcal{A}_{CA} = {10000, 10100, 12000, 14000}
+  ]
 
-**Current Period Balances**
+* Current liabilities (Kernel approximation)
+  [
+  \mathcal{A}_{CL} = {20000, 21000, 22000, 23000}
+  ]
 
-* 10000 = 12,500
-* 10100 = 1,200
+### 1.2 Period Model
 
-**Calculation**
+Let ( p ) denote a fiscal period (e.g., month, quarter, year) selected by the user.
 
-* Total Cash = 12,500 + 1,200 = **13,700**
+Define:
 
-**Audit Steps**
+* ( p^{-} ): the immediately preceding fiscal period to ( p ) (prior period).
 
-1. Pull balances for 10000 and 10100 for the period end
-2. Sum them
-3. Compare to dashboard
+### 1.3 Two Measurement Functions
 
----
+Because balance sheet accounts are **stock** measures and income statement accounts are **flow** measures, define two functions:
 
-### Example B (Zero company)
+* Period-end balance function (stock):
+  [
+  B(a, p) \in \mathbb{R}
+  ]
+  meaning the period-end balance (in reporting polarity) of account ( a ) at the close of period ( p ).
 
-* 10000 = 0
-* 10100 = 0
-  Total Cash = **0**
+* Period activity function (flow):
+  [
+  T(a, p) \in \mathbb{R}
+  ]
+  meaning the total activity (in reporting polarity) of income statement account ( a ) over period ( p ).
 
-This is valid and must display as $0.
+### 1.4 Delta Operator
 
----
-
-### Example C (Negative cash)
-
-* 10000 = -2,000
-* 10100 = 300
-  Total Cash = -2,000 + 300 = **-1,700**
-
-Negative cash is allowed (overdraft / negative bank).
-
----
-
-## 2) Net Revenue
-
-### Definition
-
-Recognized revenue net of direct reductions.
-
-### Accounts
-
-* 40000 General Operating Revenue
-* 49000 Refunds / Allowances
-
-### Formula (conceptual)
-
-Net Revenue = Revenue − Refunds
-
----
-
-### Example A (Normal)
-
-**Current Period**
-
-* 40000 = 50,000
-* 49000 = 2,500
-
-Net Revenue = 50,000 − 2,500 = **47,500**
-
-**Audit Steps**
-
-1. Pull period totals for 40000 and 49000
-2. Subtract refunds from revenue
-3. Compare to dashboard
+For any metric ( M(p) ), define the prior-period delta:
+[
+\Delta M(p) = M(p) - M(p^{-})
+]
+If ( M(p) ) or ( M(p^{-}) ) is undefined, then ( \Delta M(p) ) is undefined.
 
 ---
 
-### Example B (Refund spike)
+## 2. Core Metric Definitions (Narrative + Formal)
 
-* 40000 = 10,000
-* 49000 = 12,000
+### 2.1 Total Cash
 
-Net Revenue = 10,000 − 12,000 = **-2,000**
+#### Accounting Narrative
 
-Negative net revenue is valid (more refunds than sales).
+Total Cash represents immediate liquidity available, comprising operating cash and undeposited funds. It is a balance-sheet derived metric based on period-end balances.
 
----
+#### Mathematical Definition
 
-### Example C (No activity)
+[
+\text{TotalCash}(p) = \sum_{a \in \mathcal{A}_{cash}} B(a, p)
+]
 
-* 40000 = 0
-* 49000 = 0
-  Net Revenue = **0**
+#### Domain Notes
 
----
-
-## 3) Operating Income
-
-### Definition
-
-Profit from core operations, excluding taxes and financing.
-
-### Accounts
-
-* 40000 Revenue
-* 49000 Refunds
-* 50000 COGS
-* 60000 General Operating Expenses
-* 61000 Payroll Expense
-* 62000 Depreciation Expense
-
-### Conceptual Formula
-
-Operating Income = Net Revenue − COGS − OpEx − Payroll − Depreciation
+TotalCash is defined for all ( p ). Negative values are permitted.
 
 ---
 
-### Example A (Normal)
+### 2.2 Net Revenue
 
-**Current Period**
+#### Accounting Narrative
 
-* Revenue (40000) = 100,000
-* Refunds (49000) = 5,000
-* COGS (50000) = 40,000
-* OpEx (60000) = 20,000
-* Payroll (61000) = 25,000
-* Depreciation (62000) = 3,000
+Net Revenue represents recognized revenue reduced by refunds and allowances. It is a period activity metric and uses income statement totals for the selected period.
 
-**Step 1: Net Revenue**
+#### Mathematical Definition
 
-* Net Revenue = 100,000 − 5,000 = 95,000
+[
+\text{NetRevenue}(p) = \sum_{a \in \mathcal{A}*{rev}} T(a, p) - \sum*{a \in \mathcal{A}_{ref}} T(a, p)
+]
+Given the sets above, this simplifies to:
+[
+\text{NetRevenue}(p) = T(40000, p) - T(49000, p)
+]
 
-**Step 2: Operating Income**
+#### Domain Notes
 
-* Operating Income = 95,000 − 40,000 − 20,000 − 25,000 − 3,000
-* Operating Income = 95,000 − 88,000 = **7,000**
-
-**Audit Steps**
-
-1. Compute Net Revenue (Section 2)
-2. Subtract 50000, 60000, 61000, 62000 totals
-3. Compare to dashboard
+NetRevenue is defined for all ( p ). Negative values are permitted.
 
 ---
 
-### Example B (Loss)
+### 2.3 Operating Income
 
-* Net Revenue = 30,000
-* COGS = 15,000
-* OpEx = 12,000
-* Payroll = 10,000
-* Depreciation = 1,000
+#### Accounting Narrative
 
-Operating Income = 30,000 − 15,000 − 12,000 − 10,000 − 1,000
-Operating Income = **-8,000**
+Operating Income represents profit from core operations, computed as net revenue less cost of goods sold and operating expenses (including payroll and depreciation). It explicitly excludes taxes, interest, and financing effects.
 
----
+#### Mathematical Definition
 
-### Example C (No depreciation recorded)
+Let:
+[
+\text{OpCosts}(p) = \sum_{a \in \mathcal{A}*{cogs}\cup \mathcal{A}*{opex}\cup \mathcal{A}*{pay}\cup \mathcal{A}*{dep}} T(a, p)
+]
+Then:
+[
+\text{OperatingIncome}(p) = \text{NetRevenue}(p) - \text{OpCosts}(p)
+]
+Expanded:
+[
+\text{OperatingIncome}(p) = \left(T(40000,p) - T(49000,p)\right) - \left(T(50000,p)+T(60000,p)+T(61000,p)+T(62000,p)\right)
+]
 
-Depreciation = 0 is allowed.
-Operating Income simply excludes it.
+#### Domain Notes
 
----
-
-## 4) Net Working Capital (Kernel Approximation)
-
-### Definition
-
-Short-term buffer: current assets minus current liabilities (kernel-defined set).
-
-### Current Assets (Kernel)
-
-* 10000 Operating Cash
-* 10100 Undeposited Funds
-* 12000 Accounts Receivable
-* 14000 Prepaid Expenses
-
-### Current Liabilities (Kernel)
-
-* 20000 Accounts Payable
-* 21000 Accrued Liabilities
-* 22000 Taxes Payable
-* 23000 Deferred Revenue
-
-### Conceptual Formula
-
-NWC = (Cash + Undeposited + AR + Prepaids) − (AP + Accrued + Taxes + Deferred Rev)
+OperatingIncome is defined for all ( p ). Negative values are permitted.
 
 ---
 
-### Example A (Normal)
+### 2.4 Net Working Capital (Kernel Approximation)
 
-**Current Period Balances**
-Assets:
+#### Accounting Narrative
 
-* 10000 = 20,000
-* 10100 = 500
-* 12000 = 12,000
-* 14000 = 1,500
+Net Working Capital represents short-term financial buffer, computed as current assets less current liabilities, using the Kernel-defined approximation sets. Inventory and other non-kernel current accounts are intentionally excluded.
 
-Liabilities:
+#### Mathematical Definition
 
-* 20000 = 8,000
-* 21000 = 2,000
-* 22000 = 3,000
-* 23000 = 6,000
+[
+\text{CurrentAssets}(p) = \sum_{a \in \mathcal{A}*{CA}} B(a,p)
+]
+[
+\text{CurrentLiabilities}(p) = \sum*{a \in \mathcal{A}_{CL}} B(a,p)
+]
+[
+\text{NWC}(p) = \text{CurrentAssets}(p) - \text{CurrentLiabilities}(p)
+]
 
-**Step 1: Current Assets**
+#### Domain Notes
 
-* 20,000 + 500 + 12,000 + 1,500 = 34,000
-
-**Step 2: Current Liabilities**
-
-* 8,000 + 2,000 + 3,000 + 6,000 = 19,000
-
-**Step 3: NWC**
-
-* 34,000 − 19,000 = **15,000**
-
-**Audit Steps**
-
-1. Pull balances for the 4 asset accounts and sum
-2. Pull balances for the 4 liability accounts and sum
-3. Subtract liabilities total from assets total
+NWC is defined for all ( p ). Negative values are permitted.
 
 ---
 
-### Example B (Negative working capital)
+### 2.5 Current Ratio (Kernel Approximation)
 
-Assets total = 10,000
-Liabilities total = 25,000
-NWC = 10,000 − 25,000 = **-15,000**
+#### Accounting Narrative
 
-This is valid and must display as a negative value.
+Current Ratio is a liquidity indicator computed as current assets divided by current liabilities, using the Kernel-defined approximation sets. If current liabilities are zero, the ratio is undefined and must be presented as N/A.
 
----
+#### Mathematical Definition
 
-### Example C (Deferred revenue drives negative NWC)
+[
+\text{CurrentRatio}(p) =
+\begin{cases}
+\dfrac{\text{CurrentAssets}(p)}{\text{CurrentLiabilities}(p)}, & \text{if } \text{CurrentLiabilities}(p) \neq 0 \
+\text{undefined}, & \text{if } \text{CurrentLiabilities}(p) = 0
+\end{cases}
+]
 
-Even if cash is strong, deferred revenue can make NWC negative. That’s valid: it reflects obligations to deliver.
+#### Domain Notes
 
----
-
-## 5) Current Ratio (Kernel Approximation)
-
-### Definition
-
-Liquidity stress indicator: current assets divided by current liabilities (kernel-defined set).
-
-### Conceptual Formula
-
-Current Ratio = Current Assets / Current Liabilities
+* Division by zero is not permitted.
+* If undefined, the dashboard must display N/A (or equivalent null rendering).
 
 ---
 
-### Example A (Normal)
+## 3. Worked Examples (Auditable)
 
-Current Assets = 34,000
-Current Liabilities = 19,000
+> In all examples below, inputs are already in reporting polarity.
 
-Current Ratio = 34,000 / 19,000 = **1.789...**
-Display rule: round to a reasonable precision (e.g., 2 decimals): **1.79**
+### Example 1 — Empty Company (Baseline)
 
-**Audit Steps**
+**Inputs (period ( p ))**
+All ( B(a,p)=0 ) and all ( T(a,p)=0 ).
 
-1. Reuse totals from NWC calculation
-2. Divide Assets by Liabilities
-3. Compare rounded result to dashboard
+**Outputs**
 
----
+* ( \text{TotalCash}(p)=0 )
+* ( \text{NetRevenue}(p)=0 )
+* ( \text{OperatingIncome}(p)=0 )
+* ( \text{NWC}(p)=0 )
+* ( \text{CurrentRatio}(p)=\text{undefined} \Rightarrow \text{N/A} )
 
-### Example B (Division by zero → N/A)
+**Audit steps**
 
-Current Assets = 5,000
-Current Liabilities = 0
-
-Current Ratio is undefined → display **N/A** (or null that UI renders as N/A).
-Never display Infinity. Never crash.
+1. Verify all kernel balances and totals are zero.
+2. Apply definitions in Section 2.
 
 ---
 
-### Example C (Tiny liabilities)
+### Example 2 — Cash Only
 
-Assets = 10,000
-Liabilities = 1
+**Inputs**
 
-Ratio = 10,000
-Still valid, but watch rounding and formatting.
+* ( B(10000,p)=10{,}000 )
+* all others ( B(\cdot,p)=0 ), ( T(\cdot,p)=0 )
 
----
+**Outputs**
 
-## 6) Delta Examples (Optional but Supported)
-
-Delta is computed for each metric as:
-Delta = Current Period Value − Prior Period Value
-
----
-
-### Example A (Total Cash Delta)
-
-**Prior Period**
-
-* Total Cash = 9,000
-
-**Current Period**
-
-* Total Cash = 13,700
-
-Delta = 13,700 − 9,000 = **+4,700**
+* ( \text{TotalCash}(p)=10{,}000 )
+* ( \text{NWC}(p)=10{,}000 )
+* ( \text{CurrentRatio}(p)=\text{undefined} \Rightarrow \text{N/A} )
+* Income metrics are 0.
 
 ---
 
-### Example B (Current Ratio Delta with N/A)
+### Example 3 — Revenue with Refunds
 
-Prior: liabilities = 0 → ratio = N/A
-Current: liabilities = 19,000 → ratio = 1.79
+**Inputs**
 
-Delta is not meaningful across N/A.
-Rule: if either side is N/A, delta should be **null** (not computed).
+* ( T(40000,p)=50{,}000 )
+* ( T(49000,p)=8{,}000 )
 
----
+**Outputs**
 
-## 7) Minimum Acceptance Set (Math Only)
-
-A brand-new company with no entries must yield:
-
-* Total Cash = 0
-* Net Revenue = 0
-* Operating Income = 0
-* Net Working Capital = 0
-* Current Ratio = N/A (because liabilities total = 0)
-
-This is not optional.
+* ( \text{NetRevenue}(p)=50{,}000-8{,}000=42{,}000 )
+* If all costs are zero, ( \text{OperatingIncome}(p)=42{,}000 )
 
 ---
 
-## 8) Manual Audit Checklist (Per Metric)
+### Example 4 — Full Operating Stack (Profit)
 
-For any period:
+**Inputs**
 
-1. Confirm the fiscal period boundaries
-2. Pull account totals (income statement accounts) or balances (balance sheet accounts) for that period
-3. Normalize signs to reporting polarity
-4. Apply the math from Sections 1–5
-5. Compare to dashboard value
-6. If mismatch: verify period mapping, sign normalization, and included accounts
+* ( T(40000,p)=100{,}000 )
+* ( T(49000,p)=5{,}000 )
+* ( T(50000,p)=40{,}000 )
+* ( T(60000,p)=20{,}000 )
+* ( T(61000,p)=25{,}000 )
+* ( T(62000,p)=3{,}000 )
+
+**Outputs**
+
+* ( \text{NetRevenue}(p)=95{,}000 )
+* ( \text{OpCosts}(p)=88{,}000 )
+* ( \text{OperatingIncome}(p)=7{,}000 )
 
 ---
 
+### Example 5 — Working Capital (Positive)
+
+**Inputs**
+
+* ( B(10000,p)=20{,}000 )
+* ( B(10100,p)=500 )
+* ( B(12000,p)=12{,}000 )
+* ( B(14000,p)=1{,}500 )
+* ( B(20000,p)=8{,}000 )
+* ( B(21000,p)=2{,}000 )
+* ( B(22000,p)=3{,}000 )
+* ( B(23000,p)=6{,}000 )
+
+**Outputs**
+
+* ( \text{CurrentAssets}(p)=34{,}000 )
+* ( \text{CurrentLiabilities}(p)=19{,}000 )
+* ( \text{NWC}(p)=15{,}000 )
+* ( \text{CurrentRatio}(p)=34{,}000/19{,}000 \approx 1.78947 )
+  Presentation: round per UI standard (e.g., 2 decimals → 1.79).
+
+---
+
+### Example 6 — Division by Zero (Ratio Undefined)
+
+**Inputs**
+
+* ( \text{CurrentAssets}(p)=5{,}000 )
+* ( \text{CurrentLiabilities}(p)=0 )
+
+**Outputs**
+
+* ( \text{NWC}(p)=5{,}000 )
+* ( \text{CurrentRatio}(p)=\text{undefined} \Rightarrow \text{N/A} )
+
+---
+
+## 4. Delta Examples
+
+### Example 7 — Delta with Defined Values
+
+If ( \text{TotalCash}(p^{-})=9{,}000 ) and ( \text{TotalCash}(p)=13{,}700 ), then:
+[
+\Delta \text{TotalCash}(p) = 13{,}700 - 9{,}000 = 4{,}700
+]
+
+### Example 8 — Delta with Undefined Values
+
+If ( \text{CurrentRatio}(p^{-}) ) is undefined (liabilities = 0) and ( \text{CurrentRatio}(p) ) is defined, then:
+
+* ( \Delta \text{CurrentRatio}(p) ) is **undefined** and must be rendered as null (no delta).
+
+---
+
+## 5. Auditability Statement
+
+Each metric in Section 2 is manually reproducible by:
+
+1. extracting ( B(a,p) ) and ( T(a,p) ) for the listed accounts,
+2. applying the corresponding summation and arithmetic definitions, and
+3. reconciling the result to the dashboard output.
+
+If manual reproduction is not possible for any metric, the implementation is invalid.
+
+---
+
+If you want, I can also rewrite `kernel_L0_dashboard_intelligence.md` to match this **dual-track style** (Narrative + Notation), so the whole metrics folder has a single consistent language.

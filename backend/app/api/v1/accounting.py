@@ -6,6 +6,8 @@ from datetime import date
 
 from app.db.session import get_db
 from app.db.models.user import User
+from app.db.models.company import Company
+from app.db.models.enums import KernelLayer
 from app.api.v1.auth import get_current_user
 from app.core.security import check_superuser
 from app.core.rate_limiting import rate_limit_critical, rate_limit_write
@@ -20,6 +22,7 @@ from app.schemas.financial_statements import (
     IncomeStatementResponse,
     CashFlowStatementResponse
 )
+from app.schemas.kernel_dashboard import KernelL0CoreMetricsResponse, KernelLayerBindingsResponse
 from app.schemas.fiscal_period import (
     FiscalPeriodCreate,
     FiscalPeriodResponse,
@@ -27,6 +30,7 @@ from app.schemas.fiscal_period import (
 )
 from app.services.ledger_service import LedgerService
 from app.services.financial_statement_service import FinancialStatementService
+from app.services.kernel_l0_dashboard_service import KernelL0DashboardService
 from app.services.fiscal_period_service import FiscalPeriodService
 from app.services.permission_service import PermissionService
 
@@ -208,6 +212,65 @@ def get_cash_flow_statement(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ===== Kernel L0 Dashboard (Tier 1 Core Metrics) =====
+
+@router.get("/core-metrics", response_model=KernelL0CoreMetricsResponse)
+def get_core_metrics(
+    company_id: UUID,
+    fiscal_period_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compute Kernel L0 Dashboard Tier 1 Core Metrics for a fiscal period.
+
+    If fiscal_period_id is omitted, a single OPEN period is used when unambiguous.
+    """
+    # Check permissions
+    perm_service = PermissionService(db)
+    if not perm_service.can_view_company(current_user.id, company_id):
+        raise HTTPException(status_code=403, detail="No permission to view metrics for this company")
+
+    service = KernelL0DashboardService(db)
+    try:
+        return service.get_core_metrics(company_id, fiscal_period_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ===== Kernel Layer Placeholders =====
+
+@router.get("/kernel-layers", response_model=KernelLayerBindingsResponse)
+def get_kernel_layer_bindings(
+    company_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Return Kernel layer bindings and placeholders (L0 implemented, L1/L2 placeholders).
+    """
+    perm_service = PermissionService(db)
+    if not perm_service.can_view_company(current_user.id, company_id):
+        raise HTTPException(status_code=403, detail="No permission to view kernel bindings for this company")
+
+    company = db.query(Company).filter(Company.id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    layers = [
+        {"layer": KernelLayer.L0, "state": "implemented"},
+        {"layer": KernelLayer.L1, "state": "placeholder"},
+        {"layer": KernelLayer.L2, "state": "placeholder"},
+    ]
+
+    return {
+        "company_id": company_id,
+        "kernel_version": company.kernel_version,
+        "kernel_layer": company.kernel_layer,
+        "layers": layers,
+    }
 
 
 # ===== Fiscal Period Endpoints =====

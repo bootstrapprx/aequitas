@@ -38,29 +38,47 @@ interface CoreMetrics {
     current_ratio: number | null;
 }
 
+interface KernelLayerStatus {
+    layer: 'L0' | 'L1' | 'L2';
+    state: 'implemented' | 'placeholder';
+}
+
+interface KernelLayerBindings {
+    company_id: string;
+    kernel_version: string | null;
+    kernel_layer: 'L0' | 'L1' | 'L2' | null;
+    layers: KernelLayerStatus[];
+}
+
 const Dashboard = () => {
     const { selectedCompanyId } = useCompany();
     const { data: dashboardContext, isLoading: isContextLoading } = useDashboardContext();
 
-    // Fetch Core Metrics from backend (when endpoint is available)
+    // Fetch Core Metrics from backend
     const { data: metrics, isLoading: isMetricsLoading, error } = useQuery({
         queryKey: ['company', 'core-metrics', selectedCompanyId],
         queryFn: async () => {
-            // TODO: Replace with actual endpoint when backend implements Core Metrics
-            // For now, return placeholder data
-            return {
-                total_cash: 0,
-                net_revenue: 0,
-                operating_income: 0,
-                net_working_capital: 0,
-                current_ratio: null,
-            } as CoreMetrics;
+            return await api.get<CoreMetrics>('/accounting/core-metrics', {
+                params: { company_id: selectedCompanyId },
+            });
+        },
+        enabled: !!selectedCompanyId,
+    });
+
+    const { data: kernelLayers, isLoading: isKernelLayersLoading } = useQuery({
+        queryKey: ['company', 'kernel-layer-bindings', selectedCompanyId],
+        queryFn: async () => {
+            return await api.get<KernelLayerBindings>('/accounting/kernel-layers', {
+                params: { company_id: selectedCompanyId },
+            });
         },
         enabled: !!selectedCompanyId,
     });
 
     const isLoading = isContextLoading || isMetricsLoading;
     const accountingActive = dashboardContext?.accounting_active || false;
+    const kernelVersion = kernelLayers?.kernel_version ?? dashboardContext?.kernel_version ?? null;
+    const kernelLayer = kernelLayers?.kernel_layer ?? dashboardContext?.kernel_layer ?? null;
 
     // Format currency values
     const formatCurrency = (value: number): string => {
@@ -108,8 +126,7 @@ const Dashboard = () => {
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertDescription>
-                            <strong>Accounting system not active.</strong> Core Metrics require an active accounting system.
-                            Please complete onboarding to view financial data.
+                            <strong>Accounting system not active.</strong> Core Metrics are unavailable until activation.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -129,7 +146,14 @@ const Dashboard = () => {
                                 <Skeleton key={i} className="h-32" />
                             ))}
                         </div>
-                    ) : (
+                    ) : error ? (
+                        <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                                Core Metrics unavailable for the selected company and period.
+                            </AlertDescription>
+                        </Alert>
+                    ) : metrics ? (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -139,8 +163,8 @@ const Dashboard = () => {
                             {/* Total Cash */}
                             <StatsCard
                                 title="Total Cash"
-                                value={formatCurrency(metrics?.total_cash || 0)}
-                                subtitle="Available liquidity"
+                                value={formatCurrency(metrics.total_cash)}
+                                subtitle="Accounts: 10000, 10100"
                                 icon={Wallet}
                                 color="teal"
                             />
@@ -148,8 +172,8 @@ const Dashboard = () => {
                             {/* Net Revenue */}
                             <StatsCard
                                 title="Net Revenue"
-                                value={formatCurrency(metrics?.net_revenue || 0)}
-                                subtitle="Revenue recognition"
+                                value={formatCurrency(metrics.net_revenue)}
+                                subtitle="Accounts: 40000, 49000"
                                 icon={DollarSign}
                                 color="navy"
                             />
@@ -157,8 +181,8 @@ const Dashboard = () => {
                             {/* Operating Income */}
                             <StatsCard
                                 title="Operating Income"
-                                value={formatCurrency(metrics?.operating_income || 0)}
-                                subtitle="Operational result"
+                                value={formatCurrency(metrics.operating_income)}
+                                subtitle="Accounts: 40000, 49000, 50000, 60000, 61000, 62000"
                                 icon={Activity}
                                 color="yellow"
                             />
@@ -166,30 +190,89 @@ const Dashboard = () => {
                             {/* Net Working Capital */}
                             <StatsCard
                                 title="Net Working Capital"
-                                value={formatCurrency(metrics?.net_working_capital || 0)}
-                                subtitle="Short-term financial health"
+                                value={formatCurrency(metrics.net_working_capital)}
+                                subtitle="Accounts: 10000, 10100, 12000, 14000, 20000, 21000, 22000, 23000"
                                 icon={TrendingUp}
-                                color={metrics && metrics.net_working_capital < 0 ? "red" : "green"}
+                                color="navy"
                             />
 
                             {/* Current Ratio */}
                             <StatsCard
                                 title="Current Ratio"
-                                value={formatRatio(metrics?.current_ratio || null)}
-                                subtitle="Kernel approximation"
+                                value={formatRatio(metrics.current_ratio)}
+                                subtitle="Current Assets / Current Liabilities"
                                 icon={Scale}
                                 color="navy"
                             />
                         </motion.div>
+                    ) : (
+                        <Alert className="border-muted bg-background">
+                            <Info className="h-4 w-4" />
+                            <AlertDescription className="text-sm text-muted-foreground">
+                                Core Metrics are not available without a selected company.
+                            </AlertDescription>
+                        </Alert>
                     )}
                 </div>
 
-                {/* Metric Explanations */}
+                {/* Kernel Binding */}
                 <Card className="border-border bg-muted/30">
                     <CardHeader>
-                        <CardTitle className="text-lg font-heading">About Core Metrics</CardTitle>
+                        <CardTitle className="text-lg font-heading">Kernel Binding</CardTitle>
                         <CardDescription>
-                            Understanding the fundamentals
+                            Company kernel metadata
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                            <div>
+                                <p className="text-muted-foreground">Kernel Version</p>
+                                <p className="text-foreground font-semibold">{kernelVersion ?? 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Kernel Layer</p>
+                                <p className="text-foreground font-semibold">{kernelLayer ?? 'N/A'}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Kernel Layer Placeholders */}
+                <Card className="border-border bg-muted/30">
+                    <CardHeader>
+                        <CardTitle className="text-lg font-heading">Kernel Layers</CardTitle>
+                        <CardDescription>
+                            L0 implemented, L1/L2 placeholders
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isKernelLayersLoading ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {[...Array(3)].map((_, i) => (
+                                    <Skeleton key={i} className="h-16" />
+                                ))}
+                            </div>
+                        ) : kernelLayers ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                {kernelLayers.layers.map((layer) => (
+                                    <div key={layer.layer} className="rounded border border-border p-3">
+                                        <p className="text-muted-foreground">Layer {layer.layer}</p>
+                                        <p className="text-foreground font-semibold">{layer.state}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">Kernel layer status unavailable.</p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Metric Definitions */}
+                <Card className="border-border bg-muted/30">
+                    <CardHeader>
+                        <CardTitle className="text-lg font-heading">Metric Definitions</CardTitle>
+                        <CardDescription>
+                            Accounts and formulas (Kernel L0 only)
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -199,9 +282,8 @@ const Dashboard = () => {
                                     <Wallet className="h-4 w-4 text-teal-600" />
                                     Total Cash
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    All cash and cash equivalents available to the company. This is the most fundamental survival metric.
-                                </p>
+                                <p className="text-sm text-muted-foreground">Accounts: 10000, 10100</p>
+                                <p className="text-sm text-muted-foreground">Formula: 10000 + 10100</p>
                             </div>
 
                             <div>
@@ -209,9 +291,8 @@ const Dashboard = () => {
                                     <DollarSign className="h-4 w-4 text-navy-600" />
                                     Net Revenue
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Revenue after direct reductions. Shows the company's earning capacity.
-                                </p>
+                                <p className="text-sm text-muted-foreground">Accounts: 40000, 49000</p>
+                                <p className="text-sm text-muted-foreground">Formula: 40000 − 49000</p>
                             </div>
 
                             <div>
@@ -219,19 +300,22 @@ const Dashboard = () => {
                                     <Activity className="h-4 w-4 text-yellow-600" />
                                     Operating Income
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Profit from core business operations. Indicates operational efficiency before financing and taxes.
-                                </p>
+                                <p className="text-sm text-muted-foreground">Accounts: 40000, 49000, 50000, 60000, 61000, 62000</p>
+                                <p className="text-sm text-muted-foreground">Formula: Net Revenue − 50000 − 60000 − 61000 − 62000</p>
                             </div>
 
                             <div>
                                 <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4 text-green-600" />
+                                    <TrendingUp className="h-4 w-4 text-teal-600" />
                                     Net Working Capital
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Current assets minus current liabilities. A negative value indicates potential liquidity stress.
+                                    Current Assets: 10000, 10100, 12000, 14000
                                 </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Current Liabilities: 20000, 21000, 22000, 23000
+                                </p>
+                                <p className="text-sm text-muted-foreground">Formula: Assets − Liabilities</p>
                             </div>
 
                             <div>
@@ -240,7 +324,10 @@ const Dashboard = () => {
                                     Current Ratio
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Current assets divided by current liabilities. Values above 1.0 generally indicate good short-term health.
+                                    Formula: Current Assets / Current Liabilities
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Rule: If liabilities = 0 → N/A
                                 </p>
                             </div>
                         </div>
@@ -254,29 +341,6 @@ const Dashboard = () => {
                         </Alert>
                     </CardContent>
                 </Card>
-
-                {/* Future Metrics Notice */}
-                {accountingActive && (
-                    <Card className="border-dashed border-muted">
-                        <CardContent className="p-6">
-                            <div className="flex items-start gap-4">
-                                <Info className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium text-foreground">
-                                        Advanced Metrics and Diagnostic Metrics
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Additional metric classes (Advanced Metrics for operational efficiency and Diagnostic Metrics for accounting truth verification)
-                                        will be available in future updates once backend endpoints are implemented.
-                                    </p>
-                                    <p className="text-xs text-muted-foreground italic">
-                                        Per CANON §4.94: "If Core Metrics indicate distress, no other class may be shown by default."
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
             </main>
         </div>
     );

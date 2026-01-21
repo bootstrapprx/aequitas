@@ -1,0 +1,160 @@
+\documentclass[11pt]{article}
+
+% =========================
+% Packages
+% =========================
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+% =========================
+% Metadata
+% =========================
+\title{Delta Specification \\
+Kernel L0 Dashboard Mathematical Definitions}
+\author{Aequitas}
+\date{From Version 1.0 To Version 1.1}
+
+% =========================
+% Custom Commands
+% =========================
+\newcommand{\OldVersion}{1.0}
+\newcommand{\NewVersion}{1.1}
+\newcommand{\Period}{p}
+
+% =========================
+% Document
+% =========================
+\begin{document}
+\maketitle
+
+\section*{Normative Status}
+This document is a \textbf{delta specification}.
+It explicitly enumerates all and only the changes introduced between
+Kernel L0 Dashboard math versions \OldVersion{} and \NewVersion{}.
+
+No other changes are permitted.
+
+\section*{Delta Principles}
+\begin{itemize}
+  \item No silent modification
+  \item No reinterpretation
+  \item No backward mutation
+  \item All prior versions remain valid and reconstructible
+\end{itemize}
+
+This document is governed by \emph{CANON III — Evolution, State \& Time}.
+
+% =========================================================
+\section{Baseline Reference}
+% =========================================================
+
+This delta applies to the following frozen specification:
+
+\begin{itemize}
+  \item \texttt{kernel\_L0\_dashboard\_math\_spec\_v\OldVersion{}.tex}
+\end{itemize}
+
+The baseline specification remains authoritative for all elements not
+explicitly modified herein.
+
+% =========================================================
+\section{Summary of Changes}
+% =========================================================
+
+\begin{itemize}
+  \item[\textbf{Added:}] None
+  \item[\textbf{Modified:}] (List below)
+  \item[\textbf{Removed:}] None
+\end{itemize}
+
+If a category is empty, it must explicitly state ``None''.
+
+% =========================================================
+\section{Detailed Changes}
+% =========================================================
+
+% =========================
+\subsection{Change 1 — (Title Required)}
+% =========================
+
+\subsubsection*{Affected Element}
+Metric / Definition / Account Set / Domain Rule
+
+\subsubsection*{Prior Definition (Version \OldVersion{})}
+\begin{equation*}
+\text{(Copy exact prior formal definition here)}
+\end{equation*}
+
+\subsubsection*{New Definition (Version \NewVersion{})}
+\begin{equation*}
+\text{(Copy exact new formal definition here)}
+\end{equation*}
+
+\subsubsection*{Accounting Rationale}
+Provide a GAAP-style narrative explaining \emph{why} this change is
+necessary. Business convenience is not a valid rationale.
+
+\subsubsection*{Mathematical Impact}
+Describe precisely what changes mathematically:
+\begin{itemize}
+  \item Domain changes
+  \item Edge case behavior changes
+  \item Invariance preserved or broken
+\end{itemize}
+
+\subsubsection*{Backward Compatibility}
+State explicitly:
+\begin{itemize}
+  \item Whether historical values change (must be ``No'' for Kernel L0)
+  \item How prior results remain reconstructible
+\end{itemize}
+
+\subsubsection*{Test Vector Impact}
+List:
+\begin{itemize}
+  \item Test vectors that change (if any)
+  \item New test vectors added (if any)
+\end{itemize}
+
+% =========================
+\subsection{Change 2 — (Repeat as Needed)}
+% =========================
+
+% =========================================================
+\section{Explicit Non-Changes}
+% =========================================================
+
+The following elements are \textbf{explicitly unchanged} by this delta:
+
+\begin{itemize}
+  \item Account sets
+  \item Metric names
+  \item Period model
+  \item Measurement functions
+  \item Delta operator
+\end{itemize}
+
+Any interpretation to the contrary is invalid.
+
+% =========================================================
+\section*{Freeze and Declaration}
+% =========================================================
+
+This delta document fully enumerates all changes between versions
+\OldVersion{} and \NewVersion{}.
+
+No implicit or undocumented changes exist.
+
+\vspace{1em}
+
+\noindent
+\textbf{Declaration:}
+\begin{quote}
+Accounting truth evolves only through explicit, auditable deltas.
+\end{quote}
+
+\end{document}
