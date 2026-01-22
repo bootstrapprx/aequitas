@@ -17,7 +17,7 @@ from app.services.kernel_l0_dashboard_math import (
     KERNEL_L0_CORE_CODES,
     REDUCTION_CODES,
     compute_core_metric_deltas,
-    compute_core_metrics_from_balances,
+    compute_tier1_metrics,
 )
 
 
@@ -145,26 +145,36 @@ class KernelL0DashboardService:
             return abs(amount)
         return amount
 
-    def _get_normalized_balances(
+    def _get_bs_balances(
         self,
         accounts: Dict[str, CompanyAccount],
-        period: FiscalPeriod
+        as_of_date: date
     ) -> Dict[str, Decimal]:
+        """Fetch Stock measures (Balance Sheet) as of a specific date."""
         balances: Dict[str, Decimal] = {}
-
         for code in BALANCE_SHEET_CODES:
-            raw_balance = self._calculate_balance_as_of(accounts[code], period.end_date)
-            balances[code] = self._normalize_reporting_polarity(code, raw_balance)
-
-        for code in INCOME_STATEMENT_CODES:
-            raw_balance = self._calculate_balance_for_period(
-                accounts[code],
-                period.start_date,
-                period.end_date,
-            )
-            balances[code] = self._normalize_reporting_polarity(code, raw_balance)
-
+            if code in accounts:
+                raw_balance = self._calculate_balance_as_of(accounts[code], as_of_date)
+                balances[code] = self._normalize_reporting_polarity(code, raw_balance)
         return balances
+
+    def _get_pl_activity(
+        self,
+        accounts: Dict[str, CompanyAccount],
+        start_date: date,
+        end_date: date
+    ) -> Dict[str, Decimal]:
+        """Fetch Flow measures (Income Statement) over a period."""
+        activity: Dict[str, Decimal] = {}
+        for code in INCOME_STATEMENT_CODES:
+            if code in accounts:
+                raw_total = self._calculate_balance_for_period(
+                    accounts[code],
+                    start_date,
+                    end_date,
+                )
+                activity[code] = self._normalize_reporting_polarity(code, raw_total)
+        return activity
 
     def get_core_metrics(
         self,
@@ -174,14 +184,18 @@ class KernelL0DashboardService:
         period = self._get_fiscal_period(company_id, fiscal_period_id)
         accounts = self._get_company_accounts(company_id, KERNEL_L0_CORE_CODES)
 
-        current_balances = self._get_normalized_balances(accounts, period)
-        current_metrics = compute_core_metrics_from_balances(current_balances)
+        # Current Period
+        curr_bs = self._get_bs_balances(accounts, period.end_date)
+        curr_pl = self._get_pl_activity(accounts, period.start_date, period.end_date)
+        current_metrics = compute_tier1_metrics(curr_bs, curr_pl)
 
+        # Prior Period
         prior_period = self._get_prior_period(period)
         prior_metrics = None
         if prior_period:
-            prior_balances = self._get_normalized_balances(accounts, prior_period)
-            prior_metrics = compute_core_metrics_from_balances(prior_balances)
+            prior_bs = self._get_bs_balances(accounts, prior_period.end_date)
+            prior_pl = self._get_pl_activity(accounts, prior_period.start_date, prior_period.end_date)
+            prior_metrics = compute_tier1_metrics(prior_bs, prior_pl)
 
         deltas = compute_core_metric_deltas(current_metrics, prior_metrics)
 

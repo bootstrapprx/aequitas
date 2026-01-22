@@ -36,6 +36,11 @@ interface CoreMetrics {
     operating_income: number;
     net_working_capital: number;
     current_ratio: number | null;
+    total_cash_delta?: number | null;
+    net_revenue_delta?: number | null;
+    operating_income_delta?: number | null;
+    net_working_capital_delta?: number | null;
+    current_ratio_delta?: number | null;
 }
 
 interface KernelLayerStatus {
@@ -96,6 +101,16 @@ const Dashboard = () => {
         return value.toFixed(2);
     };
 
+    // Format delta values (neutral, explicit sign)
+    const formatDelta = (value: number | null | undefined, isCurrency: boolean = true): string | undefined => {
+        if (value === null || value === undefined) return undefined;
+        const sign = value >= 0 ? '+' : '';
+        if (isCurrency) {
+            return `${sign}${formatCurrency(value)}`;
+        }
+        return `${sign}${value.toFixed(2)}`;
+    };
+
     return (
         <div className="min-h-screen bg-background">
             {/* Page Header */}
@@ -112,7 +127,7 @@ const Dashboard = () => {
 
             {/* Main Content */}
             <main className="p-8 space-y-8">
-                {/* Constitutional Notice */}
+                {/* Constitutional Warning */}
                 <Alert className="border-gold/20 bg-gold/5">
                     <Info className="h-4 w-4 text-gold" />
                     <AlertDescription className="text-foreground">
@@ -164,6 +179,7 @@ const Dashboard = () => {
                             <StatsCard
                                 title="Total Cash"
                                 value={formatCurrency(metrics.total_cash)}
+                                delta={formatDelta(metrics.total_cash_delta)}
                                 subtitle="Accounts: 10000, 10100"
                                 icon={Wallet}
                                 color="teal"
@@ -173,6 +189,7 @@ const Dashboard = () => {
                             <StatsCard
                                 title="Net Revenue"
                                 value={formatCurrency(metrics.net_revenue)}
+                                delta={formatDelta(metrics.net_revenue_delta)}
                                 subtitle="Accounts: 40000, 49000"
                                 icon={DollarSign}
                                 color="navy"
@@ -182,6 +199,7 @@ const Dashboard = () => {
                             <StatsCard
                                 title="Operating Income"
                                 value={formatCurrency(metrics.operating_income)}
+                                delta={formatDelta(metrics.operating_income_delta)}
                                 subtitle="Accounts: 40000, 49000, 50000, 60000, 61000, 62000"
                                 icon={Activity}
                                 color="yellow"
@@ -191,6 +209,7 @@ const Dashboard = () => {
                             <StatsCard
                                 title="Net Working Capital"
                                 value={formatCurrency(metrics.net_working_capital)}
+                                delta={formatDelta(metrics.net_working_capital_delta)}
                                 subtitle="Accounts: 10000, 10100, 12000, 14000, 20000, 21000, 22000, 23000"
                                 icon={TrendingUp}
                                 color="navy"
@@ -200,6 +219,7 @@ const Dashboard = () => {
                             <StatsCard
                                 title="Current Ratio"
                                 value={formatRatio(metrics.current_ratio)}
+                                delta={formatDelta(metrics.current_ratio_delta, false)}
                                 subtitle="Current Assets / Current Liabilities"
                                 icon={Scale}
                                 color="navy"

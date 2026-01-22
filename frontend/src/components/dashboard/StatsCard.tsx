@@ -12,6 +12,7 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
+  delta?: string;
   color?: 'teal' | 'navy' | 'yellow' | 'green' | 'red';
   className?: string;
 }
@@ -50,6 +51,7 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   subtitle,
   icon: Icon,
   trend,
+  delta,
   color = 'teal',
   className,
 }) => {
@@ -77,6 +79,11 @@ export const StatsCard: React.FC<StatsCardProps> = ({
                 >
                   {trend.isPositive ? '+' : ''}
                   {trend.value}%
+                </span>
+              )}
+              {delta && (
+                <span className="text-sm font-medium text-gray-500">
+                  {delta}
                 </span>
               )}
             </div>
