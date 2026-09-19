@@ -211,7 +211,11 @@ class LedgerService:
         self,
         company_id: UUID,
         fiscal_period_id: Optional[UUID] = None,
-        as_of_date: Optional[date] = None
+        as_of_date: Optional[date] = None,
+        department_id: Optional[UUID] = None,
+        cost_center_id: Optional[UUID] = None,
+        project_id: Optional[UUID] = None,
+        location_id: Optional[UUID] = None,
     ) -> TrialBalanceResponse:
         """
         Generate a trial balance report.
@@ -255,7 +259,11 @@ class LedgerService:
             balance = self._calculate_account_balance(
                 company_account_id=company_account.id,
                 start_date=period_start,
-                end_date=period_end
+                end_date=period_end,
+                department_id=department_id,
+                cost_center_id=cost_center_id,
+                project_id=project_id,
+                location_id=location_id,
             )
 
             normal_balance = self._resolve_normal_balance(company_account)
@@ -377,30 +385,35 @@ class LedgerService:
         self,
         company_account_id: UUID,
         start_date: date,
-        end_date: date
+        end_date: date,
+        department_id: Optional[UUID] = None,
+        cost_center_id: Optional[UUID] = None,
+        project_id: Optional[UUID] = None,
+        location_id: Optional[UUID] = None,
     ) -> Decimal:
         """
-        Calculate the balance for an account over a date range.
-
-        Args:
-            company_account_id: Company account ID
-            start_date: Start date
-            end_date: End date
-
-        Returns:
-            Account balance
+        Calculate account balance for a specific period with optional dimensional filters.
         """
-        # Get all posted journal entry lines for this account in date range
+        filters = [
+            JournalEntryLine.company_account_id == company_account_id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.entry_date >= start_date,
+            JournalEntry.entry_date <= end_date,
+        ]
+
+        if department_id:
+            filters.append(JournalEntryLine.department_id == department_id)
+        if cost_center_id:
+            filters.append(JournalEntryLine.cost_center_id == cost_center_id)
+        if project_id:
+            filters.append(JournalEntryLine.project_id == project_id)
+        if location_id:
+            filters.append(JournalEntryLine.location_id == location_id)
+
+        # Get posted journal entry lines in date range
         lines = self.db.query(JournalEntryLine).join(
             JournalEntry, JournalEntryLine.journal_entry_id == JournalEntry.id
-        ).filter(
-            and_(
-                JournalEntryLine.company_account_id == company_account_id,
-                JournalEntry.status == EntryStatus.POSTED,
-                JournalEntry.entry_date >= start_date,
-                JournalEntry.entry_date <= end_date
-            )
-        ).all()
+        ).filter(and_(*filters)).all()
 
         total_debits = sum(Decimal(str(line.debit_amount)) for line in lines)
         total_credits = sum(Decimal(str(line.credit_amount)) for line in lines)

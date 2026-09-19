@@ -15,6 +15,11 @@ class JournalEntryLineBase(BaseModel):
     debit_amount: Decimal = Field(default=Decimal("0.00"), description="Debit amount")
     credit_amount: Decimal = Field(default=Decimal("0.00"), description="Credit amount")
 
+    department_id: Optional[UUID] = Field(None, description="Department dimension")
+    cost_center_id: Optional[UUID] = Field(None, description="Cost center dimension")
+    project_id: Optional[UUID] = Field(None, description="Project dimension")
+    location_id: Optional[UUID] = Field(None, description="Location dimension")
+
     @field_validator('debit_amount', 'credit_amount')
     @classmethod
     def validate_amounts(cls, v):
@@ -52,7 +57,7 @@ class JournalEntryBase(BaseModel):
     entry_date: date = Field(..., description="Entry date")
     description: str = Field(..., description="Entry description")
     reference: Optional[str] = Field(None, description="External reference (invoice #, check #, etc.)")
-    entry_type: str = Field(default="standard", description="Entry type: standard, adjusting, closing, reversing, opening")
+    entry_type: str = Field(default="STANDARD", description="Entry type: STANDARD, ADJUSTING, CLOSING, REVERSING, OPENING")
 
 
 class JournalEntryCreate(JournalEntryBase):

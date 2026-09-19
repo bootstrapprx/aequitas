@@ -120,15 +120,18 @@ class JournalEntryService:
         """
         account_ids = [line.company_account_id for line in lines]
 
+        # Get unique account IDs
+        unique_account_ids = list(set(account_ids))
+        
         # Get all accounts
         accounts = self.db.query(CompanyAccount).filter(
-            CompanyAccount.id.in_(account_ids)
+            CompanyAccount.id.in_(unique_account_ids)
         ).all()
 
         # Check all accounts exist
-        if len(accounts) != len(account_ids):
+        if len(accounts) != len(unique_account_ids):
             found_ids = {acc.id for acc in accounts}
-            missing_ids = [aid for aid in account_ids if aid not in found_ids]
+            missing_ids = [aid for aid in unique_account_ids if aid not in found_ids]
             raise ValidationError(
                 message=(
                     f"One or more accounts not found.\n"
@@ -310,7 +313,11 @@ class JournalEntryService:
                 line_number=line_data.line_number,
                 description=line_data.description,
                 debit_amount=line_data.debit_amount,
-                credit_amount=line_data.credit_amount
+                credit_amount=line_data.credit_amount,
+                department_id=getattr(line_data, "department_id", None),
+                cost_center_id=getattr(line_data, "cost_center_id", None),
+                project_id=getattr(line_data, "project_id", None),
+                location_id=getattr(line_data, "location_id", None),
             )
             self.db.add(line)
 

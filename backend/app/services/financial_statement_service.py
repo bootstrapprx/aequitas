@@ -232,7 +232,11 @@ class FinancialStatementService:
         self,
         company_id: UUID,
         start_date: date,
-        end_date: date
+        end_date: date,
+        department_id: Optional[UUID] = None,
+        cost_center_id: Optional[UUID] = None,
+        project_id: Optional[UUID] = None,
+        location_id: Optional[UUID] = None,
     ) -> IncomeStatementResponse:
         """
         Generate an income statement (P&L) for a period.
@@ -273,7 +277,11 @@ class FinancialStatementService:
             balance = self._calculate_balance_for_period(
                 company_account_id=company_account.id,
                 start_date=start_date,
-                end_date=end_date
+                end_date=end_date,
+                department_id=department_id,
+                cost_center_id=cost_center_id,
+                project_id=project_id,
+                location_id=location_id,
             )
 
             # Skip zero balances
@@ -290,11 +298,12 @@ class FinancialStatementService:
 
             category = self._resolve_category(company_account)
 
-            if category == "Revenue":
+            cat_upper = category.upper() if category else ""
+            if cat_upper in ("REVENUE", "OPERATING REVENUE"):
                 revenue_accounts.append(is_account)
-            elif category == "Cost of Goods Sold":
+            elif cat_upper in ("COGS", "COST OF GOODS SOLD"):
                 cogs_accounts.append(is_account)
-            elif category == "Expense":
+            elif cat_upper in ("EXPENSE", "EXPENSES", "OPERATING EXPENSES"):
                 expense_accounts.append(is_account)
             else:
                 other_accounts.append(is_account)
@@ -509,30 +518,35 @@ class FinancialStatementService:
         self,
         company_account_id: UUID,
         start_date: date,
-        end_date: date
+        end_date: date,
+        department_id: Optional[UUID] = None,
+        cost_center_id: Optional[UUID] = None,
+        project_id: Optional[UUID] = None,
+        location_id: Optional[UUID] = None,
     ) -> Decimal:
         """
-        Calculate account balance for a specific period.
-
-        Args:
-            company_account_id: Company account ID
-            start_date: Period start date
-            end_date: Period end date
-
-        Returns:
-            Account balance for period
+        Calculate account balance for a specific period with optional dimensional filters.
         """
+        filters = [
+            JournalEntryLine.company_account_id == company_account_id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.entry_date >= start_date,
+            JournalEntry.entry_date <= end_date,
+        ]
+
+        if department_id:
+            filters.append(JournalEntryLine.department_id == department_id)
+        if cost_center_id:
+            filters.append(JournalEntryLine.cost_center_id == cost_center_id)
+        if project_id:
+            filters.append(JournalEntryLine.project_id == project_id)
+        if location_id:
+            filters.append(JournalEntryLine.location_id == location_id)
+
         # Get posted journal entry lines in date range
         lines = self.db.query(JournalEntryLine).join(
             JournalEntry, JournalEntryLine.journal_entry_id == JournalEntry.id
-        ).filter(
-            and_(
-                JournalEntryLine.company_account_id == company_account_id,
-                JournalEntry.status == EntryStatus.POSTED,
-                JournalEntry.entry_date >= start_date,
-                JournalEntry.entry_date <= end_date
-            )
-        ).all()
+        ).filter(and_(*filters)).all()
 
         total_debits = sum(Decimal(str(line.debit_amount)) for line in lines)
         total_credits = sum(Decimal(str(line.credit_amount)) for line in lines)

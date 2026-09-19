@@ -27,6 +27,12 @@ from .pending_registration import PendingRegistration
 from .invitation import Invitation
 from .group_company import GroupCompany
 from .group_company_member import GroupCompanyMember
+from .accounting_dimension import AccountingDimension, DimensionType
+from .currency import Currency, ExchangeRate, RateType
+from .party import Party, PartyType
+from .ar_invoice import ARInvoice, ARInvoiceLine, ARInvoiceStatus, ARPayment
+from .ap_bill import APBill, APBillLine, APBillStatus, APPayment
+from .bank_statement import BankStatement, BankStatementLine, StatementLineStatus
 
 # Chart template models (Phase 3B)
 from .chart_template import ChartTemplate, ChartTemplateAccount, CompanyTemplateUsage
@@ -96,6 +102,24 @@ __all__ = [
     "JournalEntry",
     "JournalEntryLine",
     "AccountBalance",
+    "AccountingDimension",
+    "DimensionType",
+    "Currency",
+    "ExchangeRate",
+    "RateType",
+    "Party",
+    "PartyType",
+    "ARInvoice",
+    "ARInvoiceLine",
+    "ARInvoiceStatus",
+    "ARPayment",
+    "APBill",
+    "APBillLine",
+    "APBillStatus",
+    "APPayment",
+    "BankStatement",
+    "BankStatementLine",
+    "StatementLineStatus",
     # Fiscal Engine models
     "EntityTaxProfile",
     "TaxRuleset",

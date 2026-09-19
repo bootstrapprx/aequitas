@@ -25,6 +25,11 @@ class JournalEntryLine(Base):
     debit_amount = Column(Numeric(15, 2), nullable=False, default=0)
     credit_amount = Column(Numeric(15, 2), nullable=False, default=0)
 
+    department_id = Column(UUID(as_uuid=True), ForeignKey("accounting_dimensions.id"), nullable=True, index=True)
+    cost_center_id = Column(UUID(as_uuid=True), ForeignKey("accounting_dimensions.id"), nullable=True, index=True)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("accounting_dimensions.id"), nullable=True, index=True)
+    location_id = Column(UUID(as_uuid=True), ForeignKey("accounting_dimensions.id"), nullable=True, index=True)
+
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
