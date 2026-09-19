@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from app.main import app
 from app.db.base import Base
 from app.db.session import get_db
@@ -13,9 +14,12 @@ from app.core.security import get_password_hash
 from app.core.ucid import generate_ucid
 import uuid
 
-# Test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_groups.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# Test database using in-memory SQLite with StaticPool
+engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -77,7 +81,7 @@ def regular_user(db):
 @pytest.fixture(scope="function")
 def auth_headers_su(client, superuser):
     """Get auth headers for superuser"""
-    response = client.post("/api/v1/auth/login", json={
+    response = client.post("/api/v1/auth/login-json", json={
         "email": "admin@test.com",
         "password": "testpass"
     })
@@ -88,7 +92,7 @@ def auth_headers_su(client, superuser):
 @pytest.fixture(scope="function")
 def auth_headers_regular(client, regular_user):
     """Get auth headers for regular user"""
-    response = client.post("/api/v1/auth/login", json={
+    response = client.post("/api/v1/auth/login-json", json={
         "email": "user@test.com",
         "password": "testpass"
     })

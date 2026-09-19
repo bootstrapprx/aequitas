@@ -87,16 +87,29 @@ def test_profile_service_idempotent(db_session):
     assert profile1.id == profile2.id
 
 
-# Fixture for database session (mocked for minimal tests)
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from app.db.base import Base
+from app.db.models.entity_tax_profile import EntityTaxProfile
+
+
+# Fixture for database session
 @pytest.fixture
 def db_session():
-    """
-    Mock database session for testing.
-    In a full test suite, this would use a test database.
-    """
-    from unittest.mock import MagicMock
-    mock_session = MagicMock()
-    return mock_session
+    """Test database session for fiscal engine."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine, tables=[EntityTaxProfile.__table__])
+    Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    session = Session()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 if __name__ == "__main__":

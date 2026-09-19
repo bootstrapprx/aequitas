@@ -2,6 +2,7 @@
 Admin API endpoints for superuser operations.
 All endpoints require superuser privileges.
 """
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -23,6 +24,11 @@ from app.core.kernel import L0_KERNEL_CODES
 from app.services.kernel_remediation_service import KernelRemediationService
 from app.services.council_service import CouncilService
 from app.core.password_policy import PasswordPolicy
+
+# `admin.py` predates the administrative submodule directory. Declaring the
+# directory as a package path preserves the public `admin` import while making
+# `app.api.v1.admin.template_management` importable during the transition.
+__path__ = [str(Path(__file__).with_suffix(""))]
 
 router = APIRouter()
 

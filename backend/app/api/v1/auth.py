@@ -68,17 +68,18 @@ def get_current_user(
     
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        user_id = payload.get("sub")
+        if not user_id:
             raise credentials_exception
-    except JWTError:
+        user_uuid = UUID(str(user_id))
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
-    
+
     user_service = UserService(db)
-    user = user_service.get_user_by_id(UUID(user_id))
-    if user is None:
+    user = user_service.get_user_by_id(user_uuid)
+    if user is None or not user.is_active:
         raise credentials_exception
-    
+
     return user
 
 

@@ -40,6 +40,7 @@ from app.api.v1 import (
 from app.api.v1.integrations import staging as integrations_staging
 from app.api.v1.integrations import mappings as integrations_mappings
 from app.api.v1.integrations import mapping_review as integrations_mapping_review
+from app.api.v1.admin import template_management
 from app.core.startup import startup_checks
 from app.db.base import Base
 from app.db.init_db import init_db
@@ -65,29 +66,36 @@ app = FastAPI(
 )
 configure_logging()
 
-# 2. Harden CORS Configuration: CORSMiddleware is attached immediately after.
-# Dev-safe origins
-allow_origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-]
+# CORS is an explicit allowlist. Credentialed requests must never use a wildcard.
+def _configured_cors_origins() -> list[str]:
+    configured = app_settings.BACKEND_CORS_ORIGINS or os.getenv("BACKEND_CORS_ORIGINS", "")
+    if configured:
+        return [origin.strip() for origin in configured.split(",") if origin.strip()]
+    if app_settings.APP_ENV in ("development", "test", "local"):
+        return [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:3000",
+        ]
+    return []
 
-# Add production origins from environment variable
-if os.getenv("BACKEND_CORS_ORIGINS"):
-    origins_prod = [origin.strip() for origin in os.getenv("BACKEND_CORS_ORIGINS").split(",")]
-    allow_origins.extend(origins_prod)
 
-# In development, allow any origin to avoid local CORS mismatches.
-allow_origin_regex = r".*" if app_settings.APP_ENV == "development" else r"http://localhost:\d+"
+allow_origins = _configured_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allow_origins,
-    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Accept",
+        "Authorization",
+        "Content-Type",
+        "Origin",
+        "X-Aequitas-Correlation-Id",
+        "X-Aequitas-Idempotency-Key",
+        "X-Aequitas-Request-Id",
+    ],
 )
 
 app.add_middleware(RequestIdMiddleware)
@@ -111,6 +119,9 @@ def startup_event():
     - Initializes the database with essential data (e.g., superuser).
     - Runs startup checks to ensure system integrity.
     """
+    if app_settings.APP_ENV == "test" or os.getenv("TESTING") == "1":
+        return
+
     print("="*60)
     print("RUNNING STARTUP EVENT")
     print("="*60)
@@ -149,8 +160,10 @@ def startup_event():
 
 # API Routers
 # 4. Eliminate Router Shadowing: companies_su router is moved to a dedicated admin prefix.
+app.include_router(companies_su.router, prefix="/api/v1/companies", tags=["Companies - Superuser"])
 app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
+app.include_router(template_management.router, prefix="/api/v1/admin", tags=["Admin Templates"])
 app.include_router(companies_su.router, prefix="/api/v1/admin/companies", tags=["Companies - Superuser"])
 
 app.include_router(dexter_router, prefix="/api/v1/ai", tags=["ai"])
@@ -221,10 +234,15 @@ async def handle_http_exception(request: Request, exc: HTTPException):
 
 @app.exception_handler(Exception)
 async def handle_unexpected_exception(request: Request, exc: Exception):
-    logger.exception("Unhandled exception", exc_info=exc)
+    logger.exception(
+        "Unhandled exception",
+        extra={
+            "request_path": request.url.path,
+            "request_method": request.method,
+        },
+    )
     envelope = make_error_envelope(
         "AEQ_INTERNAL_SERVER_ERROR",
         "An unexpected error occurred.",
-        details={"error": str(exc)},
     )
     return JSONResponse(status_code=500, content=envelope, headers=_trace_headers())

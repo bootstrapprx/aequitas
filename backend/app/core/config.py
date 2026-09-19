@@ -1,6 +1,8 @@
 import os
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+
+from pydantic import model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Determine which .env file to load
 app_env = os.getenv("APP_ENV", "development")
@@ -14,11 +16,13 @@ class Settings(BaseSettings):
     """
     # --- Core Application Settings ---
     APP_ENV: str = "development"
-    SECRET_KEY: str = "dev_key"
-    ALLOW_MANUAL_DATA_FALLBACK: bool = True
+    # No usable secret defaults: production must fail closed when misconfigured.
+    SECRET_KEY: str = ""
+    ALLOW_MANUAL_DATA_FALLBACK: bool = False
 
     # --- Database Settings ---
     DATABASE_URL: str = "postgresql+psycopg2://user:password@localhost:5432/chartforge_dev"
+    BACKEND_CORS_ORIGINS: str = ""
     
     # --- Superuser Settings ---
     # New naming convention (preferred)
@@ -26,11 +30,11 @@ class Settings(BaseSettings):
     DEFAULT_SUPERUSER_PASSWORD: Optional[str] = None
     # Legacy naming (backward compatibility)
     FIRST_SUPERUSER: str = "admin@chartforge.com"
-    FIRST_SUPERUSER_PASSWORD: str = "ChangeMe!123"
+    FIRST_SUPERUSER_PASSWORD: Optional[str] = None
 
     # --- Registration Settings ---
     ALLOW_PUBLIC_SIGNUP: bool = False
-    ALLOW_MOCK_PAYMENTS: bool = True  # Allow mock payments when Stripe not configured
+    ALLOW_MOCK_PAYMENTS: bool = False  # Enabled only for explicit development/test environments
 
     # --- AUTH RECOVERY – REMOVE AFTER FIXING GOOGLE OAUTH ---
     AUTH_RECOVERY_MODE: bool = False
@@ -59,7 +63,7 @@ class Settings(BaseSettings):
     # --- Stripe Settings (Optional) ---
     STRIPE_API_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
-    STRIPE_MOCK_MODE: bool = True  # Deprecated, use ALLOW_MOCK_PAYMENTS
+    STRIPE_MOCK_MODE: bool = False  # Deprecated, retained for compatibility
 
     # --- QuickBooks Online (QBO) Integration (Optional) ---
     QBO_CLIENT_ID: Optional[str] = None
@@ -94,6 +98,23 @@ class Settings(BaseSettings):
         env_file_encoding='utf-8',
         extra="ignore"  # Ignore unknown environment variables
     )
+
+    @model_validator(mode="after")
+    def validate_security_settings(self) -> "Settings":
+        """Reject unsafe configuration before the application can serve traffic."""
+        environment = self.APP_ENV.lower().strip()
+        if environment != "test" and not self.SECRET_KEY:
+            raise ValueError("SECRET_KEY must be configured outside test environments")
+
+        if environment in {"production", "prod", "staging"}:
+            if len(self.SECRET_KEY) < 32 or self.SECRET_KEY in {"dev_key", "changeme", "change-me"}:
+                raise ValueError("SECRET_KEY must be a strong, unique value in production")
+            if self.ALLOW_MOCK_PAYMENTS or self.STRIPE_MOCK_MODE:
+                raise ValueError("Mock payments are forbidden outside development/test environments")
+            if self.OAUTH_STATE_SECRET and len(self.OAUTH_STATE_SECRET) < 32:
+                raise ValueError("OAUTH_STATE_SECRET must be a strong value in production")
+
+        return self
 
     @property
     def SUPERUSER_EMAIL(self) -> str:

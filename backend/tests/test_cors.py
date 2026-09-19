@@ -42,6 +42,16 @@ def test_cors_127_0_0_1_5173():
     assert response.status_code == 200
 
 
+def test_cors_rejects_arbitrary_origin():
+    response = client.get(
+        "/health",
+        headers={"Origin": "https://evil.example"},
+    )
+
+    assert response.status_code == 200
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_health_endpoint():
     """Test that health endpoint is accessible"""
     response = client.get("/health")

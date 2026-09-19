@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 from app.db.session import get_db
 from app.db.models.system_settings import SystemSettings
+from app.db.models.user import User
+from app.api.deps import require_superuser
 
 router = APIRouter()
 
@@ -14,7 +16,10 @@ class SettingUpdate(BaseModel):
     description: str = None
 
 @router.get("/", response_model=Dict[str, str])
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Get all system settings as a key-value dictionary.
     """
@@ -22,7 +27,11 @@ def get_settings(db: Session = Depends(get_db)):
     return {s.key: s.value for s in settings}
 
 @router.post("/", response_model=Dict[str, str])
-def update_settings(updates: List[SettingUpdate], db: Session = Depends(get_db)):
+def update_settings(
+    updates: List[SettingUpdate],
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Update multiple system settings.
     """

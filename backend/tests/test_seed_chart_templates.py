@@ -3,6 +3,8 @@ from datetime import date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from sqlalchemy.pool import StaticPool
+
 from app.db.base import Base
 from app.db.models.master_account import MasterAccount
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount
@@ -92,8 +94,9 @@ def seed_master_chart(db):
 @pytest.fixture()
 def db_session():
     engine = create_engine(
-        "sqlite:///:memory:",
+        "sqlite://",
         connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
     )
     Base.metadata.create_all(
         bind=engine,

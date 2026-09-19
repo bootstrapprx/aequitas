@@ -37,4 +37,34 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-ui": [
+            "@radix-ui/react-accordion",
+            "@radix-ui/react-alert-dialog",
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-tooltip",
+            "lucide-react",
+            "framer-motion",
+          ],
+          "vendor-data": [
+            "@tanstack/react-query",
+            "@tanstack/react-table",
+            "axios",
+            "date-fns",
+            "zod",
+          ],
+          "vendor-charts": ["recharts"],
+          "vendor-math": ["katex", "rehype-katex", "remark-math"],
+        },
+      },
+    },
+  },
 }));

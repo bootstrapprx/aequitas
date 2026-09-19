@@ -5,6 +5,7 @@ from typing import List
 
 from app.db.session import get_db
 from app.db.models.user import User
+from app.db.models.group_company import GroupCompany
 from app.api.v1.auth import get_current_user
 from app.schemas.group import (
     GroupCompanyCreate,
@@ -32,7 +33,7 @@ def list_groups(
     """
     if current_user.is_superuser:
         # Superusers can see all groups
-        groups = db.query(app.db.models.group_company.GroupCompany).all()
+        groups = db.query(GroupCompany).all()
     else:
         # Regular users see only their owned groups
         groups = GroupService.get_groups_for_user(db, current_user.id)

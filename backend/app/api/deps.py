@@ -15,6 +15,30 @@ from app.api.v1.auth import get_current_user
 # Re-export get_db for convenience
 get_db = get_central_db
 
+
+def get_current_active_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Return an authenticated active user."""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+    return current_user
+
+
+def require_superuser(
+    current_user: User = Depends(get_current_active_user),
+) -> User:
+    """Require an active authenticated superuser."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Superuser privileges required",
+        )
+    return current_user
+
 def get_user_companies(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_central_db)

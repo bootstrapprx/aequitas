@@ -1,6 +1,8 @@
 import csv
 from io import StringIO
 from typing import IO, Dict, Any, Literal
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
 
@@ -61,7 +63,7 @@ class CompanyImportService:
 
     def import_company_coa(
         self,
-        company_id: int, # Changed to int
+        company_id: UUID,
         file: UploadFile,
         merge_strategy: MergeStrategy = "override"
     ) -> Dict[str, Any]:

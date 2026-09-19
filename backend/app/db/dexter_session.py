@@ -50,7 +50,9 @@ class DexterReadOnlySession(Session):
     """
 
     def __init__(self, *args, **kwargs):
+        kwargs["autoflush"] = False
         super().__init__(*args, **kwargs)
+        self.autoflush = False
 
         # Block flush operations
         @event.listens_for(self, "before_flush")
@@ -121,6 +123,9 @@ class DexterReadOnlySession(Session):
                 )
 
         # Allow SELECT and other read-only operations
+        if isinstance(statement, str):
+            from sqlalchemy import text
+            statement = text(statement)
         return super().execute(statement, *args, **kwargs)
 
 

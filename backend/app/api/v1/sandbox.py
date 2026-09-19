@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.core.auth import get_current_user
+from app.api.v1.auth import get_current_user
 from app.core.exceptions import ValidationError
 from app.services.sandbox_service import SandboxService
 from app.services.sandbox_binding_validator import SandboxBindingValidator

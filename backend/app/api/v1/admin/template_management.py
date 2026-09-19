@@ -31,7 +31,7 @@ from app.db.session import get_db
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount
 from app.db.models.master_account import MasterAccount
 from app.db.models.user import User
-from app.core.security import check_superuser
+from app.api.deps import require_superuser
 from pydantic import BaseModel, Field
 
 
@@ -120,7 +120,7 @@ router = APIRouter()
 def create_template(
     request: TemplateCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Create a new chart template.
@@ -166,7 +166,7 @@ def update_template(
     template_id: UUID,
     request: TemplateUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Update an existing chart template.
@@ -228,7 +228,7 @@ def update_template(
 def delete_template(
     template_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Soft-delete a chart template by setting is_active=False.
@@ -259,7 +259,7 @@ def add_account_to_template(
     template_id: UUID,
     request: TemplateAccountCreateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Add an account to a chart template.
@@ -327,7 +327,7 @@ def update_template_account(
     account_id: UUID,
     request: TemplateAccountUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Update a template account's configuration.
@@ -376,7 +376,7 @@ def remove_account_from_template(
     template_id: UUID,
     account_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     Remove an account from a chart template.
@@ -404,7 +404,7 @@ def remove_account_from_template(
 def list_template_accounts(
     template_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(check_superuser)
+    current_user: User = Depends(require_superuser)
 ):
     """
     List all accounts in a template.

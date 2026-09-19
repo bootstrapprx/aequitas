@@ -7,6 +7,9 @@ from app.db.session import get_db
 from app.schemas.template import Template, TemplateValidationResult, ChartTemplateSummary
 from app.services.template_service import TemplateService
 from app.db.models.chart_template import ChartTemplate, ChartTemplateAccount
+from app.db.models.user import User
+from app.api.v1.auth import get_current_user
+from app.api.deps import require_superuser
 
 router = APIRouter()
 
@@ -46,7 +49,11 @@ def get_template_preview(template_name: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 @router.post("/apply/{template_name}", summary="Apply a Template")
-def apply_chart_template(template_name: str, db: Session = Depends(get_db)):
+def apply_chart_template(
+    template_name: str,
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Applies a predefined template to the Master Chart of Accounts.
     This will create missing accounts and then rebuild the hierarchy.
@@ -62,7 +69,11 @@ def apply_chart_template(template_name: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/validate", response_model=TemplateValidationResult, summary="Validate a Custom Template")
-async def validate_custom_template(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def validate_custom_template(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Validates a custom template file (JSON) without applying it.
     Returns a report of errors and warnings.
@@ -82,7 +93,8 @@ async def upload_custom_template(
     name: str = Form(...),
     version: str = Form("1.0"),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
 ):
     """
     Uploads and stores a custom template in the database for future use.

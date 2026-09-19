@@ -6,11 +6,16 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.snapshot import Snapshot
 from app.services.snapshot_service import SnapshotService
+from app.db.models.user import User
+from app.api.deps import require_superuser
 
 router = APIRouter()
 
 @router.post("/snapshot", response_model=Snapshot, status_code=status.HTTP_201_CREATED, summary="Create a Snapshot")
-def create_new_snapshot(db: Session = Depends(get_db)):
+def create_new_snapshot(
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Creates a new versioned snapshot of the entire Chart of Accounts tree.
     """
@@ -18,7 +23,10 @@ def create_new_snapshot(db: Session = Depends(get_db)):
     return service.create_snapshot()
 
 @router.get("/snapshots", response_model=List[Snapshot], summary="List All Snapshots")
-def list_all_snapshots(db: Session = Depends(get_db)):
+def list_all_snapshots(
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Retrieves a list of all available snapshots.
     """
@@ -26,7 +34,11 @@ def list_all_snapshots(db: Session = Depends(get_db)):
     return service.list_snapshots()
 
 @router.get("/snapshot/{snapshot_id}", response_model=Snapshot, summary="Get a Specific Snapshot")
-def get_specific_snapshot(snapshot_id: UUID, db: Session = Depends(get_db)):
+def get_specific_snapshot(
+    snapshot_id: UUID,
+    current_user: User = Depends(require_superuser),
+    db: Session = Depends(get_db),
+):
     """
     Retrieves a specific snapshot by its UUID.
     """

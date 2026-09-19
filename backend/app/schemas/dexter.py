@@ -258,7 +258,7 @@ class ScenarioInsights(BaseModel):
     tax_analysis: TaxLiabilityAnalysis = Field(..., description="Tax liability analysis")
     value_destination: ValueDestinationExplanation = Field(..., description="Value destination breakdown")
 
-    _disclaimer: str = Field(
+    disclaimer: str = Field(
         default="This analysis is advisory only. Dexter does not execute changes or make decisions. "
                 "All recommendations require human review and approval.",
         description="Canonical reminder that Dexter is non-authoritative"

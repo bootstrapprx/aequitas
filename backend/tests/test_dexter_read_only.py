@@ -15,11 +15,18 @@ import pytest
 from uuid import uuid4
 from sqlalchemy.exc import StatementError
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from app.db.base import Base
+
 from app.db.dexter_session import (
     DexterReadOnlySession,
     DexterWriteViolation,
     get_dexter_db
 )
+import app.db.dexter_session as dexter_session_module
+import app.db.session as session_module
 from app.db.session import SessionLocal
 from app.db.models.master_account import MasterAccount
 from app.db.models.journal_entry import JournalEntry
@@ -29,6 +36,18 @@ from app.services.dexter_tone_enforcer import (
     DexterToneViolation,
     ToneViolationType
 )
+
+test_engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+Base.metadata.create_all(bind=test_engine)
+TestDexterSessionLocal = sessionmaker(class_=DexterReadOnlySession, bind=test_engine)
+TestSessionLocal = sessionmaker(bind=test_engine)
+dexter_session_module.DexterSessionLocal = TestDexterSessionLocal
+session_module.SessionLocal = TestSessionLocal
+SessionLocal = TestSessionLocal
 
 
 # ============================================================================

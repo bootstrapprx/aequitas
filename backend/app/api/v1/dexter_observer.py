@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 from app.db.dexter_session import get_dexter_db
 from app.services.dexter_observer_service import DexterObserverService
 from app.services.dexter_tone_enforcer import tone_enforcer, format_approved_message
-from app.api.dependencies import get_current_user
+from app.api.v1.auth import get_current_user
 from app.db.models.user import User
 
 

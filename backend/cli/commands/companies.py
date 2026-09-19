@@ -73,7 +73,7 @@ def list_companies(
         db.close()
 
 
-# @app.command("create")
+@app.command("create")
 def create_company(
     name: str = typer.Option(..., help="Company name"),
     email: Optional[str] = typer.Option(None, help="Company email"),

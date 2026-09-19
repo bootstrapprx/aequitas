@@ -4,6 +4,7 @@ from sqlalchemy import Column, String, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+import app.db.models.user_database_config  # noqa: F401
 
 class User(Base):
     __tablename__ = "users"
@@ -35,6 +36,9 @@ class User(Base):
 
     # Relationship to OAuth accounts (federated authentication)
     oauth_accounts = relationship("OAuthAccount", back_populates="user", cascade="all, delete-orphan")
+
+    # Relationship to database config
+    database_config = relationship("UserDatabaseConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id='{self.id}', email='{self.email}')>"

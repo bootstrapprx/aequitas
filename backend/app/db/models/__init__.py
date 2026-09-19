@@ -21,6 +21,7 @@ from .account_mapping import AccountMapping
 from .template import Template
 from .user import User
 from .user_company import UserCompany
+from .user_database_config import UserDatabaseConfig
 from .oauth_account import OAuthAccount
 from .pending_registration import PendingRegistration
 from .invitation import Invitation

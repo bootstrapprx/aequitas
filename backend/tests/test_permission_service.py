@@ -5,6 +5,7 @@ import pytest
 import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from app.db.base import Base
 from app.db.models.user import User
 from app.db.models.company import Company
@@ -12,9 +13,12 @@ from app.db.models.user_company import UserCompany
 from app.services.permission_service import PermissionService
 from app.core.security import get_password_hash
 
-# Test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test_permissions.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# Test database using in-memory SQLite with StaticPool
+engine = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

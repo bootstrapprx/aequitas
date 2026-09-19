@@ -1,9 +1,13 @@
 from typing import Literal
+from uuid import UUID
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Form
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.services.company_import_service import CompanyImportService
+from app.db.models.user import User
+from app.api.v1.auth import get_current_user
+from app.core.access_control import require_company_access
 
 # Define MergeStrategy right in the API layer for clarity in docs
 MergeStrategy = Literal["override", "append", "keep_existing"]
@@ -12,10 +16,11 @@ router = APIRouter()
 
 @router.post("/upload")
 def upload_chart_of_accounts(
-    company_id: int = Form(...),
+    company_id: UUID = Form(...),
     merge_strategy: MergeStrategy = Form("override"),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Uploads a Chart of Accounts file (CSV or Excel) for a specific company.
@@ -30,6 +35,7 @@ def upload_chart_of_accounts(
     # Basic file type validation
     if not file.filename.endswith(('.xlsx', '.xls', '.csv')):
         raise HTTPException(status_code=400, detail="Invalid file type. Please upload a CSV or Excel file.")
+    require_company_access(db, current_user, company_id, require_admin=True, allow_superuser=True)
     
     import_service = CompanyImportService(db)
     

@@ -51,7 +51,7 @@ export interface CompanyCreate {
   description?: string | null;
 }
 
-export interface CompanyUpdate extends Partial<CompanyCreate> { }
+export type CompanyUpdate = Partial<CompanyCreate>;
 
 export interface CompanyInactivate {
   confirmation: string;

@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.core.auth import get_current_user
+from app.api.v1.auth import get_current_user
 from app.services.dexter_sandbox_observer import DexterSandboxObserver
 from app.schemas.dexter import (
     ScenarioInsights,

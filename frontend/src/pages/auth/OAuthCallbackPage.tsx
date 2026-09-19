@@ -209,7 +209,9 @@ const OAuthCallbackPage = () => {
         if (userRes.ok) {
           setUser(await userRes.json());
         }
-      } catch (e) { }
+      } catch (e) {
+        console.warn('Failed to hydrate user context:', e);
+      }
 
       toast({
         title: 'Accounts Linked',

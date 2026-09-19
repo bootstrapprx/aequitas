@@ -14,7 +14,7 @@ CRITICAL RULES:
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field, validator
 
@@ -49,6 +49,9 @@ class ProjectionFrequency(str, Enum):
 class TaxType(str, Enum):
     """Tax classification"""
     INCOME = "INCOME"
+    FEDERAL_INCOME = "FEDERAL_INCOME"
+    STATE_INCOME = "STATE_INCOME"
+    LOCAL_INCOME = "LOCAL_INCOME"
     PAYROLL = "PAYROLL"
     SALES = "SALES"
     VAT = "VAT"
@@ -145,7 +148,7 @@ class ProjectionBase(BaseModel):
 
 class RevenueProjectionCreate(ProjectionBase):
     """Create revenue projection"""
-    type: ProjectionType = Field(default=ProjectionType.REVENUE, const=True)
+    type: Literal[ProjectionType.REVENUE] = ProjectionType.REVENUE
 
     @validator('amount')
     def amount_must_be_positive(cls, v):
@@ -156,7 +159,7 @@ class RevenueProjectionCreate(ProjectionBase):
 
 class ExpenseProjectionCreate(ProjectionBase):
     """Create expense projection"""
-    type: ProjectionType = Field(default=ProjectionType.EXPENSE, const=True)
+    type: Literal[ProjectionType.EXPENSE] = ProjectionType.EXPENSE
     expense_category: Optional[str] = Field(None, max_length=100)
 
     @validator('amount')
@@ -168,7 +171,7 @@ class ExpenseProjectionCreate(ProjectionBase):
 
 class CashflowProjectionCreate(ProjectionBase):
     """Create cashflow projection"""
-    type: ProjectionType = Field(default=ProjectionType.CASHFLOW, const=True)
+    type: Literal[ProjectionType.CASHFLOW] = ProjectionType.CASHFLOW
     cashflow_type: CashflowType
     event_date: Optional[date] = None  # For ONE_TIME events
 
@@ -179,7 +182,7 @@ class CashflowProjectionCreate(ProjectionBase):
 class TaxLiabilityProjectionCreate(BaseModel):
     """Create tax liability projection (SIMULATION ONLY)"""
     scenario_id: UUID
-    type: ProjectionType = Field(default=ProjectionType.TAX_LIABILITY, const=True)
+    type: Literal[ProjectionType.TAX_LIABILITY] = ProjectionType.TAX_LIABILITY
     name: str = Field(..., min_length=1, max_length=255)
 
     # MANDATORY tax fields

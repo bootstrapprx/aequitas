@@ -9,13 +9,19 @@ from app.integrations.qbo.accounts_import import QBOAccountsImportService
 from app.integrations.qbo.accounts_export import QBOAccountsExportService
 from app.integrations.qbo.reconcile import QBOReconciliationService
 from app.services.idempotency_service import IdempotencyService
+from app.db.models.user import User
+from app.api.v1.auth import get_current_user
+from app.core.access_control import require_company_access
 
 router = APIRouter()
 
 # --- AUTHENTICATION ---
 
 @router.get("/auth/url", summary="Get QuickBooks Authorization URL")
-def get_qbo_authorization_url(db: Session = Depends(get_db)):
+def get_qbo_authorization_url(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     service = QBOAuthService(db)
     return {"authorization_url": service.get_authorization_url()}
 
@@ -24,8 +30,10 @@ def handle_qbo_callback(
     company_id: UUID = Query(...),
     code: str = Query(...),
     realmId: str = Query(...),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    require_company_access(db, current_user, company_id, require_admin=True, allow_superuser=True)
     service = QBOAuthService(db)
     try:
         token = service.exchange_code_for_tokens(company_id=company_id, authorization_code=code, realm_id=realmId)
@@ -40,8 +48,10 @@ def import_qbo_chart_of_accounts(
     company_id: UUID,
     request: Request,
     idempotency_key: str = Header(None, alias="X-Aequitas-Idempotency-Key"),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_company_access(db, current_user, company_id, require_admin=True, allow_superuser=True)
     if not idempotency_key:
         raise AequitasError(
             code="AEQ_QBO_IDEMPOTENCY_REQUIRED",
@@ -81,7 +91,12 @@ def import_qbo_chart_of_accounts(
         )
 
 @router.post("/{company_id}/export", summary="Export Master Chart to QBO")
-def export_master_chart_to_qbo(company_id: UUID, db: Session = Depends(get_db)):
+def export_master_chart_to_qbo(
+    company_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_company_access(db, current_user, company_id, require_admin=True, allow_superuser=True)
     try:
         service = QBOAccountsExportService(company_id, db)
         return service.publish_masterchart_to_qbo()
@@ -93,11 +108,16 @@ def export_master_chart_to_qbo(company_id: UUID, db: Session = Depends(get_db)):
 # --- RECONCILIATION & MAPPING ---
 
 @router.get("/{company_id}/reconcile", summary="Reconcile QBO Chart of Accounts")
-def reconcile_with_master_chart(company_id: UUID, db: Session = Depends(get_db)):
+def reconcile_with_master_chart(
+    company_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     Performs a full reconciliation between the company's imported QBO accounts
     and the Master Chart, returning a detailed report of differences and suggestions.
     """
+    require_company_access(db, current_user, company_id, allow_superuser=True)
     try:
         service = QBOReconciliationService(company_id, db)
         return service.reconcile_qbo()
@@ -107,11 +127,16 @@ def reconcile_with_master_chart(company_id: UUID, db: Session = Depends(get_db))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.get("/{company_id}/mapping", summary="Get Mapping Suggestions Preview")
-def get_mapping_suggestions(company_id: UUID, db: Session = Depends(get_db)):
+def get_mapping_suggestions(
+    company_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """
     A convenience endpoint that returns just the 'suggested_mappings' portion
     of the main reconciliation report.
     """
+    require_company_access(db, current_user, company_id, allow_superuser=True)
     try:
         service = QBOReconciliationService(company_id, db)
         report = service.reconcile_qbo()
