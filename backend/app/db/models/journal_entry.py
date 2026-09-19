@@ -6,7 +6,7 @@ CANONICAL REFERENCE:
 - Phase 3A: Backend Model Alignment
 """
 import uuid
-from sqlalchemy import Column, String, DateTime, Date, func, ForeignKey, Text, Integer, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, Date, Boolean, func, ForeignKey, Text, Integer, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base import Base
@@ -48,6 +48,8 @@ class JournalEntry(Base):
     void_reason = Column(Text, nullable=True)
 
     # Reversing entry linkage
+    auto_reverse = Column(Boolean, default=False, nullable=False)
+    reversal_date = Column(Date, nullable=True)
     reverses_entry_id = Column(UUID(as_uuid=True), ForeignKey("journal_entries.id"), nullable=True)
     reversed_by_entry_id = Column(UUID(as_uuid=True), ForeignKey("journal_entries.id"), nullable=True)
 

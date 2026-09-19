@@ -470,6 +470,49 @@ class JournalEntryService:
         entry.posted_at = datetime.utcnow()
         entry.posted_by = posted_by
 
+        # Handle auto-reversal if configured
+        if getattr(entry, "auto_reverse", False) and getattr(entry, "reversal_date", None) and entry.reversed_by_entry_id is None:
+            reversal_period = self.db.query(FiscalPeriod).filter(
+                FiscalPeriod.company_id == entry.company_id,
+                FiscalPeriod.start_date <= entry.reversal_date,
+                FiscalPeriod.end_date >= entry.reversal_date,
+                FiscalPeriod.status == PeriodStatus.OPEN,
+            ).first()
+
+            if reversal_period:
+                import uuid as _uuid
+                reversal_entry = JournalEntry(
+                    id=_uuid.uuid4(),
+                    company_id=entry.company_id,
+                    fiscal_period_id=reversal_period.id,
+                    entry_number=f"{entry.entry_number}-REV",
+                    entry_date=entry.reversal_date,
+                    description=f"Auto-reversal of {entry.entry_number}: {entry.description}",
+                    reference=entry.reference,
+                    entry_type=EntryType.REVERSING,
+                    status=EntryStatus.POSTED,
+                    created_by=posted_by,
+                    posted_by=posted_by,
+                    posted_at=datetime.utcnow(),
+                    reverses_entry_id=entry.id,
+                )
+                self.db.add(reversal_entry)
+                self.db.flush()
+
+                for line in entry.lines:
+                    rev_line = JournalEntryLine(
+                        id=_uuid.uuid4(),
+                        journal_entry_id=reversal_entry.id,
+                        company_account_id=line.company_account_id,
+                        line_number=line.line_number,
+                        description=line.description,
+                        debit_amount=line.credit_amount,
+                        credit_amount=line.debit_amount,
+                    )
+                    self.db.add(rev_line)
+
+                entry.reversed_by_entry_id = reversal_entry.id
+
         self.db.commit()
         self.db.refresh(entry)
 
