@@ -1,1 +1,11 @@
-Nothing should be ignored since the changes only include markdown documentation files (.md) which are source/config files.
+# python compiler: ignore
+__pycache__/
+*.pyc
+*.pyd
+
+# env and secrets
+.env
+
+# frontend
+frontend/node_modules/
+frontend/dist/
